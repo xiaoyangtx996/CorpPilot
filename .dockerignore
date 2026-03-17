@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+.eggs
+*.egg
+.pytest_cache
+.mypy_cache
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/*.json
+data/locks/*.lock
+*.log
+
+# Tests
+tests/
+.pytest_cache/
+
+# Docs (optional, can include if needed)
+# docs/
+
+# Misc
+*.md
+!README.md
+LICENSE
+CONTRIBUTING.md

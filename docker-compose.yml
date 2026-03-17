@@ -1,0 +1,40 @@
+# CorpPilot Docker Compose
+# 企业智脑 - 多 Agent 协作系统
+
+version: '3.8'
+
+services:
+  corppilot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: corppilot:latest
+    container_name: corppilot-server
+    ports:
+      - "7891:7891"
+    volumes:
+      # 持久化数据
+      - ./data:/app/data
+      # Agent 配置（可热更新）
+      - ./agents:/app/agents:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7891/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# 可选：添加反向代理
+#  nginx:
+#    image: nginx:alpine
+#    container_name: corppilot-nginx
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#    depends_on:
+#      - corppilot
+#    restart: unless-stopped

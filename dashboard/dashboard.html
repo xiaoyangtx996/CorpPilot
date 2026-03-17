@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CorpPilot · 企业智脑看板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-600: #4b5563;
+            --gray-900: #111827;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--gray-50);
+            min-height: 100vh;
+            color: var(--gray-900);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 20px 0;
+        }
+        
+        header .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+        
+        header .subtitle {
+            color: var(--gray-600);
+            font-size: 0.9em;
+        }
+        
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75em;
+            font-weight: 500;
+        }
+        
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--gray-200);
+        }
+        
+        .stat-card .number {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .stat-card .label {
+            color: var(--gray-600);
+            font-size: 0.875em;
+            margin-top: 4px;
+        }
+        
+        .stat-card.primary .number { color: var(--primary); }
+        .stat-card.success .number { color: var(--success); }
+        .stat-card.warning .number { color: var(--warning); }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--gray-200);
+            height: fit-content;
+        }
+        
+        .sidebar h3 {
+            font-size: 0.875em;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+        
+        .agent-list {
+            list-style: none;
+        }
+        
+        .agent-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            margin: 4px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .agent-item:hover {
+            background: var(--gray-100);
+        }
+        
+        .agent-item.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .agent-item .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 1em;
+            background: var(--gray-100);
+        }
+        
+        .agent-item.active .icon {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .agent-item .info {
+            flex: 1;
+        }
+        
+        .agent-item .name {
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+        
+        .agent-item .role {
+            font-size: 0.75em;
+            color: var(--gray-600);
+        }
+        
+        .agent-item.active .role {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        .layer-title {
+            font-size: 0.85em;
+            color: #999;
+            margin: 15px 0 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .task-board {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--gray-200);
+        }
+        
+        .task-board-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .task-board-header h3 {
+            font-size: 1.125em;
+            font-weight: 600;
+        }
+        
+        .task-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 6px 14px;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.875em;
+            transition: all 0.15s;
+        }
+        
+        .filter-btn:hover {
+            background: var(--gray-100);
+        }
+        
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875em;
+            font-weight: 500;
+            transition: background 0.15s;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .task-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .task-item {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        
+        .task-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .task-id {
+            font-family: monospace;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .task-priority {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .priority-P0 { background: #ff4444; color: white; }
+        .priority-P1 { background: #ff9800; color: white; }
+        .priority-P2 { background: #4caf50; color: white; }
+        .priority-P3 { background: #9e9e9e; color: white; }
+        
+        .task-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .task-meta {
+            display: flex;
+            gap: 15px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .task-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            margin-top: 10px;
+        }
+        
+        .status-pending { background: #e3f2fd; color: #1976d2; }
+        .status-classified { background: #fff3e0; color: #f57c00; }
+        .status-planned { background: #f3e5f5; color: #7b1fa2; }
+        .status-reviewing { background: #fce4ec; color: #c2185b; }
+        .status-approved { background: #e8f5e9; color: #388e3c; }
+        .status-rejected { background: #ffebee; color: #d32f2f; }
+        .status-dispatched { background: #e0f7fa; color: #00838f; }
+        .status-executing { background: #fff8e1; color: #ffa000; }
+        .status-review { background: #f1f8e9; color: #689f38; }
+        .status-completed { background: #c8e6c9; color: #2e7d32; }
+        .status-blocked { background: #ffcdd2; color: #c62828; }
+        
+        .task-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .submit-btn:hover {
+            background: #5a6fd6;
+        }
+        
+        .flow-diagram {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+            border: 1px solid var(--gray-200);
+        }
+        
+        .flow-diagram h3 {
+            font-size: 1em;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .flow-step {
+            padding: 8px 16px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .flow-step.decision { background: #dbeafe; color: #1e40af; }
+        .flow-step.review { background: #fef3c7; color: #92400e; }
+        .flow-step.execute { background: #d1fae5; color: #065f46; }
+        .flow-step.done { background: var(--success); color: white; }
+        
+        .flow-arrow {
+            color: var(--gray-400);
+            font-size: 1.2em;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-content">
+            <div>
+                <h1>CorpPilot</h1>
+                <p class="subtitle">多智能体协作系统</p>
+            </div>
+            <span class="badge">v1.0</span>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-card primary">
+                <div class="number" id="totalTasks">0</div>
+                <div class="label">总任务</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="number" id="pendingTasks">0</div>
+                <div class="label">待处理</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="executingTasks">0</div>
+                <div class="label">执行中</div>
+            </div>
+            <div class="stat-card success">
+                <div class="number" id="completedTasks">0</div>
+                <div class="label">已完成</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>👥 Agent 团队</h3>
+                <div id="agentList"></div>
+            </div>
+            
+            <div class="task-board">
+                <div class="task-board-header">
+                    <h3>任务看板</h3>
+                    <button class="btn-primary" onclick="showCreateModal()">+ 新建</button>
+                </div>
+                
+                <div class="task-filters">
+                    <button class="filter-btn active" onclick="filterTasks('all')">全部</button>
+                    <button class="filter-btn" onclick="filterTasks('pending')">待处理</button>
+                    <button class="filter-btn" onclick="filterTasks('executing')">执行中</button>
+                    <button class="filter-btn" onclick="filterTasks('completed')">已完成</button>
+                </div>
+                
+                <div class="task-list" id="taskList"></div>
+            </div>
+        </div>
+        
+        <div class="flow-diagram">
+            <h3>任务流转</h3>
+            <div class="flow-steps">
+                <span class="flow-step decision">董事会决策</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step decision">总裁办分拣</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step decision">战略部规划</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step review">风控审核</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step review">PMO派发</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step execute">部门执行</span>
+                <span class="flow-arrow">→</span>
+                <span class="flow-step done">完成</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📝 创建新任务</h3>
+                <button class="modal-close" onclick="hideCreateModal()">&times;</button>
+            </div>
+            <form onsubmit="createTask(event)">
+                <div class="form-group">
+                    <label>任务标题</label>
+                    <input type="text" id="taskTitle" required placeholder="输入任务标题">
+                </div>
+                <div class="form-group">
+                    <label>任务类型</label>
+                    <select id="taskType" required>
+                        <option value="RD">技术研发</option>
+                        <option value="PD">产品设计</option>
+                        <option value="DA">数据分析</option>
+                        <option value="OP">运营推广</option>
+                        <option value="MK">市场营销</option>
+                        <option value="FN">财务预算</option>
+                        <option value="HR">人力招聘</option>
+                        <option value="LG">法务合规</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>优先级</label>
+                    <select id="taskPriority" required>
+                        <option value="P0">P0 - 紧急</option>
+                        <option value="P1">P1 - 高</option>
+                        <option value="P2" selected>P2 - 中</option>
+                        <option value="P3">P3 - 低</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>请求者</label>
+                    <input type="text" id="taskRequester" required placeholder="你的身份">
+                </div>
+                <div class="form-group">
+                    <label>任务描述</label>
+                    <textarea id="taskDescription" placeholder="详细描述任务需求"></textarea>
+                </div>
+                <button type="submit" class="submit-btn">创建任务</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '';
+        let currentFilter = 'all';
+        let tasks = [];
+        let agents = [];
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadAgents();
+            loadTasks();
+            
+            // 定时刷新
+            setInterval(() => {
+                loadStats();
+                loadTasks();
+            }, 15000);
+        });
+        
+        // 加载统计数据
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/api/stats`);
+                const data = await res.json();
+                
+                document.getElementById('totalTasks').textContent = data.total_tasks || 0;
+                document.getElementById('pendingTasks').textContent = data.by_status?.pending || 0;
+                document.getElementById('executingTasks').textContent = data.by_status?.executing || 0;
+                document.getElementById('completedTasks').textContent = data.by_status?.completed || 0;
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+        
+        // 加载 Agent 列表
+        async function loadAgents() {
+            try {
+                const res = await fetch(`${API_BASE}/api/agents`);
+                const data = await res.json();
+                agents = data.agents || [];
+                renderAgents();
+            } catch (e) {
+                console.error('Failed to load agents:', e);
+                // 使用默认数据（国内大厂架构）
+                agents = [
+                    { id: 'ceo', name: 'CEO', name_cn: '首席执行官', layer: 'decision' },
+                    { id: 'president_office', name: '总裁办', name_cn: '总裁办公室', layer: 'decision' },
+                    { id: 'strategy', name: '战略发展部', name_cn: '战略规划', layer: 'decision' },
+                    { id: 'risk_center', name: '风控中心', name_cn: '风险控制', layer: 'review' },
+                    { id: 'pmo', name: 'PMO', name_cn: '项目管理', layer: 'review' },
+                    { id: 'rd_center', name: '研发中心', name_cn: '技术研发', layer: 'execution' },
+                    { id: 'product_center', name: '产品中心', name_cn: '产品设计', layer: 'execution' },
+                    { id: 'data_center', name: '数据中心', name_cn: '数据智能', layer: 'execution' },
+                    { id: 'operation_center', name: '运营中心', name_cn: '用户运营', layer: 'execution' },
+                    { id: 'marketing_center', name: '市场中心', name_cn: '市场营销', layer: 'execution' },
+                    { id: 'finance', name: '财务部', name_cn: '财务管理', layer: 'support' },
+                    { id: 'legal', name: '法务部', name_cn: '法务合规', layer: 'support' },
+                    { id: 'hr', name: 'HR', name_cn: '人力资源', layer: 'support' },
+                ];
+                renderAgents();
+            }
+        }
+        
+        // 渲染 Agent 列表
+        function renderAgents() {
+            const layers = {
+                'decision': '决策层',
+                'review': '审核层',
+                'execution': '执行层',
+                'support': '支撑层'
+            };
+            
+            const icons = {
+                'ceo': '👔', 'president_office': '📋', 'strategy': '🎯',
+                'risk_center': '🛡️', 'pmo': '📊',
+                'rd_center': '💻', 'product_center': '🎨', 'data_center': '�',
+                'operation_center': '🚀', 'marketing_center': '�',
+                'finance': '�', 'legal': '⚖️', 'hr': '�'
+            };
+            
+            let html = '';
+            let currentLayer = '';
+            
+            agents.forEach(agent => {
+                if (agent.layer !== currentLayer) {
+                    currentLayer = agent.layer;
+                    html += `<div class="layer-title">${layers[currentLayer] || currentLayer}</div>`;
+                }
+                
+                html += `
+                    <div class="agent-item" onclick="selectAgent('${agent.id}')">
+                        <div class="icon">${icons[agent.id] || '👤'}</div>
+                        <div class="info">
+                            <div class="name">${agent.name}</div>
+                            <div class="role">${agent.description || agent.name_cn || ''}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('agentList').innerHTML = html;
+        }
+        
+        // 加载任务列表
+        async function loadTasks() {
+            try {
+                const res = await fetch(`${API_BASE}/api/tasks?limit=50`);
+                const data = await res.json();
+                tasks = data.tasks || [];
+                renderTasks();
+            } catch (e) {
+                console.error('Failed to load tasks:', e);
+                tasks = [];
+                renderTasks();
+            }
+        }
+        
+        // 渲染任务列表
+        function renderTasks() {
+            let filteredTasks = tasks;
+            
+            if (currentFilter !== 'all') {
+                filteredTasks = tasks.filter(t => t.status === currentFilter);
+            }
+            
+            if (filteredTasks.length === 0) {
+                document.getElementById('taskList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>暂无任务</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            filteredTasks.forEach(task => {
+                html += `
+                    <div class="task-item">
+                        <div class="task-header">
+                            <span class="task-id">${task.task_id}</span>
+                            <span class="task-priority priority-${task.priority}">${task.priority}</span>
+                        </div>
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-meta">
+                            <span>📁 ${task.type}</span>
+                            <span>👤 ${task.requester}</span>
+                            <span>📅 ${formatDate(task.created_at)}</span>
+                        </div>
+                        <span class="task-status status-${task.status}">${task.status}</span>
+                        <div class="task-actions">
+                            <button class="action-btn" onclick="viewTask('${task.task_id}')">查看详情</button>
+                            <button class="action-btn" onclick="advanceTask('${task.task_id}')">推进状态</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('taskList').innerHTML = html;
+        }
+        
+        // 筛选任务
+        function filterTasks(status) {
+            currentFilter = status;
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            renderTasks();
+        }
+        
+        // 显示创建任务弹窗
+        function showCreateModal() {
+            document.getElementById('createModal').classList.add('show');
+        }
+        
+        // 隐藏创建任务弹窗
+        function hideCreateModal() {
+            document.getElementById('createModal').classList.remove('show');
+        }
+        
+        // 创建任务
+        async function createTask(e) {
+            e.preventDefault();
+            
+            const task = {
+                title: document.getElementById('taskTitle').value,
+                type: document.getElementById('taskType').value,
+                priority: document.getElementById('taskPriority').value,
+                requester: document.getElementById('taskRequester').value,
+                description: document.getElementById('taskDescription').value
+            };
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(task)
+                });
+                
+                if (res.ok) {
+                    hideCreateModal();
+                    loadTasks();
+                    loadStats();
+                    alert('任务创建成功！');
+                } else {
+                    const err = await res.json();
+                    alert('创建失败: ' + err.error);
+                }
+            } catch (e) {
+                console.error('Failed to create task:', e);
+                alert('创建失败，请检查网络连接');
+            }
+        }
+        
+        // 查看任务详情
+        function viewTask(taskId) {
+            const task = tasks.find(t => t.task_id === taskId);
+            if (task) {
+                alert(`任务详情:\n\nID: ${task.task_id}\n标题: ${task.title}\n类型: ${task.type}\n优先级: ${task.priority}\n状态: ${task.status}\n请求者: ${task.requester}\n\n描述: ${task.description || '无'}`);
+            }
+        }
+        
+        // 推进任务状态
+        async function advanceTask(taskId) {
+            const task = tasks.find(t => t.task_id === taskId);
+            if (!task) return;
+            
+            const transitions = {
+                'pending': 'classified',
+                'classified': 'planned',
+                'planned': 'reviewing',
+                'reviewing': 'approved',
+                'approved': 'dispatched',
+                'dispatched': 'executing',
+                'executing': 'review',
+                'review': 'completed'
+            };
+            
+            const nextStatus = transitions[task.status];
+            if (!nextStatus) {
+                alert('任务已达终态，无法继续推进');
+                return;
+            }
+            
+            if (!confirm(`确认将任务状态从 "${task.status}" 推进到 "${nextStatus}"？`)) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/tasks/${taskId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: nextStatus, actor: 'dashboard' })
+                });
+                
+                if (res.ok) {
+                    loadTasks();
+                    loadStats();
+                    alert('状态更新成功！');
+                } else {
+                    const err = await res.json();
+                    alert('更新失败: ' + err.error);
+                }
+            } catch (e) {
+                console.error('Failed to update task:', e);
+                alert('更新失败，请检查网络连接');
+            }
+        }
+        
+        // 选择 Agent
+        function selectAgent(agentId) {
+            document.querySelectorAll('.agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+        
+        // 格式化日期
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
