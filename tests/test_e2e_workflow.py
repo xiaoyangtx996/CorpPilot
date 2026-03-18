@@ -1,294 +1,217 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-CorpPilot E2E Tests
-端到端测试 - 任务流转全流程
+CorpPilot 端到端验证，覆盖任务流、编排路由与董事会流程。
 """
+from __future__ import annotations
 
-import json
 import os
-import sys
-import tempfile
 import shutil
+import sys
+import unittest
 from pathlib import Path
 
-# 添加项目路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+DASHBOARD_DIR = PROJECT_ROOT / "dashboard"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+if str(DASHBOARD_DIR) not in sys.path:
+    sys.path.insert(0, str(DASHBOARD_DIR))
 
-from task_manager import (
-    TaskStatus, TaskType, TaskPriority,
-    create_task, update_task_status, get_task, list_tasks,
-    VALID_TRANSITIONS, ensure_data_dir
-)
-
-
-class TestResult:
-    """测试结果收集器"""
-    def __init__(self):
-        self.passed = 0
-        self.failed = 0
-        self.errors = []
-    
-    def assert_true(self, condition, message):
-        """断言为真"""
-        if condition:
-            self.passed += 1
-            print(f"  ✅ {message}")
-        else:
-            self.failed += 1
-            self.errors.append(message)
-            print(f"  ❌ {message}")
-    
-    def assert_equal(self, actual, expected, message):
-        """断言相等"""
-        self.assert_true(actual == expected, f"{message}: {actual} == {expected}")
-    
-    def assert_in(self, item, container, message):
-        """断言包含"""
-        self.assert_true(item in container, f"{message}: {item} in {container}")
-    
-    def summary(self):
-        """输出测试摘要"""
-        total = self.passed + self.failed
-        print(f"\n{'='*50}")
-        print(f"测试结果: {self.passed}/{total} 通过")
-        if self.failed > 0:
-            print(f"\n失败的测试:")
-            for err in self.errors:
-                print(f"  - {err}")
-        print(f"{'='*50}")
-        return self.failed == 0
+from core import AgentCatalogService, AgentMonitorService, BoardRoom, DecisionType, EventLogService, ExecutionService, TaskPriority, TaskService, TaskStatus, TaskType, VoteResult, WorkflowEngine
 
 
-def test_task_creation():
-    """测试任务创建"""
-    print("\n📋 测试任务创建...")
-    result = TestResult()
-    
-    # 创建任务
-    task = create_task(
-        title="测试任务",
-        task_type=TaskType.RD,
-        priority=TaskPriority.P1,
-        requester="测试用户",
-        description="这是一个测试任务"
-    )
-    
-    result.assert_true(task is not None, "任务创建成功")
-    result.assert_true(task["task_id"].startswith("TASK-"), "任务ID格式正确")
-    result.assert_equal(task["title"], "测试任务", "任务标题正确")
-    result.assert_equal(task["type"], "RD", "任务类型正确")
-    result.assert_equal(task["priority"], "P1", "任务优先级正确")
-    result.assert_equal(task["status"], "pending", "初始状态正确")
-    result.assert_true(len(task["history"]) > 0, "历史记录已创建")
-    
-    return result
+class CorpPilotWorkflowTest(unittest.TestCase):
+    """验证统一编排骨架。"""
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temp_dir = PROJECT_ROOT / ".codex" / "runtime-test-data"
+        if cls.temp_dir.exists():
+            shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        cls.temp_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["CORPPILOT_DATA_DIR"] = str(cls.temp_dir)
 
-def test_status_transitions():
-    """测试状态转换"""
-    print("\n🔄 测试状态转换...")
-    result = TestResult()
-    
-    # 创建任务
-    task = create_task(
-        title="状态转换测试",
-        task_type=TaskType.PD,
-        priority=TaskPriority.P2,
-        requester="测试用户"
-    )
-    task_id = task["task_id"]
-    
-    # 测试合法转换
-    transitions = [
-        ("pending", "classified"),
-        ("classified", "planned"),
-        ("planned", "reviewing"),
-        ("reviewing", "approved"),
-        ("approved", "dispatched"),
-        ("dispatched", "executing"),
-        ("executing", "review"),
-        ("review", "completed")
-    ]
-    
-    for from_status, to_status in transitions:
-        current = get_task(task_id)
-        result.assert_equal(current["status"], from_status, f"当前状态为 {from_status}")
-        
-        try:
-            updated = update_task_status(task_id, TaskStatus(to_status), "test")
-            result.assert_equal(updated["status"], to_status, f"状态转换成功: {from_status} -> {to_status}")
-        except ValueError as e:
-            result.failed += 1
-            result.errors.append(f"状态转换失败: {from_status} -> {to_status}: {e}")
-    
-    return result
+    @classmethod
+    def tearDownClass(cls) -> None:
+        shutil.rmtree(cls.temp_dir, ignore_errors=True)
 
+    def setUp(self) -> None:
+        tasks_file = self.temp_dir / "tasks.json"
+        proposals_file = self.temp_dir / "proposals.json"
+        if tasks_file.exists():
+            tasks_file.unlink()
+        if proposals_file.exists():
+            proposals_file.unlink()
+        self.task_service = TaskService(self.temp_dir)
+        self.workflow = WorkflowEngine(self.task_service)
+        self.board_room = BoardRoom(self.temp_dir)
+        self.agent_monitor = AgentMonitorService(self.task_service, AgentCatalogService(self.temp_dir))
+        self.event_log = EventLogService(self.temp_dir)
+        self.execution_service = ExecutionService(self.workflow)
 
-def test_invalid_transitions():
-    """测试非法状态转换"""
-    print("\n🚫 测试非法状态转换...")
-    result = TestResult()
-    
-    # 创建任务
-    task = create_task(
-        title="非法转换测试",
-        task_type=TaskType.DA,
-        priority=TaskPriority.P3,
-        requester="测试用户"
-    )
-    task_id = task["task_id"]
-    
-    # 测试非法转换: pending -> completed (跳过中间状态)
-    try:
-        update_task_status(task_id, TaskStatus.COMPLETED, "test")
-        result.failed += 1
-        result.errors.append("非法转换未被拦截: pending -> completed")
-    except ValueError as e:
-        result.passed += 1
-        result.assert_in("非法状态转换", str(e), "错误信息正确")
-    
-    # 测试非法转换: pending -> executing
-    try:
-        update_task_status(task_id, TaskStatus.EXECUTING, "test")
-        result.failed += 1
-        result.errors.append("非法转换未被拦截: pending -> executing")
-    except ValueError as e:
-        result.passed += 1
-        print(f"  ✅ 非法转换被正确拦截: pending -> executing")
-    
-    return result
-
-
-def test_rejected_flow():
-    """测试驳回流程"""
-    print("\n🔙 测试驳回流程...")
-    result = TestResult()
-    
-    # 创建任务并推进到 reviewing
-    task = create_task(
-        title="驳回测试",
-        task_type=TaskType.LEGL,
-        priority=TaskPriority.P1,
-        requester="测试用户"
-    )
-    task_id = task["task_id"]
-    
-    update_task_status(task_id, TaskStatus.CLASSIFIED, "test")
-    update_task_status(task_id, TaskStatus.PLANNED, "test")
-    update_task_status(task_id, TaskStatus.REVIEWING, "test")
-    
-    # 驳回
-    updated = update_task_status(task_id, TaskStatus.REJECTED, "compliance")
-    result.assert_equal(updated["status"], "rejected", "状态变为 rejected")
-    
-    # 重新规划
-    updated = update_task_status(task_id, TaskStatus.PLANNED, "strategy")
-    result.assert_equal(updated["status"], "planned", "可重新进入规划")
-    
-    return result
-
-
-def test_task_list():
-    """测试任务列表"""
-    print("\n📚 测试任务列表...")
-    result = TestResult()
-    
-    # 创建多个任务
-    for i in range(3):
-        create_task(
-            title=f"列表测试 {i+1}",
-            task_type=TaskType.TECH,
-            priority=TaskPriority.P2,
-            requester="测试用户"
+    def test_task_creation_and_routing(self) -> None:
+        task = self.task_service.create_task(
+            title="娴嬭瘯浠诲姟",
+            task_type=TaskType.RD,
+            priority=TaskPriority.P1,
+            requester="ceo",
+            description="楠岃瘉鍒涘缓閫昏緫",
         )
-    
-    # 获取列表
-    tasks = list_tasks()
-    result.assert_true(len(tasks) >= 3, "任务列表包含新建的任务")
-    
-    # 按状态筛选
-    pending_tasks = list_tasks(status=TaskStatus.PENDING)
-    result.assert_true(len(pending_tasks) > 0, "可按状态筛选")
-    
-    return result
+        self.assertEqual(task["status"], TaskStatus.PENDING.value)
+        self.assertEqual(task["current_owner"], "president_office")
+        self.assertEqual(task["execution_owner"], "rd_center")
 
+        snapshot = self.workflow.routing_snapshot(task["task_id"])
+        self.assertEqual(snapshot["next_statuses"], [TaskStatus.CLASSIFIED.value])
 
-def test_history_tracking():
-    """测试历史记录追踪"""
-    print("\n📝 测试历史记录追踪...")
-    result = TestResult()
-    
-    task = create_task(
-        title="历史追踪测试",
-        task_type=TaskType.INFR,
-        priority=TaskPriority.P1,
-        requester="测试用户"
-    )
-    task_id = task["task_id"]
-    
-    # 执行多次状态转换
-    update_task_status(task_id, TaskStatus.CLASSIFIED, "secretary")
-    update_task_status(task_id, TaskStatus.PLANNED, "strategy")
-    update_task_status(task_id, TaskStatus.REVIEWING, "compliance")
-    
-    # 检查历史记录
-    updated_task = get_task(task_id)
-    history = updated_task["history"]
-    
-    result.assert_true(len(history) >= 5, "历史记录完整")  # created + 3 transitions
-    result.assert_in("status_change", history[-1]["action"], "最后一条记录是状态变更")
-    
-    return result
+    def test_full_task_workflow(self) -> None:
+        task = self.task_service.create_task("\u72b6\u6001\u6d41\u8f6c", TaskType.PD, TaskPriority.P2, "ceo")
+        transitions = [
+            TaskStatus.CLASSIFIED,
+            TaskStatus.PLANNED,
+            TaskStatus.REVIEWING,
+            TaskStatus.APPROVED,
+            TaskStatus.DISPATCHED,
+            TaskStatus.EXECUTING,
+            TaskStatus.REVIEW,
+            TaskStatus.COMPLETED,
+        ]
+        for status in transitions:
+            task = self.workflow.transition(task["task_id"], status, actor=f"actor:{status.value}")
+        self.assertEqual(task["status"], TaskStatus.COMPLETED.value)
+        self.assertEqual(task["current_owner"], "ceo")
+        self.assertGreaterEqual(len(task["history"]), 9)
 
+    def test_rejected_flow(self) -> None:
+        task = self.task_service.create_task("\u9a73\u56de\u6d41\u8f6c", TaskType.LG, TaskPriority.P1, "ceo")
+        for status in [TaskStatus.CLASSIFIED, TaskStatus.PLANNED, TaskStatus.REVIEWING]:
+            task = self.workflow.transition(task["task_id"], status, actor="test")
+        rejected = self.workflow.transition(task["task_id"], TaskStatus.REJECTED, actor="risk_center")
+        self.assertEqual(rejected["status"], TaskStatus.REJECTED.value)
+        planned_again = self.workflow.transition(task["task_id"], TaskStatus.PLANNED, actor="strategy")
+        self.assertEqual(planned_again["status"], TaskStatus.PLANNED.value)
 
-def run_all_tests():
-    """运行所有测试"""
-    print("\n" + "="*50)
-    print("🧪 CorpPilot E2E 测试套件")
-    print("="*50)
-    
-    # 设置测试数据目录
-    test_data_dir = Path(tempfile.mkdtemp())
-    os.environ["CORPPILOT_DATA_DIR"] = str(test_data_dir)
-    
-    # 重新设置数据目录
-    import task_manager
-    task_manager.DATA_DIR = test_data_dir
-    task_manager.TASKS_FILE = test_data_dir / "tasks.json"
-    ensure_data_dir()
-    
-    all_results = []
-    
-    try:
-        all_results.append(test_task_creation())
-        all_results.append(test_status_transitions())
-        all_results.append(test_invalid_transitions())
-        all_results.append(test_rejected_flow())
-        all_results.append(test_task_list())
-        all_results.append(test_history_tracking())
-        
-        # 汇总结果
-        total_passed = sum(r.passed for r in all_results)
-        total_failed = sum(r.failed for r in all_results)
-        total_errors = []
-        for r in all_results:
-            total_errors.extend(r.errors)
-        
-        print(f"\n{'='*50}")
-        print(f"总测试结果: {total_passed}/{total_passed + total_failed} 通过")
-        if total_failed > 0:
-            print(f"\n所有失败的测试:")
-            for err in total_errors:
-                print(f"  - {err}")
-        print(f"{'='*50}")
-        
-        return total_failed == 0
-    
-    finally:
-        # 清理测试数据
-        shutil.rmtree(test_data_dir, ignore_errors=True)
+    def test_invalid_transition(self) -> None:
+        task = self.task_service.create_task("\u975e\u6cd5\u6d41\u8f6c", TaskType.DA, TaskPriority.P3, "ceo")
+        with self.assertRaises(ValueError):
+            self.workflow.transition(task["task_id"], TaskStatus.COMPLETED, actor="system")
+
+    def test_board_room_voting(self) -> None:
+        proposal = self.board_room.create_proposal("\u9884\u7b97\u8c03\u6574", "\u8ffd\u52a0\u9884\u7b97 50 \u4e07", "ceo", DecisionType.STRATEGIC)
+        self.board_room.add_discussion(proposal["id"], "ceo", "\u652f\u6301\u63a8\u8fdb")
+        self.board_room.cast_vote(proposal["id"], "chairman", VoteResult.AGREE, "\u7b26\u5408\u6218\u7565\u65b9\u5411")
+        self.board_room.cast_vote(proposal["id"], "ceo", VoteResult.AGREE, "\u4e1a\u52a1\u5fc5\u987b")
+        result = self.board_room.tally_votes(proposal["id"])
+        self.assertEqual(result["result"], "approved")
+        self.assertGreater(result["approval_rate"], 0.5)
+
+    def test_board_room_emergency_order(self) -> None:
+        proposal = self.board_room.create_proposal("\u7d27\u6025\u6545\u969c\u5904\u7406", "\u7acb\u5373\u7194\u65ad\u53d7\u5f71\u54cd\u6a21\u5757", "chairman", DecisionType.EMERGENCY)
+        result = self.board_room.direct_order(proposal["id"], "\u7acb\u5373\u6267\u884c\u6545\u969c\u9694\u79bb")
+        self.assertEqual(result["result"], "approved")
+        fetched = self.board_room.get_proposal(proposal["id"])
+        self.assertEqual(fetched["decision_type"], DecisionType.EMERGENCY.value)
+
+    def test_task_intervention_and_timeline(self) -> None:
+        task = self.task_service.create_task("intervention", TaskType.RD, TaskPriority.P1, "ceo")
+        for status in [
+            TaskStatus.CLASSIFIED,
+            TaskStatus.PLANNED,
+            TaskStatus.REVIEWING,
+            TaskStatus.APPROVED,
+            TaskStatus.DISPATCHED,
+            TaskStatus.EXECUTING,
+        ]:
+            task = self.workflow.transition(task["task_id"], status, actor="flow")
+
+        paused = self.workflow.intervene(task["task_id"], "pause", "pmo", "manual pause")
+        self.assertEqual(paused["status"], TaskStatus.BLOCKED.value)
+
+        resumed = self.workflow.intervene(task["task_id"], "resume", "pmo", "continue")
+        self.assertEqual(resumed["status"], TaskStatus.EXECUTING.value)
+
+        sent_back = self.workflow.intervene(task["task_id"], "send_back", "risk_center", "need redesign")
+        self.assertEqual(sent_back["status"], TaskStatus.PLANNED.value)
+
+        timeline = self.workflow.timeline(task["task_id"])
+        actions = [item["action"] for item in timeline]
+        self.assertIn("intervention:pause", actions)
+        self.assertIn("intervention:resume", actions)
+        self.assertIn("intervention:send_back", actions)
+
+    def test_agent_health_snapshot(self) -> None:
+        task = self.task_service.create_task("health", TaskType.RD, TaskPriority.P1, "ceo")
+        for status in [
+            TaskStatus.CLASSIFIED,
+            TaskStatus.PLANNED,
+            TaskStatus.REVIEWING,
+            TaskStatus.APPROVED,
+            TaskStatus.DISPATCHED,
+            TaskStatus.EXECUTING,
+        ]:
+            task = self.workflow.transition(task["task_id"], status, actor="flow")
+        self.workflow.intervene(task["task_id"], "pause", "pmo", "dependency blocked")
+
+        health_items = self.agent_monitor.list_health()
+        rd_center = next(item for item in health_items if item["id"] == "rd_center")
+        pmo = next(item for item in health_items if item["id"] == "pmo")
+        self.assertGreaterEqual(rd_center["owned_task_count"], 1)
+        self.assertEqual(rd_center["blocked_task_count"], 1)
+        self.assertEqual(rd_center["health_status"], "blocked")
+        self.assertEqual(pmo["health_status"], "blocked")
+
+    def test_event_log_records_task_and_proposal_changes(self) -> None:
+        task = self.task_service.create_task("events", TaskType.RD, TaskPriority.P1, "ceo")
+        self.workflow.transition(task["task_id"], TaskStatus.CLASSIFIED, actor="president_office")
+        proposal = self.board_room.create_proposal("event proposal", "desc", "ceo", DecisionType.STRATEGIC)
+        self.board_room.add_discussion(proposal["id"], "ceo", "ok")
+
+        task_events = self.event_log.list_events(category="task", subject_id=task["task_id"], limit=10)
+        proposal_events = self.event_log.list_events(category="proposal", subject_id=proposal["id"], limit=10)
+
+        self.assertTrue(any(item["action"] == "created" for item in task_events))
+        self.assertTrue(any(item["action"] == "status_changed" for item in task_events))
+        self.assertTrue(any(item["action"] == "created" for item in proposal_events))
+        self.assertTrue(any(item["action"] == "discussed" for item in proposal_events))
+
+    def test_execution_service_protocol(self) -> None:
+        task = self.task_service.create_task("execute", TaskType.RD, TaskPriority.P1, "ceo")
+        for status in [TaskStatus.CLASSIFIED, TaskStatus.PLANNED, TaskStatus.REVIEWING, TaskStatus.APPROVED]:
+            task = self.workflow.transition(task["task_id"], status, actor="flow")
+        task = self.workflow.transition(task["task_id"], TaskStatus.DISPATCHED, actor="pmo")
+        started = self.execution_service.start(task["task_id"], "rd_center")
+        self.assertEqual(started["status"], TaskStatus.EXECUTING.value)
+        completed = self.execution_service.complete(task["task_id"], "rd_center")
+        self.assertEqual(completed["status"], TaskStatus.REVIEW.value)
+
+    def test_board_summary_and_event_ordering(self) -> None:
+        first = self.board_room.create_proposal("proposal-one", "desc-1", "ceo", DecisionType.STRATEGIC)
+        second = self.board_room.create_proposal("proposal-two", "desc-2", "chairman", DecisionType.EMERGENCY)
+        self.board_room.add_discussion(first["id"], "ceo", "需要继续评估")
+        self.board_room.direct_order(second["id"], "立即执行隔离")
+
+        summary = self.board_room.get_summary()
+        self.assertEqual(summary["total_proposals"], 2)
+        self.assertEqual(summary["by_type"][DecisionType.STRATEGIC.value], 1)
+        self.assertEqual(summary["by_type"][DecisionType.EMERGENCY.value], 1)
+        self.assertEqual(summary["by_status"]["approved"], 1)
+        self.assertEqual(summary["by_status"]["discussing"], 1)
+
+        proposal_events = self.event_log.list_events(category="proposal", limit=10)
+        self.assertGreaterEqual(len(proposal_events), 4)
+        self.assertEqual(proposal_events[0]["subject_id"], second["id"])
+        self.assertEqual(proposal_events[0]["action"], "direct_order")
+        self.assertTrue(all(item["category"] == "proposal" for item in proposal_events))
 
 
 if __name__ == "__main__":
-    success = run_all_tests()
-    sys.exit(0 if success else 1)
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(CorpPilotWorkflowTest)
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    sys.exit(0 if result.wasSuccessful() else 1)
+
+
+
+
+
+

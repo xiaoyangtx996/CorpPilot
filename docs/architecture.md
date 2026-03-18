@@ -1,217 +1,225 @@
-# CorpPilot 架构设计文档
+﻿# CorpPilot 架构说明
 
-## 概述
+## 1. 目标
 
-CorpPilot 是一个基于国内大厂组织架构的多智能体协作系统，采用董事会治理机制。
+CorpPilot 用“组织架构”来表达多 Agent 系统中的职责边界。
+当前阶段的目标不是做复杂自治，而是先把协作内核、控制面和事件留痕统一起来，让任务流、提案流和执行动作都能被稳定观察和人工干预。
 
-## 核心设计理念
+## 2. 总体结构
 
-### 1. 董事会治理
+```text
+用户请求
+  -> TaskService
+  -> WorkflowEngine
+  -> Dashboard API / CLI
 
-系统最高决策机构为董事会：
+并行存在的董事会流程
+  -> BoardRoom
+  -> Discussion / Vote / Tally / DirectOrder
 
-- **正常流程**：讨论 → 投票 → 多数同意执行
-- **紧急流程**：董事长直接下令
-
-投票权重：董事长 1.5 票，其他成员 1 票
-
-### 2. 四层架构
-
-- **决策层**：CEO、总裁办、战略发展部
-- **审核层**：风控中心、PMO
-- **执行层**：研发中心、产品中心、数据中心、运营中心、市场中心
-- **支撑层**：财务部、法务部、HR
-
-### 3. 流程驱动
-
-任务流转遵循严格的状态机：
-
-```
-董事会决策 → 总裁办分拣 → 战略部规划 → 风控审核 → PMO派发 → 部门执行 → 完成
+统一观测层
+  -> EventLogService
+  -> AgentMonitorService
 ```
 
-## 架构图
+## 3. 核心组件
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      董事会（最高决策）                           │
-│              讨论投票 · 董事长直接下令                            │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         决策层                                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                       │
-│  │   CEO    │  │  总裁办   │  │战略发展部 │                       │
-│  └──────────┘  └──────────┘  └──────────┘                       │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         审核层                                   │
-│  ┌──────────┐  ┌──────────┐                                    │
-│  │ 风控中心  │  │   PMO    │                                    │
-│  └──────────┘  └──────────┘                                    │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         执行层                                   │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                  │
-│  │研发  │ │产品  │ │数据  │ │运营  │ │市场  │                  │
-│  │中心  │ │中心  │ │中心  │ │中心  │ │中心  │                  │
-│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘                  │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         支撑层                                   │
-│         ┌──────┐      ┌──────┐      ┌──────┐                   │
-│         │财务部│      │法务部│      │  HR  │                   │
-│         └──────┘      └──────┘      └──────┘                   │
-└─────────────────────────────────────────────────────────────────┘
-```
+### 3.1 TaskService
 
-## 组件说明
+职责：
+- 创建、读取、更新、删除任务
+- 维护统一任务模型
+- 写入任务历史记录
+- 汇总任务统计
 
-### Agent 系统
+关键约束：
+- 所有任务都带 `current_owner` 和 `execution_owner`
+- 状态流转和人工干预都要进入 `history`
+- 任务事件同步写入 `events.json`
 
-每个 Agent 由 `SOUL.md` 定义，包含：
+### 3.2 WorkflowEngine
 
-- 角色定位
-- 核心职责
-- 工作原则
-- 权限范围
-- 沟通风格
+职责：
+- 作为统一编排入口
+- 执行任务状态流转
+- 提供路由快照
+- 暴露任务时间线
+- 转发人工干预动作
 
-### 任务管理
+### 3.3 BoardRoom
 
-- **task_manager.py**：任务 CRUD 操作
-- **状态机保护**：非法状态转换会被拒绝
-- **审计日志**：所有操作记录在 task.history
+职责：
+- 创建董事会提案
+- 记录讨论与投票
+- 统计投票结果
+- 支持紧急提案直接下令
+- 提供提案摘要聚合
 
-### 文件锁
+### 3.4 AgentCatalogService
 
-- **file_lock.py**：防止多 Agent 并发写入冲突
-- 支持跨平台（Unix/Windows）
+职责：
+- 扫描 `agents/*/SOUL.md`
+- 生成 Agent 配置快照
+- 提供按层级过滤的 Agent 元数据
 
-### Dashboard
+### 3.5 SkillCatalogService
 
-- **server.py**：零依赖 HTTP API 服务器
-- **dashboard.html**：单文件前端看板
+职责：
+- 管理本地与远程 Skill 配置
+- 记录 Skill 适用 Agent 范围
+- 为后续热更新预留配置入口
 
-## API 设计
+### 3.6 AgentMonitorService
 
-### RESTful API
+职责：
+- 根据任务责任链和历史记录推导 Agent 健康状态
+- 聚合责任任务数、执行中数量、阻塞数量和最近活跃时间
 
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | /api/tasks | 获取任务列表 |
-| GET | /api/tasks/:id | 获取单个任务 |
-| POST | /api/tasks | 创建任务 |
-| PUT | /api/tasks/:id | 更新任务 |
-| POST | /api/tasks/:id/status | 更新任务状态 |
-| DELETE | /api/tasks/:id | 删除任务 |
-| GET | /api/agents | 获取 Agent 列表 |
-| GET | /api/stats | 获取统计数据 |
+当前限制：
+- 现在是推导式健康状态，不是真实心跳
+- 更适合做控制面观察，不适合做生产级告警
 
-### 状态转换 API
+### 3.7 EventLogService
 
-```json
-POST /api/tasks/TASK-2024-0001/status
-{
-  "status": "approved",
-  "actor": "compliance"
-}
-```
+职责：
+- 统一记录任务与提案事件
+- 支持按类别和主体过滤
+- 默认按时间倒序返回
 
-## 数据模型
+### 3.8 ExecutionService
 
-### Task
+职责：
+- 对执行层动作提供统一协议
+- 封装 `start`、`complete`、`block`
 
-```json
-{
-  "task_id": "TASK-2024-0001",
-  "title": "开发用户登录系统",
-  "type": "TECH",
-  "priority": "P1",
-  "requester": "CEO",
-  "description": "...",
-  "status": "pending",
-  "created_at": "2024-01-01T00:00:00",
-  "updated_at": "2024-01-01T00:00:00",
-  "history": [...]
-}
+当前限制：
+- 只是编排层薄封装
+- 还没有真正接入 Worker 或 Agent 执行器
+
+## 4. 数据存储
+
+当前版本使用 JSON 文件存储：
+
+- `data/tasks.json`
+- `data/proposals.json`
+- `data/agent_config.json`
+- `data/skills.json`
+- `data/events.json`
+
+这是为了保持原型轻量。数据量放大后，需要迁移到数据库或事件存储。
+
+## 5. 状态机
+
+### 5.1 任务状态机
+
+```text
+pending
+  -> classified
+  -> planned
+  -> reviewing
+  -> approved / rejected
+  -> dispatched
+  -> executing
+  -> review
+  -> completed
 ```
 
-### Agent
+补充分支：
+- `rejected -> planned`
+- `executing -> blocked`
+- `blocked -> executing`
+- `review -> executing`
 
-```json
-{
-  "id": "rd_center",
-  "name": "研发中心",
-  "layer": "execution",
-  "description": "技术开发、系统实现",
-  "has_soul": true
-}
-```
+### 5.2 人工干预
 
-## 扩展机制
+- `pause`
+  - 允许状态：`executing`
+  - 目标状态：`blocked`
+- `resume`
+  - 允许状态：`blocked`
+  - 目标状态：`executing`
+- `send_back`
+  - 允许状态：`reviewing`、`approved`、`dispatched`、`executing`、`review`、`blocked`、`rejected`
+  - 目标状态：`planned`
 
-### 添加新 Agent
+### 5.3 执行协议
 
-1. 在 `agents/` 下创建目录
-2. 编写 `SOUL.md` 定义角色
-3. 运行 `python scripts/sync_agent_config.py sync`
+- `start`
+  - 允许状态：`dispatched`、`blocked`
+- `complete`
+  - 允许状态：`executing`
+- `block`
+  - 允许状态：`executing`
 
-### 添加新 Skill
+### 5.4 提案流程
 
-```bash
-python scripts/skill_manager.py add-local \
-  --id code-review \
-  --name "代码审查" \
-  --agents rd_center,risk_center \
-  --file skills/code_review.md
-```
+- 普通提案：讨论 -> 投票 -> 计票
+- 紧急提案：董事长直接下令
 
-## 部署
+## 6. API 设计
 
-### Docker
+### 任务
 
-```bash
-# 使用 Docker Compose
-docker-compose up -d
+- `GET /api/tasks`
+- `GET /api/tasks/:id`
+- `GET /api/tasks/:id/timeline`
+- `POST /api/tasks`
+- `PUT /api/tasks/:id`
+- `POST /api/tasks/:id/status`
+- `POST /api/tasks/:id/intervene`
+- `POST /api/tasks/:id/execute/start`
+- `POST /api/tasks/:id/execute/complete`
+- `POST /api/tasks/:id/execute/block`
+- `DELETE /api/tasks/:id`
 
-# 或单独构建
-docker build -t corppilot .
-docker run -p 7891:7891 corppilot
-```
+### 董事会
 
-### 本地运行
+- `GET /api/board/proposals`
+- `GET /api/board/summary`
+- `GET /api/board/proposals/:id`
+- `POST /api/board/proposals`
+- `POST /api/board/proposals/:id/discuss`
+- `POST /api/board/proposals/:id/vote`
+- `POST /api/board/proposals/:id/tally`
+- `POST /api/board/proposals/:id/order`
 
-```bash
-# Windows
-start.bat
+### 观测与配置
 
-# Linux/macOS
-./start.sh
+- `GET /api/agents`
+- `GET /api/skills`
+- `GET /api/stats`
+- `GET /api/events`
+- `GET /api/health`
 
-# 或直接运行
-python dashboard/server.py
-```
+## 7. 控制面现状
 
-### 初始化示例数据
+当前 Dashboard 已经支持：
 
-```bash
-python scripts/init_sample_data.py --tasks 8
-```
+- 任务列表与状态过滤
+- 按 Agent 责任链过滤任务
+- 查看任务详情与时间线
+- 推进任务状态
+- 人工干预
+- 执行协议动作
+- Agent 健康概览
+- 提案摘要与最近提案
+- 统一事件流展示
 
-## 安全考虑
+## 8. 当前边界
 
-- 文件锁防止并发冲突
-- 状态机防止非法操作
-- 审计日志追踪所有变更
+当前版本仍然是“协作内核 + 控制面原型”，还没有进入完整多 Agent 运行时阶段。明显缺口包括：
 
----
+- 真实 Agent 执行器
+- 事件总线与订阅机制
+- 任务与提案的自动联动
+- 实时心跳和执行耗时指标
+- 模型与 Skill 运行时热更新
+- 完整自动化验证链路
 
-*架构设计遵循 KISS 原则，保持简单可维护。*
+## 9. 推荐演进路径
+
+1. 给 `WorkflowEngine` 增加事件订阅、重放和回溯能力。
+2. 把 `ExecutionService` 扩展为真实 Worker 协议接入层。
+3. 把 `AgentMonitorService` 升级为心跳与指标采集服务。
+4. 给控制面补提案操作、事件筛选、SLA 和阻塞原因视图。
+5. 将 JSON 存储逐步迁移到数据库或事件存储。
