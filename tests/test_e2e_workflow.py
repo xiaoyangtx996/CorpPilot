@@ -97,6 +97,11 @@ class CorpPilotWorkflowTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.workflow.transition(task["task_id"], TaskStatus.COMPLETED, actor="system")
 
+    def test_update_task_rejects_workflow_controlled_fields(self) -> None:
+        task = self.task_service.create_task("guarded-update", TaskType.RD, TaskPriority.P1, "ceo")
+        with self.assertRaises(ValueError):
+            self.task_service.update_task(task["task_id"], {"status": TaskStatus.COMPLETED.value})
+
     def test_board_room_voting(self) -> None:
         proposal = self.board_room.create_proposal("\u9884\u7b97\u8c03\u6574", "\u8ffd\u52a0\u9884\u7b97 50 \u4e07", "ceo", DecisionType.STRATEGIC)
         self.board_room.add_discussion(proposal["id"], "ceo", "\u652f\u6301\u63a8\u8fdb")
@@ -105,6 +110,13 @@ class CorpPilotWorkflowTest(unittest.TestCase):
         result = self.board_room.tally_votes(proposal["id"])
         self.assertEqual(result["result"], "approved")
         self.assertGreater(result["approval_rate"], 0.5)
+
+    def test_board_room_rejects_duplicate_vote(self) -> None:
+        proposal = self.board_room.create_proposal("duplicate-vote", "desc", "ceo", DecisionType.STRATEGIC)
+        first = self.board_room.cast_vote(proposal["id"], "ceo", VoteResult.AGREE, "first")
+        second = self.board_room.cast_vote(proposal["id"], "ceo", VoteResult.AGREE, "second")
+        self.assertNotIn("error", first)
+        self.assertEqual(second["error"], "该成员已经投票")
 
     def test_board_room_emergency_order(self) -> None:
         proposal = self.board_room.create_proposal("\u7d27\u6025\u6545\u969c\u5904\u7406", "\u7acb\u5373\u7194\u65ad\u53d7\u5f71\u54cd\u6a21\u5757", "chairman", DecisionType.EMERGENCY)

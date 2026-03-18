@@ -62,6 +62,16 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
     def send_error_response(self, message: str, status: int = 400) -> None:
         self.send_json_response({"error": message}, status)
 
+    def parse_int_query(self, query: Dict[str, Any], key: str, default: int, minimum: int = 0) -> int:
+        raw_value = query.get(key, [default])[0]
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid query parameter: {key}") from exc
+        if value < minimum:
+            raise ValueError(f"Invalid query parameter: {key}")
+        return value
+
     def read_request_json(self) -> Dict[str, Any]:
         content_length = int(self.headers.get("Content-Length", 0))
         raw_body = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
@@ -215,8 +225,12 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
             tasks = [task for task in tasks if task["type"] == task_type]
         if priority:
             tasks = [task for task in tasks if task["priority"] == priority]
-        limit = int(query.get("limit", [20])[0])
-        offset = int(query.get("offset", [0])[0])
+        try:
+            limit = self.parse_int_query(query, "limit", 20)
+            offset = self.parse_int_query(query, "offset", 0)
+        except ValueError as exc:
+            self.send_error_response(str(exc))
+            return
         self.send_json_response({"total": len(tasks), "tasks": tasks[offset : offset + limit]})
 
     def handle_get_task(self, task_id: str) -> None:
@@ -258,7 +272,11 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
     def handle_get_events(self, query: Dict[str, Any]) -> None:
         category = query.get("category", [None])[0]
         subject_id = query.get("subject_id", [None])[0]
-        limit = int(query.get("limit", [30])[0])
+        try:
+            limit = self.parse_int_query(query, "limit", 30)
+        except ValueError as exc:
+            self.send_error_response(str(exc))
+            return
         self.send_json_response({"events": self.event_log.list_events(category=category, subject_id=subject_id, limit=limit)})
 
     def handle_update_task_status(self, task_id: str, data: Dict[str, Any]) -> None:
@@ -325,7 +343,8 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
         try:
             task = self.task_service.update_task(task_id, data)
         except ValueError as exc:
-            self.send_error_response(str(exc), 404)
+            message = str(exc)
+            self.send_error_response(message, 404 if "\u4e0d\u5b58\u5728" in message else 400)
             return
         self.send_json_response(task)
 

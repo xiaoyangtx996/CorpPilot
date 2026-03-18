@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from file_lock import with_file_lock
 
@@ -207,6 +207,20 @@ class JsonStore:
                 json.dump(value, handle, ensure_ascii=False, indent=2)
         return value
 
+    def update(self, default: Any, updater: Callable[[Any], Any]) -> Any:
+        self.file_path.parent.mkdir(parents=True, exist_ok=True)
+        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with with_file_lock(str(self.lock_path)):
+            if self.file_path.exists():
+                with open(self.file_path, "r", encoding="utf-8") as handle:
+                    current = json.load(handle)
+            else:
+                current = default
+            updated = updater(current)
+            with open(self.file_path, "w", encoding="utf-8") as handle:
+                json.dump(updated, handle, ensure_ascii=False, indent=2)
+        return updated
+
     def reset(self, value: Any) -> Any:
         """重置文件内容。"""
         return self.write(value)
@@ -220,18 +234,23 @@ class EventLogService:
         self.store = JsonStore(self.data_dir / "events.json")
 
     def append(self, category: str, action: str, actor: str, subject_id: str, detail: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        events = self.store.read([])
-        event = {
-            "event_id": f"EVT-{datetime.now().strftime('%Y%m%d%H%M%S')}-{len(events)+1:04d}",
-            "category": category,
-            "action": action,
-            "actor": actor,
-            "subject_id": subject_id,
-            "timestamp": utc_now_iso(),
-            "detail": detail or {},
-        }
-        events.append(event)
-        self.store.write(events)
+        event: Dict[str, Any] = {}
+
+        def mutate(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal event
+            event = {
+                "event_id": f"EVT-{datetime.now().strftime('%Y%m%d%H%M%S')}-{len(events)+1:04d}",
+                "category": category,
+                "action": action,
+                "actor": actor,
+                "subject_id": subject_id,
+                "timestamp": utc_now_iso(),
+                "detail": detail or {},
+            }
+            events.append(event)
+            return events
+
+        self.store.update([], mutate)
         return event
 
     def list_events(self, category: Optional[str] = None, subject_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
@@ -283,24 +302,29 @@ class TaskService:
         requester: str,
         description: str = "",
     ) -> Dict[str, Any]:
-        tasks = self._load()
-        now = utc_now_iso()
-        task = {
-            "task_id": self._generate_task_id(tasks),
-            "title": title,
-            "type": task_type.value,
-            "priority": priority.value,
-            "requester": requester,
-            "description": description,
-            "status": TaskStatus.PENDING.value,
-            "current_owner": TASK_STAGE_OWNER[TaskStatus.PENDING.value],
-            "execution_owner": TASK_TYPE_OWNER.get(task_type.value),
-            "created_at": now,
-            "updated_at": now,
-            "history": [{"action": "created", "timestamp": now, "actor": requester}],
-        }
-        tasks.append(task)
-        self._save(tasks)
+        task: Dict[str, Any] = {}
+
+        def mutate(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal task
+            now = utc_now_iso()
+            task = {
+                "task_id": self._generate_task_id(tasks),
+                "title": title,
+                "type": task_type.value,
+                "priority": priority.value,
+                "requester": requester,
+                "description": description,
+                "status": TaskStatus.PENDING.value,
+                "current_owner": TASK_STAGE_OWNER[TaskStatus.PENDING.value],
+                "execution_owner": TASK_TYPE_OWNER.get(task_type.value),
+                "created_at": now,
+                "updated_at": now,
+                "history": [{"action": "created", "timestamp": now, "actor": requester}],
+            }
+            tasks.append(task)
+            return tasks
+
+        self.store.update([], mutate)
         self.event_log.append(
             category="task",
             action="created",
@@ -327,49 +351,67 @@ class TaskService:
         return tasks[:limit]
 
     def update_task(self, task_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-        tasks = self._load()
-        task = self._find_task(tasks, task_id)
-        protected = {"task_id", "created_at", "history"}
-        for key, value in updates.items():
-            if key not in protected:
+        task: Dict[str, Any] = {}
+        protected = {"task_id", "created_at", "history", "status", "current_owner", "execution_owner", "updated_at"}
+        invalid_fields = sorted(key for key in updates.keys() if key in protected)
+        if invalid_fields:
+            raise ValueError(f"以下字段只能通过专用流程更新: {invalid_fields}")
+
+        def mutate(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal task
+            task = self._find_task(tasks, task_id)
+            for key, value in updates.items():
                 task[key] = value
-        task["updated_at"] = utc_now_iso()
-        self._save(tasks)
-        self.event_log.append("task", "updated", "system", task_id, {"fields": sorted([key for key in updates.keys() if key not in protected])})
+            task["updated_at"] = utc_now_iso()
+            return tasks
+
+        self.store.update([], mutate)
+        self.event_log.append("task", "updated", "system", task_id, {"fields": sorted(updates.keys())})
         return task
 
     def delete_task(self, task_id: str) -> bool:
-        tasks = self._load()
-        after = [task for task in tasks if task["task_id"] != task_id]
-        if len(after) == len(tasks):
+        deleted = False
+
+        def mutate(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal deleted
+            after = [task for task in tasks if task["task_id"] != task_id]
+            deleted = len(after) != len(tasks)
+            return after
+
+        self.store.update([], mutate)
+        if not deleted:
             return False
-        self._save(after)
         self.event_log.append("task", "deleted", "system", task_id)
         return True
 
     def update_task_status(self, task_id: str, new_status: TaskStatus, actor: str = "system") -> Dict[str, Any]:
-        tasks = self._load()
-        task = self._find_task(tasks, task_id)
+        task: Dict[str, Any] = {}
+        current_status: Optional[TaskStatus] = None
 
-        current_status = TaskStatus(task["status"])
-        allowed = VALID_TASK_TRANSITIONS.get(current_status, [])
-        if new_status not in allowed:
-            raise ValueError(
-                f"非法状态转换: {current_status.value} -> {new_status.value}; "
-                f"允许转换: {[status.value for status in allowed]}"
+        def mutate(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal task, current_status
+            task = self._find_task(tasks, task_id)
+            current_status = TaskStatus(task["status"])
+            allowed = VALID_TASK_TRANSITIONS.get(current_status, [])
+            if new_status not in allowed:
+                raise ValueError(
+                    f"非法状态转换: {current_status.value} -> {new_status.value}; "
+                    f"允许转换: {[status.value for status in allowed]}"
+                )
+
+            now = utc_now_iso()
+            task["status"] = new_status.value
+            task["current_owner"] = self._resolve_owner(task, new_status)
+            task["updated_at"] = now
+            self._append_history(
+                task,
+                f"status_change:{current_status.value}->{new_status.value}",
+                actor,
+                {"from": current_status.value, "to": new_status.value, "owner": task["current_owner"]},
             )
+            return tasks
 
-        now = utc_now_iso()
-        task["status"] = new_status.value
-        task["current_owner"] = self._resolve_owner(task, new_status)
-        task["updated_at"] = now
-        self._append_history(
-            task,
-            f"status_change:{current_status.value}->{new_status.value}",
-            actor,
-            {"from": current_status.value, "to": new_status.value, "owner": task["current_owner"]},
-        )
-        self._save(tasks)
+        self.store.update([], mutate)
         self.event_log.append(
             "task",
             "status_changed",
@@ -380,10 +422,6 @@ class TaskService:
         return task
 
     def intervene_task(self, task_id: str, action: str, actor: str = "system", reason: str = "") -> Dict[str, Any]:
-        tasks = self._load()
-        task = self._find_task(tasks, task_id)
-        current_status = TaskStatus(task["status"])
-
         action_map = {
             "pause": TaskStatus.BLOCKED,
             "resume": TaskStatus.EXECUTING,
@@ -391,8 +429,6 @@ class TaskService:
         }
         if action not in action_map:
             raise ValueError(f"不支持的干预动作: {action}")
-
-        target_status = action_map[action]
         allowed_actions = {
             "pause": {TaskStatus.EXECUTING},
             "resume": {TaskStatus.BLOCKED},
@@ -406,24 +442,34 @@ class TaskService:
                 TaskStatus.REJECTED,
             },
         }
-        if current_status not in allowed_actions[action]:
-            raise ValueError(f"当前状态不允许执行干预: {current_status.value} -> {action}")
+        target_status = action_map[action]
+        task: Dict[str, Any] = {}
+        current_status: Optional[TaskStatus] = None
 
-        task["status"] = target_status.value
-        task["current_owner"] = self._resolve_owner(task, target_status)
-        task["updated_at"] = utc_now_iso()
-        self._append_history(
-            task,
-            f"intervention:{action}",
-            actor,
-            {
-                "from": current_status.value,
-                "to": target_status.value,
-                "reason": reason,
-                "owner": task["current_owner"],
-            },
-        )
-        self._save(tasks)
+        def mutate(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal task, current_status
+            task = self._find_task(tasks, task_id)
+            current_status = TaskStatus(task["status"])
+            if current_status not in allowed_actions[action]:
+                raise ValueError(f"当前状态不允许执行干预: {current_status.value} -> {action}")
+
+            task["status"] = target_status.value
+            task["current_owner"] = self._resolve_owner(task, target_status)
+            task["updated_at"] = utc_now_iso()
+            self._append_history(
+                task,
+                f"intervention:{action}",
+                actor,
+                {
+                    "from": current_status.value,
+                    "to": target_status.value,
+                    "reason": reason,
+                    "owner": task["current_owner"],
+                },
+            )
+            return tasks
+
+        self.store.update([], mutate)
         self.event_log.append(
             "task",
             f"intervention:{action}",
@@ -610,25 +656,31 @@ class BoardRoom:
         proposer: str,
         decision_type: DecisionType = DecisionType.STRATEGIC,
     ) -> Dict[str, Any]:
-        proposals = self._load()
-        proposal = Proposal(
-            id=self._generate_proposal_id(proposals),
-            title=title,
-            content=content,
-            proposer=proposer,
-            decision_type=decision_type.value,
-            created_at=utc_now_iso(),
-        )
-        proposals.append(asdict(proposal))
-        self._save(proposals)
+        proposal_dict: Dict[str, Any] = {}
+
+        def mutate(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal proposal_dict
+            proposal = Proposal(
+                id=self._generate_proposal_id(proposals),
+                title=title,
+                content=content,
+                proposer=proposer,
+                decision_type=decision_type.value,
+                created_at=utc_now_iso(),
+            )
+            proposal_dict = asdict(proposal)
+            proposals.append(proposal_dict)
+            return proposals
+
+        self.store.update([], mutate)
         self.event_log.append(
             "proposal",
             "created",
             proposer,
-            proposal.id,
+            proposal_dict["id"],
             {"decision_type": decision_type.value, "title": title},
         )
-        return asdict(proposal)
+        return proposal_dict
 
     def get_proposal(self, proposal_id: str) -> Optional[Dict[str, Any]]:
         return next((item for item in self._load() if item["id"] == proposal_id), None)
@@ -641,106 +693,152 @@ class BoardRoom:
         return proposals
 
     def add_discussion(self, proposal_id: str, member_id: str, opinion: str) -> Dict[str, Any]:
-        proposals = self._load()
-        proposal = next((item for item in proposals if item["id"] == proposal_id), None)
-        if not proposal:
-            return {"error": f"提案不存在: {proposal_id}"}
-        if proposal["status"] not in {"pending", "discussing"}:
-            return {"error": "提案当前状态不允许讨论"}
-        member = self.MEMBERS.get(member_id, BoardMember(member_id, member_id, "unknown"))
-        proposal["status"] = "discussing"
-        proposal["discussion"].append(
-            {
-                "member_id": member_id,
-                "member_name": member.name,
-                "opinion": opinion,
-                "timestamp": utc_now_iso(),
-            }
-        )
-        self._save(proposals)
+        result: Dict[str, Any] = {}
+
+        def mutate(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal result
+            proposal = next((item for item in proposals if item["id"] == proposal_id), None)
+            if not proposal:
+                result = {"error": f"提案不存在: {proposal_id}"}
+                return proposals
+            if proposal["status"] not in {"pending", "discussing"}:
+                result = {"error": "提案当前状态不允许讨论"}
+                return proposals
+            member = self.MEMBERS.get(member_id, BoardMember(member_id, member_id, "unknown"))
+            proposal["status"] = "discussing"
+            proposal["discussion"].append(
+                {
+                    "member_id": member_id,
+                    "member_name": member.name,
+                    "opinion": opinion,
+                    "timestamp": utc_now_iso(),
+                }
+            )
+            result = proposal
+            return proposals
+
+        self.store.update([], mutate)
+        if "error" in result:
+            return result
         self.event_log.append("proposal", "discussed", member_id, proposal_id, {"opinion": opinion})
-        return proposal
+        return result
 
     def cast_vote(self, proposal_id: str, member_id: str, vote: VoteResult, reason: str = "") -> Dict[str, Any]:
-        proposals = self._load()
-        proposal = next((item for item in proposals if item["id"] == proposal_id), None)
-        if not proposal:
-            return {"error": f"提案不存在: {proposal_id}"}
-        if proposal["status"] not in {"discussing", "voting", "pending"}:
-            return {"error": "提案当前状态不允许投票"}
-        if any(existing["member_id"] == member_id for existing in proposal["votes"]):
-            return {"error": "该成员已经投票"}
-        member = self.MEMBERS.get(member_id, BoardMember(member_id, member_id, "unknown"))
-        proposal["status"] = "voting"
-        proposal["votes"].append(
-            {
-                "member_id": member_id,
-                "member_name": member.name,
-                "vote": vote.value,
-                "weight": member.vote_weight,
-                "reason": reason,
-                "timestamp": utc_now_iso(),
-            }
-        )
-        self._save(proposals)
+        result: Dict[str, Any] = {}
+
+        def mutate(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal result
+            proposal = next((item for item in proposals if item["id"] == proposal_id), None)
+            if not proposal:
+                result = {"error": f"提案不存在: {proposal_id}"}
+                return proposals
+            if proposal["status"] not in {"discussing", "voting", "pending"}:
+                result = {"error": "提案当前状态不允许投票"}
+                return proposals
+            if any(existing["member_id"] == member_id for existing in proposal["votes"]):
+                result = {"error": "该成员已经投票"}
+                return proposals
+            member = self.MEMBERS.get(member_id, BoardMember(member_id, member_id, "unknown"))
+            proposal["status"] = "voting"
+            proposal["votes"].append(
+                {
+                    "member_id": member_id,
+                    "member_name": member.name,
+                    "vote": vote.value,
+                    "weight": member.vote_weight,
+                    "reason": reason,
+                    "timestamp": utc_now_iso(),
+                }
+            )
+            result = proposal
+            return proposals
+
+        self.store.update([], mutate)
+        if "error" in result:
+            return result
         self.event_log.append("proposal", "voted", member_id, proposal_id, {"vote": vote.value, "reason": reason})
-        return proposal
+        return result
 
     def tally_votes(self, proposal_id: str) -> Dict[str, Any]:
-        proposals = self._load()
-        proposal = next((item for item in proposals if item["id"] == proposal_id), None)
-        if not proposal:
-            return {"error": f"提案不存在: {proposal_id}"}
+        result: Dict[str, Any] = {}
 
-        if proposal["decision_type"] == DecisionType.EMERGENCY.value:
-            proposal["status"] = "approved"
-            proposal["result"] = "\u7d27\u6025\u51b3\u7b56\uff0c\u8463\u4e8b\u957f\u76f4\u63a5\u4e0b\u4ee4\u901a\u8fc7"
-            self._save(proposals)
-            self.event_log.append("proposal", "approved", "chairman", proposal_id, {"decision_type": proposal["decision_type"]})
-            return {"proposal_id": proposal_id, "result": "approved", "message": proposal["result"], "votes": proposal["votes"]}
+        def mutate(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal result
+            proposal = next((item for item in proposals if item["id"] == proposal_id), None)
+            if not proposal:
+                result = {"error": f"提案不存在: {proposal_id}"}
+                return proposals
 
-        total_weight = sum(float(vote["weight"]) for vote in proposal["votes"])
-        agree_weight = sum(float(vote["weight"]) for vote in proposal["votes"] if vote["vote"] == VoteResult.AGREE.value)
-        if total_weight <= 0:
-            return {"error": "无人投票"}
-        approval_rate = agree_weight / total_weight
-        passed = approval_rate > self.PASS_THRESHOLD
-        proposal["status"] = "approved" if passed else "rejected"
-        proposal["result"] = (
-            f"\u6295\u7968\u901a\u8fc7\uff0c\u8d5e\u6210\u7387 {approval_rate:.1%}"
-            if passed
-            else f"\u6295\u7968\u672a\u901a\u8fc7\uff0c\u8d5e\u6210\u7387 {approval_rate:.1%}\uff0c\u9700\u5927\u4e8e {self.PASS_THRESHOLD:.0%}"
-        )
-        self._save(proposals)
+            if proposal["decision_type"] == DecisionType.EMERGENCY.value:
+                proposal["status"] = "approved"
+                proposal["result"] = "\u7d27\u6025\u51b3\u7b56\uff0c\u8463\u4e8b\u957f\u76f4\u63a5\u4e0b\u4ee4\u901a\u8fc7"
+                result = {"proposal_id": proposal_id, "result": "approved", "message": proposal["result"], "votes": proposal["votes"]}
+                return proposals
+
+            total_weight = sum(float(vote["weight"]) for vote in proposal["votes"])
+            agree_weight = sum(float(vote["weight"]) for vote in proposal["votes"] if vote["vote"] == VoteResult.AGREE.value)
+            if total_weight <= 0:
+                result = {"error": "无人投票"}
+                return proposals
+            approval_rate = agree_weight / total_weight
+            passed = approval_rate > self.PASS_THRESHOLD
+            proposal["status"] = "approved" if passed else "rejected"
+            proposal["result"] = (
+                f"\u6295\u7968\u901a\u8fc7\uff0c\u8d5e\u6210\u7387 {approval_rate:.1%}"
+                if passed
+                else f"\u6295\u7968\u672a\u901a\u8fc7\uff0c\u8d5e\u6210\u7387 {approval_rate:.1%}\uff0c\u9700\u5927\u4e8e {self.PASS_THRESHOLD:.0%}"
+            )
+            result = {
+                "proposal_id": proposal_id,
+                "result": proposal["status"],
+                "approval_rate": approval_rate,
+                "threshold": self.PASS_THRESHOLD,
+                "total_weight": total_weight,
+                "agree_weight": agree_weight,
+                "message": proposal["result"],
+                "votes": proposal["votes"],
+            }
+            return proposals
+
+        self.store.update([], mutate)
+        if "error" in result:
+            return result
+        if result["result"] == "approved" and "approval_rate" not in result:
+            self.event_log.append("proposal", "approved", "chairman", proposal_id, {"decision_type": DecisionType.EMERGENCY.value})
+            return result
         self.event_log.append(
             "proposal",
-            proposal["status"],
+            result["result"],
             "board_room",
             proposal_id,
-            {"approval_rate": approval_rate, "agree_weight": agree_weight, "total_weight": total_weight},
+            {
+                "approval_rate": result["approval_rate"],
+                "agree_weight": result["agree_weight"],
+                "total_weight": result["total_weight"],
+            },
         )
-        return {
-            "proposal_id": proposal_id,
-            "result": proposal["status"],
-            "approval_rate": approval_rate,
-            "threshold": self.PASS_THRESHOLD,
-            "total_weight": total_weight,
-            "agree_weight": agree_weight,
-            "message": proposal["result"],
-            "votes": proposal["votes"],
-        }
+        return result
 
     def direct_order(self, proposal_id: str, order: str) -> Dict[str, Any]:
-        proposals = self._load()
-        proposal = next((item for item in proposals if item["id"] == proposal_id), None)
-        if not proposal:
-            return {"error": f"提案不存在: {proposal_id}"}
-        proposal["decision_type"] = DecisionType.EMERGENCY.value
-        proposal["status"] = "approved"
-        proposal["result"] = f"\u8463\u4e8b\u957f\u76f4\u63a5\u4e0b\u4ee4\uff1a{order}"
-        self._save(proposals)
+        result: Dict[str, Any] = {}
+
+        def mutate(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal result
+            proposal = next((item for item in proposals if item["id"] == proposal_id), None)
+            if not proposal:
+                result = {"error": f"提案不存在: {proposal_id}"}
+                return proposals
+            proposal["decision_type"] = DecisionType.EMERGENCY.value
+            proposal["status"] = "approved"
+            proposal["result"] = f"\u8463\u4e8b\u957f\u76f4\u63a5\u4e0b\u4ee4\uff1a{order}"
+            result = {"proposal_id": proposal_id, "result": "approved", "message": proposal["result"]}
+            return proposals
+
+        self.store.update([], mutate)
+        if "error" in result:
+            return result
         self.event_log.append("proposal", "direct_order", "chairman", proposal_id, {"order": order})
-        return {"proposal_id": proposal_id, "result": "approved", "message": proposal["result"]}
+        return result
 
     def get_summary(self) -> Dict[str, Any]:
         proposals = self._load()

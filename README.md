@@ -254,25 +254,6 @@ PMO：已派发至研发中心执行
 
 ---
 
-## 🗺️ Roadmap
-
-### Phase 1 — 核心架构 ✅
-- [x] 13 个 Agent 角色定义
-- [x] 任务流转状态机
-- [x] 企业看板 Dashboard
-
-### Phase 2 — 功能深化 🚧
-- [ ] 多 Agent 会议讨论引擎
-- [ ] 外部 Skill 集成
-- [ ] Agent 性能统计
-
-### Phase 3 — 生态扩展
-- [ ] 插件市场
-- [ ] 企业级权限管理
-- [ ] 多租户支持
-
----
-
 ## 🤝 参与贡献
 
 欢迎提交 Issue 和 Pull Request！
@@ -284,7 +265,3 @@ PMO：已派发至研发中心执行
 ## 📄 License
 
 [MIT License](LICENSE)
-
----
-
-#等一下
