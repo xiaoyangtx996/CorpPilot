@@ -285,6 +285,14 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
         董事会
       </button>
+      <button class="nav-btn" onclick="switchTab('runtime')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        运行时
+      </button>
+      <button class="nav-btn" onclick="switchTab('models')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 15.54a5 5 0 0 1 0-7.07"></path></svg>
+        模型配置
+      </button>
     </div>
   </div>
 </nav>
@@ -392,6 +400,103 @@
   </div>
   <div class="card">
     <div id="board-container">暂无提案记录。</div>
+  </div>
+</main>
+
+<!-- 视图: 运行时控制台 -->
+<main id="runtime" class="container">
+  <div class="toolbar">
+    <div class="toolbar-title">运行时控制台</div>
+    <button class="btn" onclick="loadTrafficStats()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新</button>
+  </div>
+  <div class="grid-view grid-2" style="margin-bottom:24px;">
+    <div class="card">
+      <div class="card-title">发送业务目标</div>
+      <div class="field">
+        <label>目标 Agent</label>
+        <input id="rt-agent-id" value="ceo" placeholder="ceo">
+      </div>
+      <div class="field">
+        <label>业务目标描述</label>
+        <textarea id="rt-task-desc" placeholder="请描述你的业务目标，Agent 将接收并开始协同执行…" style="min-height:140px;"></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="triggerRunTask()">启动 Agent 协同流程</button>
+      <div id="rt-result" style="margin-top:12px;font-size:13px;color:var(--text-secondary);"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">流量监控 <span id="traffic-window-badge" class="badge gray" style="font-size:11px;margin-left:6px;">最近1小时</span></div>
+      <div class="grid-view grid-2" style="gap:12px;margin-bottom:16px;">
+        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
+          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">API 调用</div>
+          <div id="tr-calls" style="font-size:28px;font-weight:600;margin-top:4px;">-</div>
+        </div>
+        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
+          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">总 Token 量</div>
+          <div id="tr-tokens" style="font-size:28px;font-weight:600;margin-top:4px;">-</div>
+        </div>
+        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
+          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">估算成本 (USD)</div>
+          <div id="tr-cost" style="font-size:28px;font-weight:600;margin-top:4px;">$-</div>
+        </div>
+        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
+          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">平均延迟 (ms)</div>
+          <div id="tr-latency" style="font-size:28px;font-weight:600;margin-top:4px;">-</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);width:100%;margin-bottom:4px;">按模型分布</div>
+        <div id="tr-by-model" style="width:100%;"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="toolbar" style="margin-bottom:16px;">
+      <div class="card-title" style="margin:0;">最近调用记录</div>
+      <a href="/api/traffic/export" class="btn btn-sm" download>导出 JSONL</a>
+    </div>
+    <div id="tr-recent-list"></div>
+  </div>
+</main>
+
+<!-- 视图: 模型配置 -->
+<main id="models" class="container">
+  <div class="toolbar">
+    <div class="toolbar-title">网络神经元架构配置 (Model Pool & Routes)</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" onclick="loadModels()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新配置</button>
+      <button class="btn btn-primary" onclick="saveAllModelsConfig()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> 保存并重载内核</button>
+    </div>
+  </div>
+  
+  <div class="grid-view grid-2" style="margin-bottom:24px;">
+    <!-- 左侧：模型池 -->
+    <div class="card">
+      <div class="card-title">模型池 (Model Pool)</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">登记系统可调用的所有底层模型实例，为上层路由提供选项。</p>
+      <div id="models-pool-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <button class="btn btn-sm" style="margin-top:16px;width:100%;border:1px dashed var(--border-color);background:none;" onclick="addModelToPool()">+ 新增模型实例</button>
+    </div>
+    
+    <!-- 右侧：全局路由 -->
+    <div class="card">
+      <div class="card-title">全局按能力路由 (Global Routes)</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">设置各能力域（如文本、绘图）的默认处理大脑及跌落容灾策略。</p>
+      <div id="models-global-routes" style="display:flex;flex-direction:column;gap:16px;"></div>
+    </div>
+  </div>
+  
+  <!-- 下部：层级覆盖配置 -->
+  <div class="card">
+    <div class="card-title">网状干预覆盖 (Hierarchical Overrides)</div>
+    <div class="toolbar" style="margin-bottom: 16px;">
+      <div class="segment-control">
+        <button class="segment-btn active" onclick="switchRouteTab(this, 'agent')">Agent级</button>
+        <button class="segment-btn" onclick="switchRouteTab(this, 'role')">岗位级</button>
+        <button class="segment-btn" onclick="switchRouteTab(this, 'department')">部门级</button>
+      </div>
+      <button class="btn btn-sm" onclick="addRouteOverride()">+ 添加覆盖策略</button>
+    </div>
+    <div id="models-overrides-list"></div>
   </div>
 </main>
 
@@ -742,9 +847,267 @@
     }catch(err){console.error(err);alert('网络阻断');}
   }
 
-  function fmt(v){if(!v)return'-';const d=new Date(v);return isNaN(d)?v:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;}
+  function fmt(v){if(!v)return'-';const d=new Date(v);return isNaN(d)?v:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;  }
   function esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function appAlert(m){alert(m);}
+
+  // ──────────────────── 运行时控制台 ────────────────────
+
+  async function triggerRunTask() {
+    const agentId = document.getElementById('rt-agent-id').value.trim() || 'ceo';
+    const task = document.getElementById('rt-task-desc').value.trim();
+    const resultEl = document.getElementById('rt-result');
+    if (!task) { resultEl.textContent = '请输入业务目标描述。'; return; }
+    resultEl.innerHTML = '<span style="color:var(--blue);">正在提交...</span>';
+    try {
+      const r = await fetch('/api/run/task', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({agent_id: agentId, task}),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        resultEl.innerHTML = `<span style="color:var(--green);">✓ ${esc(agentId)} 已在后台启动，正在处理目标。</span>`;
+        document.getElementById('rt-task-desc').value = '';
+        setTimeout(loadTrafficStats, 2000);
+      } else {
+        resultEl.innerHTML = `<span style="color:var(--red);">错误：${esc(d.error||'未知错误')}</span>`;
+      }
+    } catch(e) {
+      resultEl.innerHTML = `<span style="color:var(--red);">网络错误：${esc(String(e))}</span>`;
+    }
+  }
+
+  async function loadTrafficStats() {
+    try {
+      const r = await fetch('/api/traffic?window=1h');
+      const d = await r.json();
+      const s = d.stats || {};
+      document.getElementById('tr-calls').textContent = s.total_calls ?? '-';
+      document.getElementById('tr-tokens').textContent = s.total_tokens ? s.total_tokens.toLocaleString() : '-';
+      document.getElementById('tr-cost').textContent = s.total_cost_usd != null ? `$${s.total_cost_usd.toFixed(4)}` : '$-';
+      document.getElementById('tr-latency').textContent = s.avg_latency_ms ?? '-';
+      // 按模型分布
+      const byModel = s.by_model || {};
+      const byModelEl = document.getElementById('tr-by-model');
+      if (Object.keys(byModel).length === 0) {
+        byModelEl.innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;">暂无数据</div>';
+      } else {
+        byModelEl.innerHTML = Object.entries(byModel).map(([mdl, info]) =>
+          `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);">
+            <span style="font-weight:500;">${esc(mdl)}</span>
+            <span style="color:var(--text-secondary);">${info.calls} 次 · ${(info.tokens||0).toLocaleString()} tok · $${(info.cost_usd||0).toFixed(4)}</span>
+          </div>`
+        ).join('');
+      }
+      // 最近记录
+      const recent = d.recent || [];
+      const listEl = document.getElementById('tr-recent-list');
+      if (recent.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><p>暂无调用记录</p></div>';
+      } else {
+        listEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="color:var(--text-secondary);">
+            <th style="text-align:left;padding:8px 0;font-weight:500;">时间</th>
+            <th style="text-align:left;padding:8px;font-weight:500;">Agent</th>
+            <th style="text-align:left;padding:8px;font-weight:500;">模型</th>
+            <th style="text-align:right;padding:8px;font-weight:500;">Tokens</th>
+            <th style="text-align:right;padding:8px;font-weight:500;">延迟 ms</th>
+            <th style="text-align:right;padding:8px 0;font-weight:500;">成本 USD</th>
+          </tr></thead>
+          <tbody>${recent.map(r => `<tr style="border-top:1px solid var(--border-light);">
+            <td style="padding:8px 0;color:var(--text-tertiary);">${fmt(new Date(r.ts*1000))}</td>
+            <td style="padding:8px;">${esc(r.agent_id||'-')}</td>
+            <td style="padding:8px;">${esc(r.model||'-')}</td>
+            <td style="padding:8px;text-align:right;">${(r.total_tokens||0).toLocaleString()}</td>
+            <td style="padding:8px;text-align:right;">${r.latency_ms||'-'}</td>
+            <td style="padding:8px 0;text-align:right;">$${(r.cost_usd||0).toFixed(5)}</td>
+          </tr>`).join('')}</tbody></table>`;
+      }
+    } catch(e) { console.error('loadTrafficStats error:', e); }
+  }
+
+  // ──────────────────── 模型配置管理 (v2) ────────────────────
+  let g_llmConfig = {models:[], global_routes:{}, department_routes:{}, role_routes:{}, agent_routes:{}};
+  let g_currentRouteTarget = 'agent'; // 'agent', 'role', 'department'
+
+  async function loadModels() {
+    try {
+      const r = await fetch('/api/models');
+      const d = await r.json();
+      if (!d.config) return;
+      g_llmConfig = {
+        models: d.config.models || [],
+        global_routes: d.config.global_routes || { chat: { primary: '', fallback: '', max_retries: 3 } },
+        department_routes: d.config.department_routes || {},
+        role_routes: d.config.role_routes || {},
+        agent_routes: d.config.agent_routes || {}
+      };
+      // 预填充缺失的基础结构
+      if (!g_llmConfig.global_routes.chat) g_llmConfig.global_routes.chat = { primary: '', fallback: '', max_retries: 3 };
+      if (!g_llmConfig.global_routes.image) g_llmConfig.global_routes.image = { primary: '', fallback: '', max_retries: 2 };
+      
+      renderModelPool();
+      renderGlobalRoutes();
+      renderOverrides();
+    } catch(e) { console.error('loadModels error:', e); alert('加载模型配置失败'); }
+  }
+
+  function getModelOptionsHtml(selectedId, emptyText="-- 请选择 --") {
+    let html = `<option value="">${emptyText}</option>`;
+    for (const m of g_llmConfig.models) {
+      const sel = (m.id === selectedId) ? 'selected' : '';
+      html += `<option value="${esc(m.id)}" ${sel}>[${esc(m.provider)}] ${esc(m.model)} (${esc(m.id)})</option>`;
+    }
+    return html;
+  }
+
+  // == 模型池渲染 ==
+  function renderModelPool() {
+    const listEl = document.getElementById('models-pool-list');
+    listEl.innerHTML = g_llmConfig.models.map((m, idx) => `
+      <div style="background:var(--card-bg);border:1px solid var(--border-light);border-radius:12px;padding:16px;position:relative;box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <input class="field" style="flex:1;padding:8px;font-size:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" placeholder="型号简写 (如 gpt-4)" value="${esc(m.id)}" onchange="g_llmConfig.models[${idx}].id=this.value;renderAll()">
+          <select class="field" style="width:120px;padding:8px;font-size:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" onchange="g_llmConfig.models[${idx}].type=this.value">
+            <option value="chat" ${m.type==='chat'?'selected':''}>Chat (文本)</option>
+            <option value="image" ${m.type==='image'?'selected':''}>Image (绘图)</option>
+            <option value="embedding" ${m.type==='embedding'?'selected':''}>Embedding</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <input class="field" style="width:100px;padding:8px;font-size:13px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" placeholder="厂商" value="${esc(m.provider)}" onchange="g_llmConfig.models[${idx}].provider=this.value">
+          <input class="field" style="flex:1;padding:8px;font-size:13px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" placeholder="模型调用名 (如 gpt-4o)" value="${esc(m.model)}" onchange="g_llmConfig.models[${idx}].model=this.value">
+        </div>
+        <div>
+          <input class="field" style="width:100%;padding:8px;font-size:13px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" placeholder="API Key（或填入 \${环境变量名}）" value="${esc(m.api_key_env||'')}" onchange="g_llmConfig.models[${idx}].api_key_env=this.value">
+        </div>
+        <button class="btn btn-sm" style="position:absolute;top:16px;right:16px;width:28px;height:28px;border-radius:14px;padding:0;background:var(--accent-light);color:var(--text-secondary);" onclick="g_llmConfig.models.splice(${idx},1);renderAll()" title="移除此模型">✕</button>
+      </div>
+    `).join('');
+  }
+  function addModelToPool() {
+    g_llmConfig.models.push({id: "new-model-" + Date.now().toString().slice(-4), provider: "openai", model: "", type: "chat"});
+    renderAll();
+  }
+
+  // == 全局路由渲染 ==
+  function renderGlobalRoutes() {
+    const rEl = document.getElementById('models-global-routes');
+    rEl.innerHTML = ['chat', 'image'].map(capType => {
+      const cfg = g_llmConfig.global_routes[capType];
+      return `
+      <div style="background:var(--card-bg);border:1px solid var(--border-light);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+        <div style="font-weight:600;font-size:14px;margin-bottom:16px;text-transform:uppercase;color:var(--text-main);display:flex;align-items:center;gap:8px;">
+          <span style="width:8px;height:8px;border-radius:4px;background:var(--blue);"></span> ${capType} 能力域集群
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:500;margin-bottom:6px;display:block;">首发路由 (Primary)</label>
+          <select style="width:100%;padding:10px;font-size:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" onchange="g_llmConfig.global_routes['${capType}'].primary=this.value">${getModelOptionsHtml(cfg.primary)}</select>
+        </div>
+        <div style="display:flex;gap:16px;align-items:flex-end;">
+          <div class="field" style="flex:1;margin:0;">
+            <label style="font-size:12px;font-weight:500;margin-bottom:6px;display:block;">降级重试阈值</label>
+            <input type="number" min="1" max="5" style="width:100%;padding:10px;font-size:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" value="${cfg.max_retries||3}" onchange="g_llmConfig.global_routes['${capType}'].max_retries=parseInt(this.value)">
+          </div>
+          <div class="field" style="flex:2;margin:0;">
+            <label style="font-size:12px;font-weight:500;margin-bottom:6px;display:block;">熔断跌落 (Fallback)</label>
+            <select style="width:100%;padding:10px;font-size:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" onchange="g_llmConfig.global_routes['${capType}'].fallback=this.value">${getModelOptionsHtml(cfg.fallback, "-- 放弃调用 --")}</select>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // == 层级覆盖渲染 ==
+  function switchRouteTab(btn, targetType) {
+    document.querySelectorAll('#models .segment-btn').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    g_currentRouteTarget = targetType;
+    renderOverrides();
+  }
+  
+  function getOverridesDict() {
+    if(g_currentRouteTarget==='agent') return g_llmConfig.agent_routes;
+    if(g_currentRouteTarget==='role') return g_llmConfig.role_routes;
+    return g_llmConfig.department_routes;
+  }
+
+  function renderOverrides() {
+    const listEl = document.getElementById('models-overrides-list');
+    const dict = getOverridesDict();
+    const typeLabel = g_currentRouteTarget === 'agent' ? '指定智能体 (Agent ID)' : (g_currentRouteTarget === 'role' ? '所属职能体系 (Role ID)' : '所属架构树 (Dept ID)');
+    
+    if (Object.keys(dict).length === 0) {
+      listEl.innerHTML = '<div class="empty-state" style="padding:48px 0;border:1px dashed var(--border-color);border-radius:12px;"><p>该干预面处于纯净基态，遵循下级链路继承传递。</p></div>';
+      return;
+    }
+
+    listEl.innerHTML = Object.entries(dict).map(([targetId, routesArr]) => `
+      <div class="list-item" style="padding:20px;background:#fff;border-radius:14px;margin-bottom:16px;border:1px solid var(--border-light);box-shadow:0 2px 12px rgba(0,0,0,0.03);flex-direction:column;align-items:stretch;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:16px;align-items:center;">
+          <div style="font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px;">
+            <span class="badge blue">${typeLabel}</span> <span style="font-family:monospace;">${esc(targetId)}</span>
+          </div>
+          <button class="btn btn-sm btn-danger" onclick="delete getOverridesDict()['${esc(targetId)}']; renderOverrides()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> 摘除拦截器</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="field" style="margin:0;"><label style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;display:block;">[Chat 泛指令] 会话拦截分配</label>
+            <select style="width:100%;padding:10px;font-size:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" onchange="getOverridesDict()['${esc(targetId)}'].chat=this.value">${getModelOptionsHtml(routesArr.chat, "-- 空投给低优先级 --")}</select>
+          </div>
+          <div class="field" style="margin:0;"><label style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;display:block;">[Image 多模态] 绘图拦截分配</label>
+            <select style="width:100%;padding:10px;font-size:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-color);" onchange="getOverridesDict()['${esc(targetId)}'].image=this.value">${getModelOptionsHtml(routesArr.image, "-- 空投给低优先级 --")}</select>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function addRouteOverride() {
+    const lbl = g_currentRouteTarget === 'agent' ? 'Agent ID (如 ceo)' : (g_currentRouteTarget === 'role' ? 'Role ID (如 architect)' : 'Department ID (如 pmo)');
+    const targetId = prompt(`输入要拦截分配指令的 ${lbl}：`);
+    if (!targetId) return;
+    const dict = getOverridesDict();
+    if (!dict[targetId]) dict[targetId] = { chat: '', image: '' };
+    renderOverrides();
+  }
+
+  function renderAll() {
+    renderModelPool();
+    renderGlobalRoutes();
+    renderOverrides();
+  }
+
+  async function saveAllModelsConfig() {
+    try {
+      const btn = document.querySelector('button[onclick="saveAllModelsConfig()"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '正在刷写底座簇...';
+      const r = await fetch('/api/models', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ action: 'save_all', config: g_llmConfig })
+      });
+      const d = await r.json();
+      btn.innerHTML = originalText;
+      
+      if (d.ok) {
+        alert('系统路由矩阵已全部重塑完毕！新下达的任务指令即刻生效。');
+        loadModels();
+      } else {
+        alert('核心更新握手失败：' + d.error);
+      }
+    } catch(e) { alert('网络链路阻断: ' + e); }
+  }
+
+  // 页面切换时按需加载新视图数据
+  const _origSwitchTab = switchTab;
+  switchTab = function(tab) {
+    _origSwitchTab(tab);
+    if (tab === 'runtime') loadTrafficStats();
+    if (tab === 'models') loadModels();
+  };
+
 </script>
 </body>
 </html>

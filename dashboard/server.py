@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 CorpPilot Dashboard Server
 统一暴露任务、董事会、Agent 和 Skill 的 HTTP API。
@@ -94,6 +94,13 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
 
+
+        if path == "/api/models":
+            self.handle_post_models(data)
+            return
+        if path == "/api/run/task":
+            self.handle_run_task(data)
+            return
         if path == "/api/tasks":
             self.handle_get_tasks(query)
             return
@@ -143,6 +150,22 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
             members = {key: value.__dict__ for key, value in BoardRoom.MEMBERS.items()}
             self.send_json_response({"members": members})
             return
+
+        if path == "/api/departments":
+            self.send_json_response(self.agent_monitor.get_department_health())
+            return
+        if path == "/api/models":
+            self.handle_get_models()
+            return
+        if path == "/api/traffic":
+            self.handle_get_traffic(query)
+            return
+        if path == "/api/traffic/export":
+            self.handle_export_traffic()
+            return
+        if path.startswith("/api/run/logs"):
+            self.handle_sse_logs()
+            return
         if path in {"/", "/dashboard"}:
             self.serve_dashboard()
             return
@@ -157,6 +180,13 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
             self.send_error_response(str(exc))
             return
 
+
+        if path == "/api/models":
+            self.handle_post_models(data)
+            return
+        if path == "/api/run/task":
+            self.handle_run_task(data)
+            return
         if path == "/api/tasks":
             self.handle_create_task(data)
             return
@@ -404,6 +434,102 @@ class CorpPilotAPI(BaseHTTPRequestHandler):
             self.send_error_response(result["error"])
             return
         self.send_json_response(result)
+
+    # ─────────────────────────────────────────────────────── #
+    # 模型配置 API
+    # ─────────────────────────────────────────────────────── #
+
+    def handle_get_models(self) -> None:
+        try:
+            from runtime.model_router import ModelRouter
+            router = ModelRouter()
+            self.send_json_response({"config": router.to_dict()})
+        except ImportError as exc:
+            self.send_json_response({"config": {}, "error": str(exc)})
+
+    def handle_post_models(self, data: dict) -> None:
+        try:
+            from runtime.model_router import ModelRouter
+            router = ModelRouter()
+            action = data.get("action")
+            if action == "save_all":
+                new_cfg = data.get("config")
+                if not isinstance(new_cfg, dict):
+                    self.send_error_response("config 必须是一个字典")
+                    return
+                router.save_config(new_cfg)
+                self.send_json_response({"ok": True, "config": router.to_dict()})
+            else:
+                self.send_error_response(f"未知 action: {action}")
+        except Exception as exc:
+            self.send_error_response(str(exc))
+
+    # ─────────────────────────────────────────────────────── #
+    # 流量统计 API
+    # ─────────────────────────────────────────────────────── #
+
+    def handle_get_traffic(self, query: dict) -> None:
+        try:
+            from runtime.model_router import ModelRouter
+            from runtime.traffic_monitor import TrafficMonitor
+            router = ModelRouter()
+            monitor = TrafficMonitor(router=router)
+            window = (query.get("window", ["1h"]) or ["1h"])[0]
+            self.send_json_response({
+                "stats": monitor.get_stats(window),
+                "recent": monitor.get_recent(20),
+            })
+        except Exception as exc:
+            self.send_json_response({"stats": {}, "error": str(exc)})
+
+    def handle_export_traffic(self) -> None:
+        import time as _time
+        log_file = Path(__file__).resolve().parent.parent / "data" / "traffic_logs.jsonl"
+        payload = log_file.read_bytes() if log_file.exists() else b""
+        ts = _time.strftime("%Y%m%d-%H%M%S")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/jsonlines")
+        self.send_header("Content-Disposition", f"attachment; filename=traffic_{ts}.jsonl")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    # ─────────────────────────────────────────────────────── #
+    # 运行时任务触发 API
+    # ─────────────────────────────────────────────────────── #
+
+    def handle_run_task(self, data: dict) -> None:
+        import threading as _threading
+        try:
+            from runtime.llm_client import LLMClient
+            from runtime.model_router import ModelRouter
+            from runtime.traffic_monitor import TrafficMonitor
+            from runtime.message_bus import MessageBus
+            from runtime.agent_manager import AgentManager
+        except ImportError as exc:
+            self.send_error_response(f"runtime 模块未安装: {exc}")
+            return
+
+        agent_id = data.get("agent_id", "ceo")
+        task_desc = data.get("task", "")
+        if not task_desc:
+            self.send_error_response("task 字段不能为空")
+            return
+
+        def _bg() -> None:
+            router = ModelRouter()
+            monitor = TrafficMonitor(router=router)
+            client = LLMClient()
+            bus = MessageBus()
+            manager = AgentManager(bus, router, monitor, client, self.task_service)
+            manager.spawn(agent_id=agent_id, initial_task=task_desc)
+
+        _threading.Thread(target=_bg, daemon=True).start()
+        self.send_json_response({"ok": True, "agent_id": agent_id})
+
+    def handle_departments(self) -> None:
+        self.send_json_response(self.agent_monitor.get_department_health())
 
     def serve_dashboard(self) -> None:
         dashboard_file = Path(__file__).parent / "dashboard.html"
