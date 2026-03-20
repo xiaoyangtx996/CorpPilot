@@ -1,93 +1,750 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CorpPilot 企业智能看板</title>
+  <title>CorpPilot Dashboard</title>
   <style>
-    :root{--bg:#f5f1e8;--panel:#fffdf8;--line:#ddd2c1;--ink:#1f2937;--muted:#6b7280;--accent:#0f766e;--danger:#b91c1c;--warn:#b45309}
-    *{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:linear-gradient(180deg,#faf7f0 0%,var(--bg) 100%);color:var(--ink)}
-    .app{max-width:1440px;margin:0 auto;padding:24px 18px 40px}.hero,.layout,.extra,.stats{display:grid;gap:16px}.hero{grid-template-columns:1.2fr .8fr}.layout{grid-template-columns:320px 1fr;margin-top:16px}.extra{grid-template-columns:1fr 1fr 1fr;margin-top:16px}.stats{grid-template-columns:repeat(6,minmax(0,1fr));margin-top:16px}
-    .panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 30px rgba(31,41,55,.08)}.pad{padding:20px}.badge,.pill,.flow-step,.btn{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid var(--line)}
-    .badge{padding:7px 12px;background:rgba(15,118,110,.12);color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.pill,.flow-step{padding:6px 10px;font-size:12px;background:#faf6ef}.btn{padding:9px 14px;background:#fff;cursor:pointer;font-size:13px}.btn:hover,.active{border-color:rgba(15,118,110,.4);color:var(--accent)}.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}.btn-danger{color:var(--danger)}.btn-warn{color:var(--warn)}
-    h1{margin:14px 0 10px;font-size:clamp(32px,5vw,52px);line-height:1.05}h2,h3{margin:0}.muted,.hint{color:var(--muted);font-size:14px;line-height:1.7}.metric{padding:18px;border:1px solid rgba(15,118,110,.18);border-radius:18px;background:linear-gradient(135deg,rgba(15,118,110,.08),rgba(255,255,255,.75))}.metric .v,.stat .v{margin-top:8px;font-size:30px;font-weight:800}.stat .k,.metric .k,.section{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-    .toolbar,.row,.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.wrap{display:flex;flex-wrap:wrap;gap:8px}.list{display:grid;gap:12px;margin-top:14px}.agent,.task,.card,.event,.timeline{border:1px solid var(--line);border-radius:16px;background:#fff;padding:14px}.agent{cursor:pointer}.agent:hover{border-color:rgba(15,118,110,.4)}.mono{font-family:Consolas,monospace;color:var(--accent);font-size:13px;font-weight:700}.task .title{margin:8px 0;font-size:18px;font-weight:800}.empty{padding:36px 12px;border:1px dashed var(--line);border-radius:16px;text-align:center;color:var(--muted)}
-    .modal{display:none;position:fixed;inset:0;background:rgba(17,24,39,.42);align-items:center;justify-content:center;padding:18px}.modal.show{display:flex}.modal-card{width:min(560px,100%)}.field{display:grid;gap:6px;margin-bottom:12px}.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font:inherit}.field textarea{min-height:100px}.close{border:0;background:transparent;font-size:26px;cursor:pointer}
-    @media (max-width:1180px){.layout,.extra,.hero,.stats{grid-template-columns:1fr}} 
+    :root {
+      --bg-color: #fbfbfd;
+      --card-bg: #ffffff;
+      --text-main: #1d1d1f;
+      --text-secondary: #86868b;
+      --text-tertiary: #a1a1a6;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --border-light: rgba(0, 0, 0, 0.04);
+      --accent: #1d1d1f;
+      --accent-light: rgba(0, 0, 0, 0.05);
+      --accent-hover: rgba(0, 0, 0, 0.08);
+      --blue: #007aff;
+      --green: #34c759;
+      --orange: #ff9500;
+      --red: #ff3b30;
+      
+      --nav-height: 52px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      padding-top: var(--nav-height);
+    }
+
+    h1, h2, h3, h4, p { margin: 0; }
+    button { font-family: inherit; border: none; background: none; cursor: pointer; padding: 0; }
+    input, select, textarea { font-family: inherit; }
+    
+    /* 顶部导航 (Glassmorphism) */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--nav-height);
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+    }
+    
+    .nav-inner {
+      width: 100%; max-width: 1024px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 24px;
+    }
+
+    .brand { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; gap: 6px; }
+    .brand svg { width: 20px; height: 20px; }
+
+    .nav-links { display: flex; gap: 8px; }
+    .nav-btn {
+      padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--text-secondary);
+      border-radius: 980px; transition: all 0.2s ease;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .nav-btn:hover { background: var(--accent-light); color: var(--text-main); }
+    .nav-btn.active { background: var(--text-main); color: #fff; }
+
+    /* 通用容器与卡片 */
+    .container { max-width: 1024px; margin: 0 auto; padding: 32px 24px; display: none; }
+    .container.active { display: block; animation: fadeIn 0.3s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .grid-view { display: grid; gap: 20px; }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    
+    @media (max-width: 768px) {
+      .grid-3, .grid-4 { grid-template-columns: repeat(1, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+      border: 1px solid var(--border-light);
+      position: relative;
+    }
+    .card-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; letter-spacing: -0.01em; }
+
+    /* 数据概览指标 */
+    .metric { text-align: left; }
+    .metric-value { font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 4px; }
+    .metric-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+
+    /* 状态指示器 (Pills) */
+    .badge {
+      display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 980px; 
+      font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+      background: var(--accent-light); color: var(--text-main); white-space: nowrap;
+    }
+    .badge.green { background: rgba(52,199,89,0.12); color: var(--green); }
+    .badge.blue { background: rgba(0,122,255,0.12); color: var(--blue); }
+    .badge.orange { background: rgba(255,149,0,0.12); color: var(--orange); }
+    .badge.red { background: rgba(255,59,48,0.12); color: var(--red); }
+    .badge.gray { background: #f2f2f7; color: var(--text-secondary); }
+
+    /* 部门架构卡片 */
+    .dept-card { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .dept-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    .dept-card h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .dept-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 16px; }
+    .dept-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+    .dept-stat-item {
+      display: flex; flex-direction: column; background: var(--bg-color);
+      padding: 8px 12px; border-radius: var(--radius-sm); flex: 1; text-align: center;
+    }
+    .dept-stat-item strong { font-size: 16px; font-weight: 600; }
+    .dept-stat-item span { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* 列表与表格元素取代 */
+    .list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 0; border-bottom: 1px solid var(--border-color);
+    }
+    .list-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .list-item-main { flex: 1; min-width: 0; padding-right: 16px; }
+    .list-item-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-item-desc { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-item-action { display: flex; gap: 8px; align-items: center; }
+
+    /* 按钮 */
+    .btn {
+      padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 980px;
+      transition: all 0.2s; background: var(--accent-light); color: var(--text-main);
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-primary { background: var(--text-main); color: #fff; }
+    .btn-primary:hover { background: #000; color: #fff; }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-blue:hover { background: #0066d6; color: #fff; }
+    .btn-danger { color: var(--red); background: rgba(255,59,48,0.1); }
+    .btn-danger:hover { background: rgba(255,59,48,0.15); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    /* 工具条 */
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .toolbar-title { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+    .segment-control { display: flex; background: var(--accent-light); padding: 3px; border-radius: 980px; }
+    .segment-btn { padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--text-secondary); border-radius: 980px; }
+    .segment-btn.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* 侧边滑栏 (Drawer) - Agent 详情 */
+    .drawer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.2); backdrop-filter: blur(4px);
+      z-index: 2000; opacity: 0; visibility: hidden; transition: all 0.3s ease;
+    }
+    .drawer-overlay.open { opacity: 1; visibility: visible; }
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100%);
+      background: var(--bg-color); box-shadow: -4px 0 24px rgba(0,0,0,0.1);
+      transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 2001; display: flex; flex-direction: column;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header {
+      padding: 16px 24px; border-bottom: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 2;
+    }
+    .drawer-body { padding: 24px; overflow-y: auto; flex: 1; }
+    .close-btn { width: 32px; height: 32px; border-radius: 16px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; color: var(--text-main); transition: background 0.2s; }
+    .close-btn:hover { background: var(--border-color); }
+
+    /* Agent 横幅 */
+    .agent-hero { text-align: center; margin-bottom: 32px; }
+    .agent-avatar {
+      width: 72px; height: 72px; border-radius: 24px; background: #fff;
+      margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid var(--border-light);
+    }
+    .agent-avatar svg { width: 36px; height: 36px; color: var(--text-main); }
+    .agent-hero h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+
+    /* 模态框 */
+    .modal {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+      z-index: 3000; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal.show { display: flex; animation: fadeIn 0.2s; }
+    .modal-card { width: min(480px, 100%); max-height: 90vh; overflow-y: auto; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color); background: var(--bg-color); font-size: 15px; outline: none; transition: border 0.2s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); background: #fff; }
+    .field textarea { min-height: 100px; resize: vertical; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--text-tertiary); }
+    .empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+    /* 时间线样式更新 */
+    .timeline-item {
+      position: relative; padding-left: 24px; padding-bottom: 24px;
+    }
+    .timeline-item::before {
+      content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--border-color);
+    }
+    .timeline-item:last-child::before { bottom: auto; height: 100%; }
+    .timeline-dot {
+      position: absolute; left: 0; top: 2px; width: 14px; height: 14px; border-radius: 7px;
+      background: var(--card-bg); border: 2px solid var(--text-secondary); z-index: 1;
+    }
+    .timeline-content {
+      background: var(--bg-color); border-radius: var(--radius-sm); padding: 12px;
+      border: 1px solid var(--border-light);
+    }
+    .timeline-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .timeline-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+    /* 部门详情页面专属样式 */
+    .view-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+    }
+    .back-btn {
+      width: 36px; height: 36px; border-radius: 18px; background: var(--card-bg);
+      display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); transition: all 0.2s; color: var(--text-main);
+    }
+    .back-btn:hover { background: var(--accent-light); }
+    
+    .agent-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .agent-card {
+      padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);
+      background: var(--bg-color); cursor: pointer; transition: all 0.2s;
+      display: flex; flex-direction: column;
+    }
+    .agent-card:hover { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: var(--text-secondary); }
+    .agent-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .agent-role { font-size: 15px; font-weight: 600; }
+    .agent-id { font-size: 12px; color: var(--text-secondary); font-family: monospace; }
   </style>
 </head>
 <body>
-<div class="app">
-  <section class="hero">
-    <div class="panel pad">
-      <span class="badge">Multi-Agent Runtime</span>
-      <h1>CorpPilot 企业智能看板</h1>
-      <p class="muted">这一轮重点是把控制面补齐：任务、董事会提案、统一事件流和执行协议都收口到一个页面，继续向真实多 Agent 协作系统靠拢。</p>
-      <div class="wrap" style="margin-top:16px"><span class="flow-step">任务流</span><span class="flow-step">提案流</span><span class="flow-step">事件流</span><span class="flow-step">执行协议</span><span class="flow-step">Agent 健康</span></div>
+
+<!-- 导航栏 -->
+<nav>
+  <div class="nav-inner">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5Z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+      CorpPilot
     </div>
-    <div class="panel pad" style="display:grid;gap:12px">
-      <div class="metric"><div class="k">系统状态</div><div class="v">在线</div></div>
-      <div class="metric"><div class="k">本轮重点</div><div class="v">提案 + 事件 + 执行</div></div>
+    <div class="nav-links">
+      <button class="nav-btn active" onclick="switchTab('overview')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        全景概览
+      </button>
+      <button class="nav-btn" onclick="switchTab('departments')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        组织架构
+      </button>
+      <button class="nav-btn" onclick="switchTab('tasks')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        任务中心
+      </button>
+      <button class="nav-btn" onclick="switchTab('board')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        董事会
+      </button>
     </div>
-  </section>
-  <section class="stats">
-    <div class="panel pad stat"><div class="k">任务总量</div><div class="v" id="totalTasks">0</div></div>
-    <div class="panel pad stat"><div class="k">待处理</div><div class="v" id="pendingTasks">0</div></div>
-    <div class="panel pad stat"><div class="k">执行中</div><div class="v" id="executingTasks">0</div></div>
-    <div class="panel pad stat"><div class="k">已阻塞</div><div class="v" id="blockedTasks">0</div></div>
-    <div class="panel pad stat"><div class="k">已完成</div><div class="v" id="completedTasks">0</div></div>
-    <div class="panel pad stat"><div class="k">提案总量</div><div class="v" id="totalProposals">0</div></div>
-  </section>
-  <section class="layout">
-    <aside class="panel pad">
-      <div class="toolbar"><div><h2>Agent 健康概览</h2><p class="hint">点击 Agent 后，任务看板按责任链过滤。</p></div><button class="btn" type="button" onclick="clearAgentFilter()">清空</button></div>
-      <div id="agentList"></div>
-    </aside>
-    <main class="panel pad">
-      <div class="toolbar"><div><h2>任务看板</h2><p class="hint">支持查看详情、推进状态、人工干预和执行协议动作。</p></div><button class="btn btn-primary" type="button" onclick="showCreateModal()">新建任务</button></div>
-      <div class="wrap"><button class="btn active" data-filter="all" onclick="filterTasks(event,'all')">全部</button><button class="btn" data-filter="pending" onclick="filterTasks(event,'pending')">待处理</button><button class="btn" data-filter="executing" onclick="filterTasks(event,'executing')">执行中</button><button class="btn" data-filter="blocked" onclick="filterTasks(event,'blocked')">已阻塞</button><button class="btn" data-filter="completed" onclick="filterTasks(event,'completed')">已完成</button></div>
-      <div class="list" id="taskList"></div>
-    </main>
-  </section>
-  <section class="extra">
-    <div class="panel pad"><div class="section">任务时间线</div><div id="timelinePanel" class="empty">点击任务“查看详情”后显示时间线。</div></div>
-    <div class="panel pad"><div class="toolbar"><div><div class="section">董事会摘要</div><p class="hint">展示提案状态分布和最近提案。</p></div><button class="btn" type="button" onclick="loadBoardData()">刷新</button></div><div id="boardSummary"></div></div>
-    <div class="panel pad"><div class="toolbar"><div><div class="section">统一事件流</div><p class="hint">任务与提案事件统一按时间倒序展示。</p></div><button class="btn" type="button" onclick="loadEvents()">刷新</button></div><div id="eventFeed"></div></div>
-  </section>
+  </div>
+</nav>
+
+<!-- 视图: 全景概览 -->
+<main id="overview" class="container active">
+  <div class="toolbar">
+    <div class="toolbar-title">企业级多智能体协同概览</div>
+  </div>
+  
+  <div class="grid-view grid-4" style="margin-bottom: 24px;">
+    <div class="card metric">
+      <div class="metric-value" id="stat-total-tasks">0</div>
+      <div class="metric-label">系统总任务量</div>
+    </div>
+    <div class="card metric">
+      <div class="metric-value" id="stat-executing">0</div>
+      <div class="metric-label">正在执行的任务</div>
+    </div>
+    <div class="card metric">
+      <div class="metric-value" id="stat-proposals">0</div>
+      <div class="metric-label">董事会提案池</div>
+    </div>
+    <div class="card metric">
+      <div class="metric-value" id="stat-blocked" style="color: var(--red);">0</div>
+      <div class="metric-label" style="color: var(--red);">发生阻塞的任务</div>
+    </div>
+  </div>
+
+  <div class="grid-view grid-2">
+    <div class="card">
+      <div class="card-title">系统统一事件流</div>
+      <div id="feed-container" class="list"></div>
+    </div>
+    <div class="grid-view" style="grid-template-columns: 1fr; gap: 20px; align-content: start;">
+      <div class="card">
+        <div class="toolbar" style="margin-bottom: 16px;">
+          <div class="card-title" style="margin: 0;">董事会最新决议</div>
+          <button class="btn btn-sm" onclick="switchTab('board')">查看全部</button>
+        </div>
+        <div id="latest-proposals-container"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- 视图: 组织架构 (进入具体部门前) -->
+<main id="departments" class="container">
+  <div id="depts-grid-view">
+    <div class="toolbar">
+      <div class="toolbar-title">企业部门架构与能力视图</div>
+      <button class="btn" onclick="loadDepartments()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新名册</button>
+    </div>
+    <div class="grid-view grid-3" id="departments-container">
+      <div class="empty-state" style="grid-column: 1/-1;">加载架构中...</div>
+    </div>
+  </div>
+  
+  <div id="dept-detail-view" style="display: none;">
+    <div class="view-header">
+      <button class="back-btn" onclick="closeDepartment()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg></button>
+      <div>
+        <h2 id="detail-dept-name" style="font-size: 24px;">部门名称</h2>
+        <div style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;" id="detail-dept-stats">统计信息将在此处显示</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">部级负责人 (Head)</div>
+      <div id="dept-head-container"></div>
+    </div>
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">固定编制人员 (Default Roles)</div>
+      <div class="agent-grid" id="dept-default-container"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">动态扩容人员 (Dynamic Agents) <span class="badge" style="font-size: 11px; margin-left: 8px;">由HR实时调度</span></div>
+      <div class="agent-grid" id="dept-dynamic-container"></div>
+    </div>
+  </div>
+</main>
+
+<!-- 视图: 任务中心 -->
+<main id="tasks" class="container">
+  <div class="toolbar">
+    <div class="toolbar-title">任务控制中心</div>
+    <button class="btn btn-primary" onclick="showModal('createTaskModal')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 发起新要求</button>
+  </div>
+  <div class="card">
+    <div class="toolbar" style="margin-bottom: 20px;">
+      <div class="segment-control">
+        <button class="segment-btn active" data-filter="all" onclick="filterTasks(this, 'all')">全部记录</button>
+        <button class="segment-btn" data-filter="pending" onclick="filterTasks(this, 'pending')">待处理</button>
+        <button class="segment-btn" data-filter="executing" onclick="filterTasks(this, 'executing')">执行中</button>
+        <button class="segment-btn" data-filter="blocked" onclick="filterTasks(this, 'blocked')">受阻滞</button>
+      </div>
+    </div>
+    <div id="tasks-container">加载任务中...</div>
+  </div>
+</main>
+
+<!-- 视图: 董事会 -->
+<main id="board" class="container">
+  <div class="toolbar">
+    <div class="toolbar-title">董事会决策大厅</div>
+  </div>
+  <div class="card">
+    <div id="board-container">暂无提案记录。</div>
+  </div>
+</main>
+
+<!-- 右侧滑出抽屉: Agent 详细档案面板 -->
+<div class="drawer-overlay" id="agentDrawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="agentDrawer">
+  <div class="drawer-header">
+    <h3 style="font-size: 16px;">智能体深度检测</h3>
+    <button class="close-btn" onclick="closeDrawer()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+  </div>
+  <div class="drawer-body" id="agentDrawerContent">
+    <!-- Agent Detail Injection -->
+  </div>
 </div>
-<div class="modal" id="createModal"><div class="panel pad modal-card"><div class="toolbar"><h3>创建任务</h3><button class="close" type="button" onclick="hideCreateModal()">&times;</button></div><form onsubmit="createTask(event)"><div class="field"><label>任务标题</label><input id="taskTitle" required></div><div class="field"><label>任务类型</label><select id="taskType"><option value="RD">技术研发</option><option value="PD">产品设计</option><option value="DA">数据分析</option><option value="OP">运营推广</option><option value="MK">市场营销</option><option value="FN">财务预算</option><option value="HR">人力招聘</option><option value="LG">法务合规</option></select></div><div class="field"><label>优先级</label><select id="taskPriority"><option value="P0">P0</option><option value="P1">P1</option><option value="P2" selected>P2</option><option value="P3">P3</option></select></div><div class="field"><label>请求方</label><input id="taskRequester" required placeholder="例如 ceo / pmo / rd_center"></div><div class="field"><label>任务描述</label><textarea id="taskDescription" placeholder="补充业务背景、目标、边界和交付要求"></textarea></div><button class="btn btn-primary" type="submit" style="width:100%">提交任务</button></form></div></div>
+
+<!-- 弹窗: 创建任务 -->
+<div class="modal" id="createTaskModal">
+  <div class="card modal-card">
+    <div class="toolbar" style="margin-bottom: 20px;">
+      <h3 style="font-size: 18px;">生成业务要求</h3>
+      <button class="close-btn" onclick="hideModal('createTaskModal')" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+    </div>
+    <form onsubmit="submitTask(event)">
+      <div class="field">
+        <label>标题核心简述</label>
+        <input id="f_title" required placeholder="如：落地一套全新用户增长策略">
+      </div>
+      <div class="grid-2" style="gap: 16px;">
+        <div class="field">
+          <label>目标能力域</label>
+          <select id="f_type">
+            <option value="RD">技术研发 (RD)</option>
+            <option value="PD">产品梳理 (PD)</option>
+            <option value="DA">数据赋能 (DA)</option>
+            <option value="OP">客户运营 (OP)</option>
+            <option value="MK">行销公关 (MK)</option>
+            <option value="HR">人力调配 (HR)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>要求层级</label>
+          <select id="f_priority">
+            <option value="P0">P0 (特急)</option>
+            <option value="P1">P1 (加急)</option>
+            <option value="P2" selected>P2 (常规)</option>
+            <option value="P3">P3 (暂缓)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>投递来源身份</label>
+        <input id="f_requester" required placeholder="如：ceo / pmo_director">
+      </div>
+      <div class="field">
+        <label>上下文界定（可选）</label>
+        <textarea id="f_desc" placeholder="输入有助于理解目标的先验信息或参考规范..."></textarea>
+      </div>
+      <div style="margin-top: 24px;">
+        <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px;" type="submit">编排任务</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
-const API_BASE = "";
-const STATUS_LABELS = {pending:"待处理",classified:"已分类",planned:"已规划",reviewing:"审核中",approved:"已批准",rejected:"已驳回",dispatched:"已派发",executing:"执行中",review:"复核中",completed:"已完成",blocked:"已阻塞"};
-const HEALTH_LABELS = {idle:"空闲",active:"活跃",busy:"繁忙",blocked:"阻塞"};
-const LAYER_LABELS = {decision:"决策层",review:"审核层",execution:"执行层",support:"支持层"};
-const PROPOSAL_STATUS = {pending:"待讨论",discussing:"讨论中",voting:"投票中",approved:"已通过",rejected:"已驳回"};
-const PROPOSAL_TYPE = {strategic:"战略决策",tactical:"战术决策",emergency:"紧急决策"};
-let tasks = []; let agents = []; let proposals = []; let events = []; let boardSummary = {total_proposals:0,by_status:{},by_type:{}}; let currentFilter = "all"; let activeAgentId = null; let selectedTaskId = null;
-document.addEventListener("DOMContentLoaded",()=>{refreshAll();setInterval(refreshAll,15000);});
-async function refreshAll(){await Promise.all([loadStats(),loadAgents(),loadTasks(),loadBoardData(),loadEvents()]); if(selectedTaskId){await viewTask(selectedTaskId,false);}}
-async function loadStats(){try{const res=await fetch(`${API_BASE}/api/stats`);const data=await res.json();document.getElementById("totalTasks").textContent=data.total_tasks||0;document.getElementById("pendingTasks").textContent=data.by_status?.pending||0;document.getElementById("executingTasks").textContent=data.by_status?.executing||0;document.getElementById("blockedTasks").textContent=data.by_status?.blocked||0;document.getElementById("completedTasks").textContent=data.by_status?.completed||0;}catch(error){console.error("加载统计失败",error);}}
-async function loadAgents(){try{const res=await fetch(`${API_BASE}/api/agents`);const data=await res.json();agents=data.agents||[];}catch(error){console.error("加载 Agent 失败",error);agents=[];}renderAgents();}
-function renderAgents(){const grouped=agents.reduce((acc,agent)=>{const layer=agent.layer||"other";(acc[layer] ||= []).push(agent);return acc;},{});const html=Object.entries(grouped).map(([layer,items])=>`<div class="list"><div class="section">${LAYER_LABELS[layer]||layer}</div>${items.map((agent)=>`<button class="agent ${activeAgentId===agent.id?"active":""}" type="button" onclick="selectAgent('${agent.id}')"><div class="head"><div><div><strong>${esc(agent.name_cn||agent.name||agent.id)}</strong></div><div class="muted">${esc(agent.description||"暂无说明")}</div></div><span class="pill">${HEALTH_LABELS[agent.health_status]||agent.health_status||"未知"}</span></div><div class="wrap" style="margin-top:8px"><span class="pill">责任任务 ${agent.owned_task_count||0}</span><span class="pill">执行中 ${agent.executing_task_count||0}</span><span class="pill">阻塞 ${agent.blocked_task_count||0}</span></div></button>`).join("")}</div>`).join("");document.getElementById("agentList").innerHTML=html||'<div class="empty">暂无 Agent 数据</div>';}
-function selectAgent(agentId){activeAgentId=activeAgentId===agentId?null:agentId;renderAgents();renderTasks();}
-function clearAgentFilter(){activeAgentId=null;renderAgents();renderTasks();}
-async function loadTasks(){try{const res=await fetch(`${API_BASE}/api/tasks?limit=80`);const data=await res.json();tasks=data.tasks||[];}catch(error){console.error("加载任务失败",error);tasks=[];}renderTasks();}
-function renderTasks(){let filtered=tasks.slice();if(currentFilter!=="all"){filtered=filtered.filter((task)=>task.status===currentFilter);}if(activeAgentId){filtered=filtered.filter((task)=>task.current_owner===activeAgentId||task.execution_owner===activeAgentId);}if(!filtered.length){document.getElementById("taskList").innerHTML='<div class="empty">当前筛选条件下没有任务</div>';return;}document.getElementById("taskList").innerHTML=filtered.map((task)=>`<article class="task"><div class="head"><div><div class="mono">${esc(task.task_id)}</div><div class="title">${esc(task.title)}</div></div><span class="pill">${esc(task.priority||"-")}</span></div><div class="muted">${esc(task.description||"暂无描述")}</div><div class="wrap" style="margin-top:10px"><span class="pill">类型 ${esc(task.type||"-")}</span><span class="pill">请求方 ${esc(task.requester||"-")}</span><span class="pill">当前责任方 ${esc(task.current_owner||"-")}</span><span class="pill">执行责任方 ${esc(task.execution_owner||"-")}</span><span class="pill">${STATUS_LABELS[task.status]||esc(task.status||"-")}</span></div><div class="wrap" style="margin-top:12px"><button class="btn" type="button" onclick="viewTask('${task.task_id}')">查看详情</button><button class="btn" type="button" onclick="advanceTask('${task.task_id}')">推进状态</button>${interventionButtons(task)}${executionButtons(task)}</div></article>`).join("");}
-function interventionButtons(task){if(task.status==="executing"){return `<button class="btn btn-warn" type="button" onclick="interveneTask('${task.task_id}','pause')">暂停</button><button class="btn btn-danger" type="button" onclick="interveneTask('${task.task_id}','send_back')">打回规划</button>`;}if(task.status==="blocked"){return `<button class="btn" type="button" onclick="interveneTask('${task.task_id}','resume')">恢复执行</button><button class="btn btn-danger" type="button" onclick="interveneTask('${task.task_id}','send_back')">打回规划</button>`;}if(["reviewing","approved","dispatched","review","rejected"].includes(task.status)){return `<button class="btn btn-danger" type="button" onclick="interveneTask('${task.task_id}','send_back')">打回规划</button>`;}return "";}
-function executionButtons(task){if(task.status==="dispatched"){return `<button class="btn" type="button" onclick="executeAction('${task.task_id}','start')">开始执行</button>`;}if(task.status==="executing"){return `<button class="btn" type="button" onclick="executeAction('${task.task_id}','complete')">提交完成</button><button class="btn btn-warn" type="button" onclick="executeAction('${task.task_id}','block')">上报阻塞</button>`;}if(task.status==="blocked"){return `<button class="btn" type="button" onclick="executeAction('${task.task_id}','start')">恢复执行协议</button>`;}return "";}
-function filterTasks(event,filter){currentFilter=filter;document.querySelectorAll('[data-filter]').forEach((b)=>b.classList.remove('active'));event.currentTarget.classList.add('active');renderTasks();}
-async function viewTask(taskId,scroll=true){selectedTaskId=taskId;try{const [taskRes,timelineRes]=await Promise.all([fetch(`${API_BASE}/api/tasks/${taskId}`),fetch(`${API_BASE}/api/tasks/${taskId}/timeline`)]);const task=await taskRes.json();const timelineData=await timelineRes.json();const timeline=timelineData.timeline||[];const body=timeline.length?timeline.map((item)=>`<div class="timeline"><div><strong>${esc(item.action)}</strong></div><div class="muted">时间：${fmt(item.timestamp)}<br>操作方：${esc(item.actor||'-')}${item.detail?`<br>详情：${esc(detail(item.detail))}`:''}</div></div>`).join(''):'<div class="empty">当前任务还没有时间线记录</div>';document.getElementById('timelinePanel').innerHTML=`<div class="card"><div class="mono">${esc(task.task_id)}</div><div class="title" style="margin-top:8px">${esc(task.title)}</div><div class="muted">当前状态：${STATUS_LABELS[task.status]||esc(task.status)}，当前责任方：${esc(task.current_owner||'-')}</div><div class="wrap" style="margin-top:12px">${interventionButtons(task)}${executionButtons(task)}</div><div class="list" style="margin-top:14px">${body}</div></div>`;if(scroll){document.getElementById('timelinePanel').scrollIntoView({behavior:'smooth',block:'center'});}}catch(error){console.error('加载任务详情失败',error);alert('加载任务详情失败');}}
-function detail(obj){return Object.entries(obj).map(([k,v])=>`${k}=${v}`).join(' / ');}
-async function advanceTask(taskId){const task=tasks.find((item)=>item.task_id===taskId);if(!task){return;}const transitions={pending:'classified',classified:'planned',planned:'reviewing',reviewing:'approved',approved:'dispatched',dispatched:'executing',executing:'review',review:'completed',blocked:'executing'};const nextStatus=transitions[task.status];if(!nextStatus){alert('该任务当前没有可自动推进的下一状态');return;}if(!confirm(`确认将任务推进到“${STATUS_LABELS[nextStatus]||nextStatus}”吗？`)){return;}try{const res=await fetch(`${API_BASE}/api/tasks/${taskId}/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:nextStatus,actor:'dashboard'})});const data=await res.json();if(!res.ok){alert(`推进失败：${data.error}`);return;}await refreshAll();await viewTask(taskId,false);}catch(error){console.error('推进状态失败',error);alert('推进状态失败');}}
-async function interveneTask(taskId,action){const names={pause:'暂停任务',resume:'恢复任务',send_back:'打回规划'};const reason=prompt(`请输入“${names[action]||action}”原因`,'');if(reason===null){return;}try{const res=await fetch(`${API_BASE}/api/tasks/${taskId}/intervene`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,actor:'dashboard',reason})});const data=await res.json();if(!res.ok){alert(`干预失败：${data.error}`);return;}await refreshAll();await viewTask(taskId,false);}catch(error){console.error('干预任务失败',error);alert('干预任务失败');}}
-async function executeAction(taskId,action){const urls={start:`${API_BASE}/api/tasks/${taskId}/execute/start`,complete:`${API_BASE}/api/tasks/${taskId}/execute/complete`,block:`${API_BASE}/api/tasks/${taskId}/execute/block`};const payload={actor:'dashboard_execution'};if(action==='block'){const reason=prompt('请输入阻塞原因','等待外部依赖');if(reason===null){return;}payload.reason=reason;}try{const res=await fetch(urls[action],{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await res.json();if(!res.ok){alert(`执行动作失败：${data.error}`);return;}await refreshAll();await viewTask(taskId,false);}catch(error){console.error('执行协议失败',error);alert('执行协议失败');}}
-async function loadBoardData(){try{const [summaryRes,proposalsRes]=await Promise.all([fetch(`${API_BASE}/api/board/summary`),fetch(`${API_BASE}/api/board/proposals`)]);boardSummary=await summaryRes.json();const proposalData=await proposalsRes.json();proposals=proposalData.proposals||[];document.getElementById('totalProposals').textContent=boardSummary.total_proposals||0;renderBoardSummary();}catch(error){console.error('加载提案摘要失败',error);document.getElementById('boardSummary').innerHTML='<div class="empty">加载提案摘要失败</div>';}}
-function renderBoardSummary(){const byStatus=boardSummary.by_status||{};const byType=boardSummary.by_type||{};const recent=proposals.slice(0,5);document.getElementById('boardSummary').innerHTML=`<div class="list"><div class="card"><div class="wrap"><span class="pill">提案总量 ${boardSummary.total_proposals||0}</span><span class="pill">待处理 ${(byStatus.pending||0)+(byStatus.discussing||0)+(byStatus.voting||0)}</span><span class="pill">已通过 ${byStatus.approved||0}</span></div><div class="wrap" style="margin-top:10px">${Object.entries(byStatus).length?Object.entries(byStatus).map(([k,v])=>`<span class="pill">${PROPOSAL_STATUS[k]||k} ${v}</span>`).join(''):'<span class="pill">暂无状态数据</span>'}</div><div class="wrap" style="margin-top:10px">${Object.entries(byType).length?Object.entries(byType).map(([k,v])=>`<span class="pill">${PROPOSAL_TYPE[k]||k} ${v}</span>`).join(''):'<span class="pill">暂无类型数据</span>'}</div></div>${recent.length?recent.map((proposal)=>`<div class="card"><div class="head"><div><strong>${esc(proposal.title)}</strong></div><span class="pill">${PROPOSAL_STATUS[proposal.status]||esc(proposal.status||'-')}</span></div><div class="muted" style="margin-top:8px">${esc(proposal.content||'暂无内容')}</div><div class="wrap" style="margin-top:10px"><span class="pill">类型 ${PROPOSAL_TYPE[proposal.decision_type]||esc(proposal.decision_type||'-')}</span><span class="pill">提出者 ${esc(proposal.proposer||'-')}</span><span class="pill">讨论 ${proposal.discussion?.length||0}</span><span class="pill">投票 ${proposal.votes?.length||0}</span></div></div>`).join(''):'<div class="empty">暂无提案</div>'}</div>`;}
-async function loadEvents(){try{const res=await fetch(`${API_BASE}/api/events?limit=18`);const data=await res.json();events=data.events||[];document.getElementById('eventFeed').innerHTML=events.length?`<div class="list">${events.map((event)=>`<div class="event"><div><strong>${esc(event.category||'-')} / ${esc(event.action||'-')}</strong></div><div class="muted" style="margin-top:8px">时间：${fmt(event.timestamp)}<br>操作方：${esc(event.actor||'-')}<br>主体：<span class="mono">${esc(event.subject_id||'-')}</span>${event.detail&&Object.keys(event.detail).length?`<br>详情：${esc(detail(event.detail))}`:''}</div></div>`).join('')}</div>`:'<div class="empty">暂无事件</div>';}catch(error){console.error('加载事件流失败',error);document.getElementById('eventFeed').innerHTML='<div class="empty">加载事件流失败</div>';}}
-function showCreateModal(){document.getElementById('createModal').classList.add('show');} function hideCreateModal(){document.getElementById('createModal').classList.remove('show');}
-async function createTask(event){event.preventDefault();const payload={title:document.getElementById('taskTitle').value,type:document.getElementById('taskType').value,priority:document.getElementById('taskPriority').value,requester:document.getElementById('taskRequester').value,description:document.getElementById('taskDescription').value};try{const res=await fetch(`${API_BASE}/api/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const data=await res.json();if(!res.ok){alert(`创建失败：${data.error}`);return;}hideCreateModal();event.target.reset();await refreshAll();await viewTask(data.task_id,false);}catch(error){console.error('创建任务失败',error);alert('创建任务失败');}}
-function fmt(value){if(!value){return '-';}const date=new Date(value);if(Number.isNaN(date.getTime())){return value;}return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}:${String(date.getSeconds()).padStart(2,'0')}`;}
-function esc(value){return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  // -- 全局常量与状态 --
+  const API_BASE = "";
+  const S_LBL = { pending:"待分拣", classified:"已分类", planned:"已规划", reviewing:"风险审查", approved:"受理批准", rejected:"打回优化", dispatched:"已指派", executing:"作业中", review:"交付复验", completed:"结项归档", blocked:"受阻挂起" };
+  const H_COLOR = { idle:"gray", active:"blue", busy:"orange", blocked:"red" };
+  const H_LBL = { idle:"侦听轮询", active:"受控运转", busy:"高载作业", blocked:"异常锁死" };
+
+  let G = { tasks: [], depts: {}, events: [], board: [], activeTab: 'overview', currentDeptId: null };
+
+  // -- 启动与生命周期 --
+  document.addEventListener("DOMContentLoaded", () => {
+    switchTab('overview');
+    pollData();
+    setInterval(pollData, 15000);
+  });
+
+  async function pollData() {
+    await Promise.all([ fetchDepts(), fetchTasks(), fetchEvents(), fetchBoard() ]);
+    updateOverview();
+    if(G.activeTab === 'departments') { G.currentDeptId ? renderDeptDetail(G.currentDeptId) : renderDeptsGrid(); }
+    if(G.activeTab === 'tasks') renderTasks();
+    if(G.activeTab === 'board') renderBoard();
+  }
+
+  // -- 网络取数 --
+  async function fetchDepts() {
+    try { const res = await fetch(`${API_BASE}/api/departments`); const data = await res.json(); G.depts = data.departments || {}; } catch (e) { console.error('Error depts', e); }
+  }
+  async function fetchTasks() {
+    try { const res = await fetch(`${API_BASE}/api/tasks?limit=100`); const data = await res.json(); G.tasks = data.tasks || []; } catch (e) { console.error('Error tasks', e); }
+  }
+  async function fetchEvents() {
+    try { const res = await fetch(`${API_BASE}/api/events?limit=8`); const data = await res.json(); G.events = data.events || []; } catch (e) { console.error('Error events', e); }
+  }
+  async function fetchBoard() {
+    try { const res = await fetch(`${API_BASE}/api/board/proposals`); const data = await res.json(); G.board = data.proposals || []; } catch (e) { console.error('Error board', e); }
+  }
+
+  // -- 视图切换机制 --
+  function switchTab(tabId) {
+    G.activeTab = tabId;
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.nav-btn[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    document.querySelectorAll('main.container').forEach(c => c.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    
+    if(tabId === 'departments') { closeDepartment(); renderDeptsGrid(); }
+    if(tabId === 'tasks') renderTasks();
+    if(tabId === 'board') renderBoard();
+  }
+
+  // -- 概览渲染 --
+  function updateOverview() {
+    const t = G.tasks;
+    document.getElementById('stat-total-tasks').innerText = t.length;
+    document.getElementById('stat-executing').innerText = t.filter(x => x.status === 'executing').length;
+    document.getElementById('stat-blocked').innerText = t.filter(x => x.status === 'blocked').length;
+    document.getElementById('stat-proposals').innerText = G.board.length;
+
+    // 事件流
+    const feedHTML = G.events.length ? G.events.map(ev => `
+      <div class="list-item">
+        <div class="list-item-main">
+          <div class="list-item-title">${esc(ev.category)} / ${esc(ev.action)}</div>
+          <div class="list-item-desc">${fmt(ev.timestamp)} by ${esc(ev.actor)} -> ${esc(ev.subject_id)}</div>
+        </div>
+      </div>
+    `).join('') : '<div class="empty-state">暂无系统事件上报</div>';
+    document.getElementById('feed-container').innerHTML = feedHTML;
+
+    // 决议
+    const brdHTML = G.board.slice(0,4).map(p => `
+      <div class="list-item">
+        <div class="list-item-main">
+          <div class="list-item-title" style="margin-bottom:8px;">${esc(p.title)}</div>
+          <div><span class="badge ${p.status==='approved'?'green':(p.status==='rejected'?'red':'gray')}">${esc(p.status)}</span></div>
+        </div>
+      </div>
+    `).join('');
+    document.getElementById('latest-proposals-container').innerHTML = brdHTML || '<div class="empty-state">提案池内无事务悬决</div>';
+  }
+
+  // -- 部门视图渲染 (Grid) --
+  const DEPT_NAMES = { ceo:"执行官集群", president_office:"总办枢纽", strategy:"参谋企划", risk_center:"风控审核核流", pmo:"发配总控中心", rd_center:"技术工程矩阵", product_center:"物料铸造厂", data_center:"基底算法集群", operation_center:"推演运营", marketing_center:"外宣阵列", finance:"资本配管", legal:"法务规制", hr:"产能维系(HR)" };
+
+  function renderDeptsGrid() {
+    const arr = Object.keys(G.depts).map(k => ({ id:k, ...G.depts[k] }));
+    if(!arr.length) { document.getElementById('departments-container').innerHTML = '<div class="empty-state">名册数据为空或无法加载</div>'; return; }
+    
+    document.getElementById('departments-container').innerHTML = arr.map(d => {
+      const s = d.stats || {};
+      const name = DEPT_NAMES[d.id] || d.id;
+      return `
+        <div class="card dept-card" onclick="openDepartment('${d.id}')">
+          <h3>${name}</h3>
+          <p><span style="font-family:monospace;">${d.id}</span><br>管理着 ${s.total_agents||0} 个子节点</p>
+          <div class="dept-stats">
+            <div class="dept-stat-item"><strong>${s.active_agents||0}</strong><span>运行态</span></div>
+            <div class="dept-stat-item"><strong>${s.busy_agents||0}</strong><span>高载态</span></div>
+            <div class="dept-stat-item"><strong style="color:var(--red);">${s.blocked_agents||0}</strong><span>受阻态</span></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // -- 部门详情视图 (钻取) --
+  function openDepartment(deptId) {
+    G.currentDeptId = deptId;
+    document.getElementById('depts-grid-view').style.display = 'none';
+    document.getElementById('dept-detail-view').style.display = 'block';
+    renderDeptDetail(deptId);
+  }
+  function closeDepartment() {
+    G.currentDeptId = null;
+    document.getElementById('depts-grid-view').style.display = 'block';
+    document.getElementById('dept-detail-view').style.display = 'none';
+  }
+
+  function renderDeptDetail(deptId) {
+    const d = G.depts[deptId];
+    if(!d) return;
+    const name = DEPT_NAMES[deptId] || deptId;
+    document.getElementById('detail-dept-name').innerText = name;
+    document.getElementById('detail-dept-stats').innerText = `ID: ${deptId} | 总控及挂载兵力: ${d.stats?.total_agents || 0}`;
+
+    const renderAgent = (a) => `
+      <div class="agent-card" onclick="openAgentDrawer('${esc(JSON.stringify(a))}')">
+        <div class="agent-header">
+          <div class="agent-role">${esc(a.label || a.role)}</div>
+          <span class="badge ${H_COLOR[a.health_status]||'gray'}">${H_LBL[a.health_status]||a.health_status}</span>
+        </div>
+        <div class="agent-id">${esc(a.agent_id)}</div>
+        <div class="dept-stats" style="margin-top: 16px;">
+          <div class="dept-stat-item" style="background:#fff;border:1px solid rgba(0,0,0,0.05);"><strong>${a.executing_task_count||0}</strong><span>处理中</span></div>
+          <div class="dept-stat-item" style="background:#fff;border:1px solid rgba(0,0,0,0.05);"><strong>${a.completed_task_count||0}</strong><span>已交付</span></div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('dept-head-container').innerHTML = d.head ? renderAgent(d.head) : '<div class="empty-state">尚未指派负责人</div>';
+    document.getElementById('dept-default-container').innerHTML = (d.default_roles||[]).length ? d.default_roles.map(renderAgent).join('') : '<div class="empty-state">无固定编制要素</div>';
+    document.getElementById('dept-dynamic-container').innerHTML = (d.dynamic_agents||[]).length ? d.dynamic_agents.map(renderAgent).join('') : '<div class="empty-state">当前未发现 HR 临时配给的算力实体</div>';
+  }
+
+  // -- Agent 抽屉 (Drawer) --
+  function openAgentDrawer(agentJsonStr) {
+    const a = JSON.parse(agentJsonStr);
+    document.getElementById('agentDrawerOverlay').classList.add('open');
+    document.getElementById('agentDrawer').classList.add('open');
+    
+    // 查询该 Agent 正在处理的专属任务列表
+    const myTasks = G.tasks.filter(t => t.current_owner === a.agent_id || t.execution_owner === a.agent_id);
+    
+    const html = `
+      <div class="agent-hero">
+        <div class="agent-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+        <h2>${esc(a.label||a.role)}</h2>
+        <p class="agent-id">${esc(a.agent_id)}</p>
+        <div style="margin-top: 12px;"><span class="badge ${H_COLOR[a.health_status]||'gray'}">${H_LBL[a.health_status]||a.health_status}</span></div>
+      </div>
+
+      <div class="card" style="box-shadow:none; background:#fff; border:1px solid var(--border-color); padding: 20px;">
+        <h3 style="font-size: 15px; margin-bottom: 12px;">直接关联承载物 (责任范围内的任务)</h3>
+        ${myTasks.length ? myTasks.map(t => `
+          <div class="list-item" style="padding:12px 0;">
+            <div class="list-item-main">
+              <div class="list-item-title">${esc(t.title)}</div>
+              <div class="list-item-desc" style="margin-bottom: 6px;">${esc(t.task_id)} | ${S_LBL[t.status]||t.status}</div>
+              <button class="btn btn-sm btn-primary" onclick="navToTask('${t.task_id}')">跃迁至该任务核</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty-state" style="padding: 24px 0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg><br>目前该线程完全纯净</div>'}
+      </div>
+    `;
+    document.getElementById('agentDrawerContent').innerHTML = html;
+  }
+  function closeDrawer() {
+    document.getElementById('agentDrawerOverlay').classList.remove('open');
+    document.getElementById('agentDrawer').classList.remove('open');
+  }
+
+  function navToTask(tid) {
+    closeDrawer();
+    switchTab('tasks');
+    // 可选：实现将页面滑到该任务的地方
+  }
+
+  // -- 任务中心渲染 --
+  let taskFilter = 'all';
+  function filterTasks(btnNode, f) {
+    taskFilter = f;
+    document.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+    btnNode.classList.add('active');
+    renderTasks();
+  }
+  function renderTasks() {
+    let arr = [...G.tasks];
+    if(taskFilter !== 'all') { arr = arr.filter(x => x.status === taskFilter); }
+    
+    if(!arr.length) { document.getElementById('tasks-container').innerHTML = '<div class="empty-state">当前信道纯净，无相关指令投递。</div>'; return; }
+
+    const makeActions = (t) => {
+      let b = [];
+      if(t.status === 'executing') b.push(`<button class="btn btn-sm" onclick="appAlert('仿真：任务 ${t.task_id} 下步将推向测试')">流转下一步</button>`);
+      return b.join('');
+    };
+
+    document.getElementById('tasks-container').innerHTML = arr.map(t => `
+      <div class="list-item" style="padding: 20px 0;">
+        <div class="list-item-main">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <span class="badge gray" style="font-family:monospace;">${esc(t.task_id)}</span>
+            <span class="badge ${t.status==='completed'?'green':(t.status==='blocked'?'red':'blue')}">${S_LBL[t.status]||t.status}</span>
+          </div>
+          <div class="list-item-title" style="font-size: 16px;">${esc(t.title)}</div>
+          <div class="list-item-desc" style="white-space:normal; line-height:1.5;">${esc(t.description||'无需附加描绘')}</div>
+          <div style="margin-top: 12px; font-size: 12px; color: var(--text-tertiary);">
+            发起: ${esc(t.requester)} | 处理方: ${esc(t.current_owner)} -> 控制权: ${esc(t.execution_owner)}
+          </div>
+        </div>
+        <div class="list-item-action">
+          <button class="btn btn-sm btn-primary" onclick="viewTimeline('${t.task_id}')">时序刻录录音</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function viewTimeline(tid) {
+    try {
+      const res = await fetch(`${API_BASE}/api/tasks/${tid}/timeline`);
+      const data = await res.json();
+      const tl = data.timeline || [];
+      const html = `<div style="padding:24px;">
+        <h3 style="margin-bottom:24px; font-size: 18px;">操作时序轴 - ${tid}</h3>
+        ${tl.map(item => `
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <div class="timeline-title">${esc(item.action)}</div>
+              <div class="timeline-meta">时间：${fmt(item.timestamp)}<br>执行载体：${esc(item.actor)} ${item.detail?`<br>核心内存栈：${esc(JSON.stringify(item.detail))}`:''}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+      document.getElementById('agentDrawerContent').innerHTML = html;
+      document.getElementById('agentDrawerOverlay').classList.add('open');
+      document.getElementById('agentDrawer').classList.add('open');
+    } catch(e) { console.error('Timeline err', e); }
+  }
+
+  // -- 董事会渲染 --
+  function renderBoard() {
+    if(!G.board.length) { document.getElementById('board-container').innerHTML = '<div class="empty-state">尚未触发决策流</div>'; return; }
+    document.getElementById('board-container').innerHTML = G.board.map(p => `
+      <div class="list-item" style="padding: 24px 0;">
+        <div class="list-item-main">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <span class="badge gray" style="font-family:monospace;">${esc(p.id)}</span>
+            <span class="badge ${p.status==='approved'?'green':(p.status==='rejected'?'red':'gray')}">${esc(p.status)}</span>
+          </div>
+          <div class="list-item-title" style="font-size: 17px;">${esc(p.title)}</div>
+          <div class="list-item-desc" style="white-space:normal; line-height:1.5;">${esc(p.content||'')}</div>
+          ${p.result ? `<div style="margin-top:12px; padding:12px; border-radius: 8px; background: rgba(0,0,0,0.03); font-size:13px; font-weight:600;">裁断输出: ${esc(p.result)}</div>` : ''}
+          <div style="margin-top: 12px; font-size: 12px; color: var(--text-tertiary);">提请人: ${esc(p.proposer)} | 性质: ${esc(p.decision_type)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // -- 辅助与表单 --
+  function showModal(id) { document.getElementById(id).classList.add('show'); }
+  function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+  async function submitTask(e) {
+    e.preventDefault();
+    const pl = { title:document.getElementById('f_title').value, type:document.getElementById('f_type').value, priority:document.getElementById('f_priority').value, requester:document.getElementById('f_requester').value, description:document.getElementById('f_desc').value };
+    try {
+      const res=await fetch(`${API_BASE}/api/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)});
+      const data=await res.json();
+      if(!res.ok){alert('创建失败：'+data.error);return;}
+      hideModal('createTaskModal'); e.target.reset(); pollData();
+    }catch(err){console.error(err);alert('网络阻断');}
+  }
+
+  function fmt(v){if(!v)return'-';const d=new Date(v);return isNaN(d)?v:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;}
+  function esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+  function appAlert(m){alert(m);}
 </script>
 </body>
 </html>
