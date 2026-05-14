@@ -1,6 +1,6 @@
 # CorpPilot · 企业智脑
 
-> 基于国内大厂组织架构的多智能体协作系统
+> 基于国内大厂组织架构的多智能体协作系统。皆在为了快速落地Idea，你作为CorpPilot具有话语权的人，提出对应idea，和董事会进行讨论需求，明确好你的边界想要的内容，多Agent协同实现出结果，快速验证。一人公司OPC，小型公司很好的选择！
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
