@@ -8,7 +8,7 @@ import json
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .message_bus import MessageBus
@@ -104,6 +104,40 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "git_commit",
+            "description": "在 git 仓库中暂存指定文件并提交（需已 git init）。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "description": "提交说明"},
+                    "paths": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "要提交的文件路径，空则提交全部变更",
+                    },
+                },
+                "required": ["message"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_shell",
+            "description": "在项目根目录执行 shell 命令（超时 120 秒），用于测试、构建、git 等。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "要执行的命令"},
+                    "cwd": {"type": "string", "description": "可选，相对于项目根的工作目录"},
+                },
+                "required": ["command"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "report_done",
             "description": "标记当前任务已完成，输出最终产出物摘要。",
             "parameters": {
@@ -128,6 +162,19 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
 # --------------------------------------------------------------------------- #
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+
+
+def normalize_artifact_path(rel_path: str, task_id: Optional[str] = None) -> Path:
+    """将 Agent 写入路径规范到 artifacts/{task_id}/ 下（若提供 task_id）。"""
+    rel = str(rel_path or "").strip().replace("\\", "/").lstrip("/")
+    if task_id and not rel.startswith("artifacts/"):
+        rel = f"artifacts/{task_id}/{rel}"
+    full = (PROJECT_ROOT / rel).resolve()
+    root = PROJECT_ROOT.resolve()
+    if not str(full).startswith(str(root)):
+        raise ValueError(f"路径越界: {rel_path}")
+    return full
 
 
 class ToolExecutor:
@@ -144,20 +191,29 @@ class ToolExecutor:
         agent_id: str,
         bus: "MessageBus",
         task_service=None,  # 可选：接入 TaskService
+        on_report_done: Optional[Callable[[str, str, List[str]], None]] = None,
+        task_id: Optional[str] = None,
     ):
         self.agent_id = agent_id
         self.bus = bus
         self.task_service = task_service
+        self.on_report_done = on_report_done
+        self.task_id = task_id
         self._done = False
         self._done_summary: Optional[str] = None
+        self._done_artifacts: List[str] = []
 
     @property
     def is_done(self) -> bool:
         return self._done
 
-    @property 
+    @property
     def done_summary(self) -> Optional[str]:
         return self._done_summary
+
+    @property
+    def done_artifacts(self) -> List[str]:
+        return list(self._done_artifacts)
 
     def execute(self, tool_name: str, tool_input: Dict[str, Any]) -> str:
         """分发并执行工具调用，返回结果字符串。"""
@@ -196,7 +252,10 @@ class ToolExecutor:
             return f"[Error] 读取失败: {exc}"
 
     def _tool_write_file(self, inp: Dict[str, Any]) -> str:
-        path = PROJECT_ROOT / inp.get("path", "")
+        try:
+            path = normalize_artifact_path(inp.get("path", ""), self.task_id)
+        except ValueError as exc:
+            return f"[Error] {exc}"
         content = inp.get("content", "")
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -220,11 +279,82 @@ class ToolExecutor:
                 return f"[Error] 任务创建失败: {exc}"
         return "[Warning] TaskService 未挂载，跳过任务创建。"
 
+    def _tool_git_commit(self, inp: Dict[str, Any]) -> str:
+        message = inp.get("message", "").strip()
+        if not message:
+            return "[Error] message 不能为空"
+        paths = inp.get("paths") or []
+        try:
+            if paths:
+                add = subprocess.run(
+                    ["git", "add", *paths],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=30,
+                )
+                if add.returncode != 0:
+                    return f"[Error] git add 失败: {add.stderr}"
+            else:
+                subprocess.run(
+                    ["git", "add", "-A"],
+                    cwd=str(PROJECT_ROOT),
+                    capture_output=True,
+                    timeout=30,
+                )
+            commit = subprocess.run(
+                ["git", "commit", "-m", message],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=30,
+            )
+            out = (commit.stdout or "") + (commit.stderr or "")
+            return f"exit_code={commit.returncode}\n{out}"
+        except Exception as exc:
+            return f"[Error] git commit 失败: {exc}"
+
+    def _tool_run_shell(self, inp: Dict[str, Any]) -> str:
+        command = inp.get("command", "").strip()
+        if not command:
+            return "[Error] command 不能为空"
+        cwd_rel = inp.get("cwd", "")
+        cwd = PROJECT_ROOT / cwd_rel if cwd_rel else PROJECT_ROOT
+        try:
+            proc = subprocess.run(
+                command,
+                shell=True,
+                cwd=str(cwd),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=120,
+            )
+            out = (proc.stdout or "") + (proc.stderr or "")
+            if len(out) > 8000:
+                out = out[:8000] + "\n…(输出已截断)"
+            return f"exit_code={proc.returncode}\n{out}"
+        except subprocess.TimeoutExpired:
+            return "[Error] 命令执行超时（120s）"
+        except Exception as exc:
+            return f"[Error] 执行失败: {exc}"
+
     def _tool_report_done(self, inp: Dict[str, Any]) -> str:
         self._done = True
         self._done_summary = inp.get("summary", "")
         artifacts = inp.get("artifacts", [])
+        self._done_artifacts = list(artifacts) if isinstance(artifacts, list) else []
         result = f"任务完成。产出摘要：{self._done_summary}"
-        if artifacts:
-            result += f"\n产出文件：{', '.join(artifacts)}"
+        if self._done_artifacts:
+            result += f"\n产出文件：{', '.join(self._done_artifacts)}"
+        if self.on_report_done:
+            try:
+                self.on_report_done(self.agent_id, self._done_summary, self._done_artifacts)
+            except Exception as exc:
+                result += f"\n[Warning] 治理层回调失败: {exc}"
         return result

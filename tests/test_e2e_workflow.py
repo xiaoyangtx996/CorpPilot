@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 CorpPilot 端到端验证，覆盖任务流、编排路由与董事会流程。
 """
@@ -31,6 +31,7 @@ class CorpPilotWorkflowTest(unittest.TestCase):
             shutil.rmtree(cls.temp_dir, ignore_errors=True)
         cls.temp_dir.mkdir(parents=True, exist_ok=True)
         os.environ["CORPPILOT_DATA_DIR"] = str(cls.temp_dir)
+        os.environ["CORPPILOT_AUTO_RUNTIME"] = "0"
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -44,7 +45,7 @@ class CorpPilotWorkflowTest(unittest.TestCase):
         if proposals_file.exists():
             proposals_file.unlink()
         self.task_service = TaskService(self.temp_dir)
-        self.workflow = WorkflowEngine(self.task_service)
+        self.workflow = WorkflowEngine(self.task_service, auto_runtime=False)
         self.board_room = BoardRoom(self.temp_dir)
         self.agent_monitor = AgentMonitorService(self.task_service, AgentCatalogService(self.temp_dir))
         self.event_log = EventLogService(self.temp_dir)
@@ -186,6 +187,18 @@ class CorpPilotWorkflowTest(unittest.TestCase):
         self.assertTrue(any(item["action"] == "status_changed" for item in task_events))
         self.assertTrue(any(item["action"] == "created" for item in proposal_events))
         self.assertTrue(any(item["action"] == "discussed" for item in proposal_events))
+
+    def test_task_artifacts_and_routing_meta(self) -> None:
+        task = self.task_service.create_task("artifacts", TaskType.RD, TaskPriority.P1, "ceo")
+        self.assertEqual(task.get("artifacts"), [])
+        updated = self.task_service.append_artifacts(
+            task["task_id"],
+            [{"path": "artifacts/TASK-test/out.md", "agent_id": "rd_center", "summary": "done"}],
+            actor="rd_center",
+        )
+        self.assertEqual(len(updated["artifacts"]), 1)
+        snapshot = self.workflow.routing_snapshot(task["task_id"])
+        self.assertEqual(snapshot["artifacts_count"], 1)
 
     def test_execution_service_protocol(self) -> None:
         task = self.task_service.create_task("execute", TaskType.RD, TaskPriority.P1, "ceo")

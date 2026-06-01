@@ -1,0 +1,4 @@
+# 可选：Playwright 截图级 visual_diff
+# pip install playwright pillow && playwright install chromium
+playwright>=1.40.0
+Pillow>=10.0.0

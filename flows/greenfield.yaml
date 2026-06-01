@@ -1,0 +1,60 @@
+# CorpPilot Greenfield 流程模板
+id: greenfield
+name: 从零到一产品开发
+description: 想法 → Demo → PRD → 开发 → 验收
+
+steps:
+  - id: board_discussion
+    role: president_office
+    outputs: [idea_brief.md]
+    gate_mode: gate
+
+  - id: product_demo
+    role: product_center
+    skills: [demo-generator]
+    outputs: [design/]
+    gate_mode: founder_select_one
+
+  - id: prd_generation
+    role: pmo
+    outputs: [PRD.md]
+    gate_mode: auto
+    postcondition: [design_selected == true]
+
+  - id: dev_parallel
+    type: parallel
+    parallel:
+      - id: frontend_dev
+        role: product_center
+        skills: [coding]
+        description: 按 design/ 实现前端
+      - id: backend_dev
+        role: rd_center
+        skills: [coding]
+        executor: claude_code
+        description: 实现 API 与后端
+    postcondition: [tests_pass == true, prd_coverage >= 0.75]
+    merge_gate: [tests_pass == true]
+    on_fail: retry
+    max_retries: 3
+    gate_mode: auto
+
+  - id: qa_gate
+    role: rd_center
+    type: supervisor
+    postcondition:
+      - tests_pass == true
+      - prd_coverage >= 0.95
+      - visual_diff >= 0.7
+      - checklist_pass == true
+    on_fail: send_back
+    send_back_to: dev_parallel
+    gate_mode: auto
+
+  - id: project_close
+    parallel:
+      - role: finance
+        outputs: [cost_report.json]
+      - role: legal
+        outputs: [compliance_report.md]
+    gate_mode: founder_ack

@@ -84,6 +84,9 @@ class AgentManager:
         on_output: Optional[Callable[[str, str], None]] = None,
         max_turns: int = 50,
         daemon: bool = True,
+        task_id: Optional[str] = None,
+        skill_ids: Optional[List[str]] = None,
+        on_report_done: Optional[Callable[[str, Optional[str], List[str]], None]] = None,
     ) -> None:
         """在独立线程中启动一个 Agent。"""
         with self._lock:
@@ -96,12 +99,23 @@ class AgentManager:
                 "status": STATUS_WORKING,
                 "started_at": time.time(),
                 "task": initial_task[:200],
+                "task_id": task_id,
                 "result": None,
                 "error": None,
             }
             self._save_state()
 
         def _run() -> None:
+            reported_summary: Optional[str] = None
+            reported_artifacts: List[str] = []
+
+            def _bridge_done(aid: str, summary: str, arts: List[str]) -> None:
+                nonlocal reported_summary
+                reported_summary = summary
+                reported_artifacts.extend(arts)
+                if on_report_done:
+                    on_report_done(aid, summary, arts)
+
             try:
                 result = agent_loop(
                     agent_id=agent_id,
@@ -113,11 +127,16 @@ class AgentManager:
                     on_output=lambda aid, txt: [self._emit(aid, txt), on_output(aid, txt) if on_output else None],
                     max_turns=max_turns,
                     task_service=self.task_service,
+                    task_id=task_id,
+                    skill_ids=skill_ids,
+                    on_report_done=_bridge_done if on_report_done else None,
                 )
                 with self._lock:
                     self._agents[agent_id]["status"] = STATUS_DONE
                     self._agents[agent_id]["result"] = result
                     self._save_state()
+                if on_report_done and not reported_summary and result:
+                    on_report_done(agent_id, result, reported_artifacts)
             except Exception as exc:
                 with self._lock:
                     self._agents[agent_id]["status"] = STATUS_FAILED

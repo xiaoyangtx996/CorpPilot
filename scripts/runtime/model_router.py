@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from dataclass import dataclass
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from .llm_client import ModelConfig
@@ -126,9 +126,25 @@ class ModelRouter:
         return dict(self._config)
 
     def save_config(self, new_config: Dict[str, Any]) -> None:
-        """整体保存配置，供 Dashboard API 用"""
-        self._config = new_config
+        """整体保存配置，保留 traffic 等未提交字段。"""
+        merged = dict(self._config)
+        for key, value in new_config.items():
+            if key == "traffic" and isinstance(value, dict) and isinstance(merged.get("traffic"), dict):
+                traffic = dict(merged["traffic"])
+                traffic.update(value)
+                merged["traffic"] = traffic
+            else:
+                merged[key] = value
+        if "traffic" not in merged and "traffic" in self._config:
+            merged["traffic"] = self._config["traffic"]
+        self._config = merged
         self._save()
+
+    def get_traffic_config(self) -> Dict[str, Any]:
+        return dict(self._config.get("traffic") or {})
+
+    def get_rate_limit_rpm(self) -> int:
+        return int(self.get_traffic_config().get("rate_limit_rpm", 60))
 
     # ---------------------------------------------------------------------- #
     # 私有

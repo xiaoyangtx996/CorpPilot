@@ -32,6 +32,45 @@ def _load_soul(agent_id: str) -> str:
     return f"你是 CorpPilot 系统中的 {agent_id} 智能体，请根据收到的指令认真完成你的职责。"
 
 
+def _load_skills(agent_id: str, skill_ids: Optional[List[str]] = None) -> str:
+    """加载绑定到该 Agent 的 Skill 正文，注入 system prompt。"""
+    try:
+        from core import PROJECT_ROOT as _root, SkillCatalogService
+
+        catalog = SkillCatalogService()
+    except Exception:
+        return ""
+
+    skills: List[Dict[str, Any]] = []
+    if skill_ids:
+        seen = set()
+        for sid in skill_ids:
+            if sid in seen:
+                continue
+            seen.add(sid)
+            skill = catalog.get_skill(sid)
+            if skill:
+                skills.append(skill)
+    if not skills:
+        skills = catalog.list_skills(agent_id)
+
+    if not skills:
+        return ""
+
+    blocks: List[str] = ["\n\n---\n## 已加载 Skills\n"]
+    for skill in skills:
+        blocks.append(f"\n### Skill: {skill.get('name', skill.get('id'))}\n")
+        if skill.get("type") == "local" and skill.get("path"):
+            path = _root / str(skill["path"])
+            if path.exists():
+                blocks.append(path.read_text(encoding="utf-8"))
+            else:
+                blocks.append(f"（文件缺失: {skill['path']}）")
+        else:
+            blocks.append(skill.get("description", ""))
+    return "\n".join(blocks)
+
+
 def agent_loop(
     agent_id: str,
     initial_task: str,
@@ -42,6 +81,9 @@ def agent_loop(
     on_output: Optional[Callable[[str, str], None]] = None,
     max_turns: int = 50,
     task_service=None,
+    task_id: Optional[str] = None,
+    skill_ids: Optional[List[str]] = None,
+    on_report_done: Optional[Callable[[str, str, List[str]], None]] = None,
 ) -> str:
     """
     单个 Agent 的完整执行循环。
@@ -60,11 +102,11 @@ def agent_loop(
     返回：
         最终输出的文本摘要
     """
-    system_prompt = _load_soul(agent_id)
+    system_prompt = _load_soul(agent_id) + _load_skills(agent_id, skill_ids)
     messages: List[Dict[str, Any]] = [
         {"role": "user", "content": initial_task}
     ]
-    executor = ToolExecutor(agent_id, bus, task_service)
+    executor = ToolExecutor(agent_id, bus, task_service, on_report_done=on_report_done, task_id=task_id)
     final_output = ""
 
     def _emit(text: str) -> None:
@@ -90,18 +132,32 @@ def agent_loop(
 
         # 2. 解析本轮应使用的模型
         dept_id = role_id = ""
+        flow_step_id = None
         try:
             from core import AgentCatalogService
+
             catalog = AgentCatalogService()
             info = catalog.get_agent(agent_id) or {}
-            dept_id = info.get("department", "")
-            role_id = info.get("role", "")
+            dept_id = info.get("department", "") or agent_id
+            role_id = info.get("role", "") or agent_id
         except ImportError:
-            pass
+            dept_id = agent_id
+
+        if task_id and task_service:
+            try:
+                task = task_service.get_task(task_id)
+                if task:
+                    flow_step_id = task.get("flow_step_id")
+                    dept_id = dept_id or task.get("execution_owner") or agent_id
+            except Exception:
+                pass
 
         route = router.resolve(agent_id=agent_id, department_id=dept_id, role_id=role_id, capability="chat")
 
-        # 3. 调用 LLM（内部自带重试与跌落策略）
+        # 3. 调用 LLM（RPM 限流 + 内部重试）
+        if not monitor.check_rate_limit(agent_id, router.get_rate_limit_rpm()):
+            _emit(f"[{agent_id}] RPM 限流触发，等待 5s…")
+            time.sleep(5)
         t0 = time.time()
         try:
             response = client.call(
@@ -122,6 +178,11 @@ def agent_loop(
             prompt_tokens=response.prompt_tokens,
             completion_tokens=response.completion_tokens,
             latency_ms=latency_ms,
+            extra={
+                "task_id": task_id,
+                "department_id": dept_id,
+                "flow_step_id": flow_step_id,
+            },
         )
 
         # 5. 追加助手回复
@@ -163,6 +224,9 @@ def agent_loop(
         if executor.is_done:
             _emit(f"[{agent_id}] 任务完成：{executor.done_summary}")
             return executor.done_summary or final_output
+
+    if executor.is_done:
+        return executor.done_summary or final_output
 
     _emit(f"[{agent_id}] 执行循环结束（共 {min(turn+1, max_turns)} 轮）")
     return final_output

@@ -84,10 +84,11 @@ class TrafficMonitor:
             ]
         return len(recent) >= limit_rpm
 
-    def get_stats(self, window: str = "1h") -> Dict[str, Any]:
+    def get_stats(self, window: str = "1h", group_by: Optional[str] = None) -> Dict[str, Any]:
         """
         聚合统计数据。
         window: "1h" | "24h" | "all"
+        group_by: None | "department" | "task" | "step"
         """
         seconds = {"1h": 3600, "24h": 86400, "all": float("inf")}
         cutoff = time.time() - seconds.get(window, 3600)
@@ -126,7 +127,7 @@ class TrafficMonitor:
         with self._lock:
             rpm = sum(1 for e in self._minute_calls if e[0] >= now - 60)
 
-        return {
+        result: Dict[str, Any] = {
             "window": window,
             "total_calls": total_calls,
             "total_tokens": total_tokens,
@@ -136,6 +137,27 @@ class TrafficMonitor:
             "by_agent": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in by_agent.items()},
             "by_model": {k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in by_model.items()},
         }
+
+        if group_by in {"department", "task", "step"}:
+            key_map = {
+                "department": "department_id",
+                "task": "task_id",
+                "step": "flow_step_id",
+            }
+            field = key_map[group_by]
+            grouped: Dict[str, Dict[str, Any]] = defaultdict(
+                lambda: {"calls": 0, "tokens": 0, "cost_usd": 0.0}
+            )
+            for r in rows:
+                gid = r.get(field) or "unknown"
+                grouped[gid]["calls"] += 1
+                grouped[gid]["tokens"] += r.get("total_tokens", 0)
+                grouped[gid]["cost_usd"] += r.get("cost_usd", 0)
+            result[f"by_{group_by}"] = {
+                k: {**v, "cost_usd": round(v["cost_usd"], 6)} for k, v in grouped.items()
+            }
+
+        return result
 
     def get_recent(self, limit: int = 20) -> List[Dict[str, Any]]:
         """返回最近 N 条记录（时间倒序）。"""

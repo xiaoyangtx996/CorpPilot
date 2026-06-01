@@ -104,6 +104,16 @@
     }
     .card-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; letter-spacing: -0.01em; }
 
+    .flow-steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .flow-step {
+      padding: 6px 10px; border-radius: 8px; font-size: 12px;
+      border: 1px solid var(--border-color); font-family: monospace;
+    }
+    .flow-step.done { background: rgba(52,199,89,0.08); border-color: var(--green); color: var(--green); }
+    .flow-step.current { background: rgba(0,122,255,0.08); border-color: var(--blue); font-weight: 600; }
+    .flow-step.skipped { opacity: 0.45; text-decoration: line-through; }
+    .flow-step.pending { opacity: 0.55; }
+
     /* 数据概览指标 */
     .metric { text-align: left; }
     .metric-value { font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 4px; }
@@ -206,6 +216,7 @@
     }
     .modal.show { display: flex; animation: fadeIn 0.2s; }
     .modal-card { width: min(480px, 100%); max-height: 90vh; overflow-y: auto; }
+    .modal-card.wide { width: min(720px, 100%); }
     .field { margin-bottom: 16px; }
     .field label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
     .field input, .field select, .field textarea {
@@ -257,6 +268,78 @@
     .agent-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
     .agent-role { font-size: 15px; font-weight: 600; }
     .agent-id { font-size: 12px; color: var(--text-secondary); font-family: monospace; }
+
+    /* Token 网关 (9Router 风格) */
+    .gw-hero {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap;
+      padding: 24px 28px; border-radius: var(--radius-lg); margin-bottom: 24px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
+      color: #f8fafc; border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 12px 40px rgba(15,23,42,0.18);
+    }
+    .gw-hero h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .gw-hero p { font-size: 13px; color: #94a3b8; line-height: 1.5; max-width: 520px; }
+    .gw-endpoint {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-md); padding: 12px 16px; min-width: 220px;
+    }
+    .gw-endpoint span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 6px; }
+    .gw-endpoint code { font-size: 13px; color: #38bdf8; font-family: ui-monospace, monospace; }
+
+    .gw-kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 900px) { .gw-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    .gw-kpi {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--radius-md);
+      padding: 16px 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+    }
+    .gw-kpi-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .gw-kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+    .gw-kpi-sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+
+    .gw-provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .gw-provider-card {
+      background: var(--card-bg); border: 1px solid var(--border-light); border-radius: var(--radius-md);
+      padding: 16px; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .gw-provider-card:hover { border-color: rgba(0,122,255,0.25); box-shadow: 0 6px 20px rgba(0,122,255,0.08); }
+    .gw-provider-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .gw-provider-name { font-weight: 600; font-size: 14px; }
+    .gw-provider-meta { font-size: 12px; color: var(--text-secondary); font-family: monospace; margin-bottom: 10px; }
+    .gw-provider-stats { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap; }
+
+    .gw-progress { margin-bottom: 14px; }
+    .gw-progress-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+    .gw-progress-head span:first-child { font-weight: 600; color: var(--text-main); }
+    .gw-progress-head span:last-child { color: var(--text-secondary); font-family: monospace; }
+    .gw-progress-bar { height: 8px; background: var(--accent-light); border-radius: 999px; overflow: hidden; }
+    .gw-progress-fill { height: 100%; border-radius: 999px; background: var(--blue); transition: width 0.4s ease; }
+    .gw-progress-fill.warn { background: var(--orange); }
+    .gw-progress-fill.danger { background: var(--red); }
+
+    .gw-panel { display: none; }
+    .gw-panel.active { display: block; animation: fadeIn 0.25s ease; }
+
+    .gw-data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .gw-data-table th {
+      text-align: left; padding: 10px 12px; font-weight: 600; color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .gw-data-table th.num, .gw-data-table td.num { text-align: right; }
+    .gw-data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+    .gw-data-table tr:hover td { background: rgba(0,122,255,0.03); }
+    .gw-data-table .mono { font-family: ui-monospace, monospace; font-size: 12px; }
+
+    .gw-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .gw-split { grid-template-columns: 1fr; } }
+
+    .gw-launcher { background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); }
+    .gw-pricing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .gw-pricing-row {
+      display: grid; grid-template-columns: 1fr 90px 90px; gap: 8px; align-items: center;
+      padding: 10px 12px; background: var(--bg-color); border-radius: var(--radius-sm); border: 1px solid var(--border-light);
+    }
+    .gw-pricing-row label { font-size: 12px; font-family: monospace; font-weight: 600; }
+    .gw-pricing-row input { padding: 8px 10px; font-size: 13px; border-radius: 8px; border: 1px solid var(--border-color); background: #fff; width: 100%; }
   </style>
 </head>
 <body>
@@ -281,17 +364,21 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         任务中心
       </button>
+      <button class="nav-btn" onclick="switchTab('flows')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        Flow 市场
+      </button>
       <button class="nav-btn" onclick="switchTab('board')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
         董事会
       </button>
-      <button class="nav-btn" onclick="switchTab('runtime')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        运行时
+      <button class="nav-btn" onclick="switchTab('gateway')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        Token 网关
       </button>
-      <button class="nav-btn" onclick="switchTab('models')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 15.54a5 5 0 0 1 0-7.07"></path></svg>
-        模型配置
+      <button class="nav-btn" onclick="switchTab('skills')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+        Skill 进化
       </button>
     </div>
   </div>
@@ -397,106 +484,173 @@
 <main id="board" class="container">
   <div class="toolbar">
     <div class="toolbar-title">董事会决策大厅</div>
+    <button class="btn btn-primary" onclick="showBoardProposalModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> 新提案</button>
   </div>
   <div class="card">
     <div id="board-container">暂无提案记录。</div>
   </div>
 </main>
 
-<!-- 视图: 运行时控制台 -->
-<main id="runtime" class="container">
+<!-- 视图: Token 网关 (9Router 风格 · 财务部) -->
+<main id="gateway" class="container">
+  <div class="gw-hero">
+    <div>
+      <h1>Token 网关 · 财务部</h1>
+      <p>参考 9Router 的统一 Key 池 + 分层路由：多 Provider 模型池、Primary/Fallback 容灾、实时用量归因与预算限流。下方成本为<strong style="color:#cbd5e1;font-weight:600;">估算参考</strong>，非实际账单。</p>
+    </div>
+    <div class="gw-endpoint">
+      <span>路由内核</span>
+      <code>ModelRouter + TrafficMonitor</code>
+    </div>
+  </div>
+
   <div class="toolbar">
-    <div class="toolbar-title">运行时控制台</div>
-    <button class="btn" onclick="loadTrafficStats()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新</button>
-  </div>
-  <div class="grid-view grid-2" style="margin-bottom:24px;">
-    <div class="card">
-      <div class="card-title">发送业务目标</div>
-      <div class="field">
-        <label>目标 Agent</label>
-        <input id="rt-agent-id" value="ceo" placeholder="ceo">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="segment-control" id="gw-window-pills">
+        <button class="segment-btn active" data-window="1h" onclick="setTrafficWindow('1h', this)">1 小时</button>
+        <button class="segment-btn" data-window="24h" onclick="setTrafficWindow('24h', this)">24 小时</button>
+        <button class="segment-btn" data-window="all" onclick="setTrafficWindow('all', this)">全部</button>
       </div>
-      <div class="field">
-        <label>业务目标描述</label>
-        <textarea id="rt-task-desc" placeholder="请描述你的业务目标，Agent 将接收并开始协同执行…" style="min-height:140px;"></textarea>
-      </div>
-      <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="triggerRunTask()">启动 Agent 协同流程</button>
-      <div id="rt-result" style="margin-top:12px;font-size:13px;color:var(--text-secondary);"></div>
+      <span id="traffic-window-badge" class="badge gray">最近 1 小时</span>
     </div>
-    <div class="card">
-      <div class="card-title">流量监控 <span id="traffic-window-badge" class="badge gray" style="font-size:11px;margin-left:6px;">最近1小时</span></div>
-      <div class="grid-view grid-2" style="gap:12px;margin-bottom:16px;">
-        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
-          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">API 调用</div>
-          <div id="tr-calls" style="font-size:28px;font-weight:600;margin-top:4px;">-</div>
-        </div>
-        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
-          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">总 Token 量</div>
-          <div id="tr-tokens" style="font-size:28px;font-weight:600;margin-top:4px;">-</div>
-        </div>
-        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
-          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">估算成本 (USD)</div>
-          <div id="tr-cost" style="font-size:28px;font-weight:600;margin-top:4px;">$-</div>
-        </div>
-        <div style="background:var(--bg-color);padding:14px;border-radius:12px;">
-          <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.05em;">平均延迟 (ms)</div>
-          <div id="tr-latency" style="font-size:28px;font-weight:600;margin-top:4px;">-</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);width:100%;margin-bottom:4px;">按模型分布</div>
-        <div id="tr-by-model" style="width:100%;"></div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="toolbar" style="margin-bottom:16px;">
-      <div class="card-title" style="margin:0;">最近调用记录</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="loadGateway()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新</button>
+      <button class="btn btn-primary" onclick="saveAllModelsConfig()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> 保存配置</button>
       <a href="/api/traffic/export" class="btn btn-sm" download>导出 JSONL</a>
     </div>
-    <div id="tr-recent-list"></div>
+  </div>
+
+  <div class="gw-kpi-grid">
+    <div class="gw-kpi"><div class="gw-kpi-label">总 Token</div><div class="gw-kpi-value" id="tr-tokens">-</div><div class="gw-kpi-sub">窗口内累计</div></div>
+    <div class="gw-kpi"><div class="gw-kpi-label">估算成本</div><div class="gw-kpi-value" id="tr-cost">$-</div><div class="gw-kpi-sub">USD · token_pricing</div></div>
+    <div class="gw-kpi"><div class="gw-kpi-label">请求数</div><div class="gw-kpi-value" id="tr-calls">-</div><div class="gw-kpi-sub">LLM 调用次数</div></div>
+    <div class="gw-kpi"><div class="gw-kpi-label">当前 RPM</div><div class="gw-kpi-value"><span id="tr-rpm">-</span><span style="font-size:14px;color:var(--text-tertiary);"> / </span><span id="tr-rpm-limit" style="font-size:18px;">60</span></div><div class="gw-kpi-sub">滑动 1 分钟</div></div>
+    <div class="gw-kpi"><div class="gw-kpi-label">平均延迟</div><div class="gw-kpi-value" id="tr-latency">-</div><div class="gw-kpi-sub">ms</div></div>
+  </div>
+
+  <div id="gw-providers" class="gw-provider-grid"></div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-title" style="margin-bottom:12px;">预算与限流进度</div>
+    <div id="gw-budget-bars"></div>
+  </div>
+
+  <div class="toolbar" style="margin-bottom:16px;">
+    <div class="segment-control" id="gw-panel-tabs">
+      <button class="segment-btn active" onclick="switchGatewayPanel('usage', this)">用量分析</button>
+      <button class="segment-btn" onclick="switchGatewayPanel('pool', this)">模型池</button>
+      <button class="segment-btn" onclick="switchGatewayPanel('routes', this)">路由策略</button>
+      <button class="segment-btn" onclick="switchGatewayPanel('budget', this)">预算 · 定价</button>
+    </div>
+  </div>
+
+  <div id="gw-panel-usage" class="gw-panel active">
+    <div class="gw-split" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title" style="font-size:16px;">按模型</div>
+        <div id="tr-by-model"></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="font-size:16px;">按部门</div>
+        <div id="tr-by-dept"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title" style="font-size:16px;">按任务归因</div>
+      <div id="gw-by-task"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="font-size:16px;">最近请求</div>
+      <div id="tr-recent-list"></div>
+    </div>
+  </div>
+
+  <div id="gw-panel-pool" class="gw-panel">
+    <div class="card">
+      <div class="card-title">模型池 (Providers)</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">登记所有底层 Provider 实例，供全局路由与层级覆盖选用。对标 9Router Providers 面板。</p>
+      <div id="models-pool-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <button class="btn btn-sm" style="margin-top:16px;width:100%;border:1px dashed var(--border-color);background:none;" onclick="addModelToPool()">+ 新增 Provider</button>
+    </div>
+  </div>
+
+  <div id="gw-panel-routes" class="gw-panel">
+    <div class="grid-view grid-2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">全局路由 (Primary / Fallback)</div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">各能力域默认大脑与跌落容灾，类似 9Router Combo 的 Tier 策略。</p>
+        <div id="models-global-routes" style="display:flex;flex-direction:column;gap:16px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">层级覆盖</div>
+        <div class="toolbar" style="margin-bottom:16px;">
+          <div class="segment-control">
+            <button class="segment-btn active" onclick="switchRouteTab(this, 'agent')">Agent</button>
+            <button class="segment-btn" onclick="switchRouteTab(this, 'role')">岗位</button>
+            <button class="segment-btn" onclick="switchRouteTab(this, 'department')">部门</button>
+          </div>
+          <button class="btn btn-sm" onclick="addRouteOverride()">+ 添加覆盖</button>
+        </div>
+        <div id="models-overrides-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gw-panel-budget" class="gw-panel">
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">预算与 RPM 限流</div>
+      <div id="models-traffic-config" class="grid-2" style="gap:16px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Token 定价 (USD / 1K tokens)</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">用于成本估算，与 9Router Usage Analytics 的参考价一致——展示节省/消耗趋势，非真实扣费。</p>
+      <div id="models-token-pricing" class="gw-pricing-grid"></div>
+    </div>
+  </div>
+
+  <div class="card gw-launcher" style="margin-top:24px;">
+    <div class="card-title">快速启动 Agent</div>
+    <div class="grid-view grid-2" style="gap:16px;">
+      <div class="field" style="margin:0;"><label>目标 Agent</label><input id="rt-agent-id" value="ceo" placeholder="ceo"></div>
+      <div class="field" style="margin:0;grid-column:1/-1;"><label>业务目标</label><textarea id="rt-task-desc" placeholder="描述业务目标，Agent 接收后开始协同…" style="min-height:80px;"></textarea></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:12px;padding:10px 20px;" onclick="triggerRunTask()">启动协同流程</button>
+    <div id="rt-result" style="margin-top:10px;font-size:13px;color:var(--text-secondary);"></div>
   </div>
 </main>
 
-<!-- 视图: 模型配置 -->
-<main id="models" class="container">
+<!-- 视图: Flow 市场 -->
+<main id="flows" class="container">
   <div class="toolbar">
-    <div class="toolbar-title">网络神经元架构配置 (Model Pool & Routes)</div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn" onclick="loadModels()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新配置</button>
-      <button class="btn btn-primary" onclick="saveAllModelsConfig()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> 保存并重载内核</button>
+    <div class="toolbar-title">Flow 工艺卡市场</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="loadFlowsView()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新</button>
+      <button class="btn" onclick="document.getElementById('flowImportInput').click()">导入 Flow</button>
+      <input type="file" id="flowImportInput" accept=".json,application/json" style="display:none" onchange="importFlowFile(event)">
     </div>
   </div>
-  
+  <div id="flows-container" class="grid-view grid-2"></div>
+</main>
+
+<!-- 视图: Skill 自进化 -->
+<main id="skills" class="container">
+  <div class="toolbar">
+    <div class="toolbar-title">Skill 自进化 · 提案审批与版本回滚</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="loadSkillsView()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 刷新</button>
+      <button class="btn btn-primary" onclick="openNewSkillEditor()">新建 Skill</button>
+    </div>
+  </div>
   <div class="grid-view grid-2" style="margin-bottom:24px;">
-    <!-- 左侧：模型池 -->
     <div class="card">
-      <div class="card-title">模型池 (Model Pool)</div>
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">登记系统可调用的所有底层模型实例，为上层路由提供选项。</p>
-      <div id="models-pool-list" style="display:flex;flex-direction:column;gap:12px;"></div>
-      <button class="btn btn-sm" style="margin-top:16px;width:100%;border:1px dashed var(--border-color);background:none;" onclick="addModelToPool()">+ 新增模型实例</button>
+      <div class="card-title">待审批提案</div>
+      <div id="skills-proposals-list" class="list"></div>
     </div>
-    
-    <!-- 右侧：全局路由 -->
     <div class="card">
-      <div class="card-title">全局按能力路由 (Global Routes)</div>
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">设置各能力域（如文本、绘图）的默认处理大脑及跌落容灾策略。</p>
-      <div id="models-global-routes" style="display:flex;flex-direction:column;gap:16px;"></div>
+      <div class="card-title">已入库 Skill · 版本回滚</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">审批通过后 Skill 自动备份至 <code>skills/.history/</code>，可一键回滚。</p>
+      <div id="skills-catalog-list" class="list"></div>
     </div>
-  </div>
-  
-  <!-- 下部：层级覆盖配置 -->
-  <div class="card">
-    <div class="card-title">网状干预覆盖 (Hierarchical Overrides)</div>
-    <div class="toolbar" style="margin-bottom: 16px;">
-      <div class="segment-control">
-        <button class="segment-btn active" onclick="switchRouteTab(this, 'agent')">Agent级</button>
-        <button class="segment-btn" onclick="switchRouteTab(this, 'role')">岗位级</button>
-        <button class="segment-btn" onclick="switchRouteTab(this, 'department')">部门级</button>
-      </div>
-      <button class="btn btn-sm" onclick="addRouteOverride()">+ 添加覆盖策略</button>
-    </div>
-    <div id="models-overrides-list"></div>
   </div>
 </main>
 
@@ -551,12 +705,76 @@
         <input id="f_requester" required placeholder="如：ceo / pmo_director">
       </div>
       <div class="field">
+        <label>项目工艺卡（Flow）</label>
+        <select id="f_flow">
+          <option value="">legacy — 默认十三部门链</option>
+          <option value="greenfield">greenfield — 从零到一</option>
+          <option value="hotfix">hotfix — 紧急修复（跳过 Demo）</option>
+        </select>
+      </div>
+      <div class="field">
         <label>上下文界定（可选）</label>
         <textarea id="f_desc" placeholder="输入有助于理解目标的先验信息或参考规范..."></textarea>
       </div>
       <div style="margin-top: 24px;">
         <button class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px;" type="submit">编排任务</button>
       </div>
+    </form>
+  </div>
+</div>
+
+<!-- 弹窗: Skill 在线编辑 -->
+<div class="modal" id="skillEditModal">
+  <div class="card modal-card wide">
+    <div class="toolbar" style="margin-bottom: 20px;">
+      <h3 id="skillEditTitle" style="font-size: 18px;">编辑 Skill</h3>
+      <button class="close-btn" onclick="hideModal('skillEditModal')" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+    </div>
+    <form onsubmit="submitSkillEdit(event)">
+      <input type="hidden" id="se_id">
+      <div class="grid-2" style="gap: 16px;">
+        <div class="field">
+          <label>Skill ID</label>
+          <input id="se_id_display" pattern="[a-z][a-z0-9_-]*" placeholder="my-skill" required>
+        </div>
+        <div class="field">
+          <label>名称</label>
+          <input id="se_name" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>绑定 Agent（逗号分隔）</label>
+        <input id="se_agents" placeholder="rd_center, qa_center">
+      </div>
+      <div class="field">
+        <label>描述</label>
+        <input id="se_desc">
+      </div>
+      <div class="field">
+        <label>Markdown 正文</label>
+        <textarea id="se_content" rows="14" style="font-family: ui-monospace, monospace; font-size: 13px;"></textarea>
+      </div>
+      <div style="margin-top: 24px; display:flex; gap:12px;">
+        <button class="btn btn-primary" style="flex:1; padding: 12px;" type="submit">保存（自动备份旧版）</button>
+        <button class="btn" type="button" onclick="hideModal('skillEditModal')">取消</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 弹窗: 董事会新提案 -->
+<div class="modal" id="boardProposalModal">
+  <div class="card modal-card">
+    <div class="toolbar" style="margin-bottom: 20px;">
+      <h3 style="font-size: 18px;">提交董事会提案</h3>
+      <button class="close-btn" onclick="hideModal('boardProposalModal')" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+    </div>
+    <form onsubmit="submitBoardProposal(event)">
+      <div class="field"><label>标题</label><input id="bp_title" required placeholder="如：紧急跳过 Demo 直接开发"></div>
+      <div class="field"><label>内容</label><textarea id="bp_content" required placeholder="提案详情…"></textarea></div>
+      <div class="field"><label>提请人</label><input id="bp_proposer" value="ceo" required></div>
+      <div class="field"><label>关联任务 ID（可选）</label><input id="bp_task_id" placeholder="TASK-2026-001"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;margin-top:12px;" type="submit">提交提案</button>
     </form>
   </div>
 </div>
@@ -568,7 +786,7 @@
   const H_COLOR = { idle:"gray", active:"blue", busy:"orange", blocked:"red" };
   const H_LBL = { idle:"侦听轮询", active:"受控运转", busy:"高载作业", blocked:"异常锁死" };
 
-  let G = { tasks: [], depts: {}, events: [], board: [], activeTab: 'overview', currentDeptId: null };
+  let G = { tasks: [], depts: {}, events: [], board: [], skills: [], flows: [], activeTab: 'overview', currentDeptId: null };
 
   // -- 启动与生命周期 --
   document.addEventListener("DOMContentLoaded", () => {
@@ -583,6 +801,7 @@
     if(G.activeTab === 'departments') { G.currentDeptId ? renderDeptDetail(G.currentDeptId) : renderDeptsGrid(); }
     if(G.activeTab === 'tasks') renderTasks();
     if(G.activeTab === 'board') renderBoard();
+    if(G.activeTab === 'skills') renderSkillsView();
   }
 
   // -- 网络取数 --
@@ -610,6 +829,8 @@
     if(tabId === 'departments') { closeDepartment(); renderDeptsGrid(); }
     if(tabId === 'tasks') renderTasks();
     if(tabId === 'board') renderBoard();
+    if(tabId === 'skills') loadSkillsView();
+    if(tabId === 'flows') loadFlowsView();
   }
 
   // -- 概览渲染 --
@@ -621,14 +842,16 @@
     document.getElementById('stat-proposals').innerText = G.board.length;
 
     // 事件流
-    const feedHTML = G.events.length ? G.events.map(ev => `
-      <div class="list-item">
+    const feedHTML = G.events.length ? G.events.map(ev => {
+      const isFinance = ev.category === 'finance' && ev.action === 'budget_exceeded';
+      return `
+      <div class="list-item" style="${isFinance ? 'border-left:3px solid var(--orange);background:rgba(255,149,0,0.06);' : ''}">
         <div class="list-item-main">
-          <div class="list-item-title">${esc(ev.category)} / ${esc(ev.action)}</div>
+          <div class="list-item-title">${isFinance ? '⚠ ' : ''}${esc(ev.category)} / ${esc(ev.action)}</div>
           <div class="list-item-desc">${fmt(ev.timestamp)} by ${esc(ev.actor)} -> ${esc(ev.subject_id)}</div>
         </div>
-      </div>
-    `).join('') : '<div class="empty-state">暂无系统事件上报</div>';
+      </div>`;
+    }).join('') : '<div class="empty-state">暂无系统事件上报</div>';
     document.getElementById('feed-container').innerHTML = feedHTML;
 
     // 决议
@@ -653,10 +876,11 @@
     document.getElementById('departments-container').innerHTML = arr.map(d => {
       const s = d.stats || {};
       const name = DEPT_NAMES[d.id] || d.id;
+      const runtimeDyn = s.runtime_dynamic_agents || 0;
       return `
         <div class="card dept-card" onclick="openDepartment('${d.id}')">
           <h3>${name}</h3>
-          <p><span style="font-family:monospace;">${d.id}</span><br>管理着 ${s.total_agents||0} 个子节点</p>
+          <p><span style="font-family:monospace;">${d.id}</span><br>管理着 ${s.total_agents||0} 个子节点${runtimeDyn ? ` · <span style="color:var(--orange)">${runtimeDyn} HR 临时</span>` : ''}</p>
           <div class="dept-stats">
             <div class="dept-stat-item"><strong>${s.active_agents||0}</strong><span>运行态</span></div>
             <div class="dept-stat-item"><strong>${s.busy_agents||0}</strong><span>高载态</span></div>
@@ -690,10 +914,11 @@
     const renderAgent = (a) => `
       <div class="agent-card" onclick="openAgentDrawer('${esc(JSON.stringify(a))}')">
         <div class="agent-header">
-          <div class="agent-role">${esc(a.label || a.role)}</div>
+          <div class="agent-role">${esc(a.label || a.role)}${a.is_dynamic ? ' <span class="badge orange" style="font-size:10px;margin-left:4px;">HR 临时</span>' : ''}</div>
           <span class="badge ${H_COLOR[a.health_status]||'gray'}">${H_LBL[a.health_status]||a.health_status}</span>
         </div>
         <div class="agent-id">${esc(a.agent_id)}</div>
+        ${a.task_id ? `<div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">任务 ${esc(a.task_id)}</div>` : ''}
         <div class="dept-stats" style="margin-top: 16px;">
           <div class="dept-stat-item" style="background:#fff;border:1px solid rgba(0,0,0,0.05);"><strong>${a.executing_task_count||0}</strong><span>处理中</span></div>
           <div class="dept-stat-item" style="background:#fff;border:1px solid rgba(0,0,0,0.05);"><strong>${a.completed_task_count||0}</strong><span>已交付</span></div>
@@ -704,6 +929,49 @@
     document.getElementById('dept-head-container').innerHTML = d.head ? renderAgent(d.head) : '<div class="empty-state">尚未指派负责人</div>';
     document.getElementById('dept-default-container').innerHTML = (d.default_roles||[]).length ? d.default_roles.map(renderAgent).join('') : '<div class="empty-state">无固定编制要素</div>';
     document.getElementById('dept-dynamic-container').innerHTML = (d.dynamic_agents||[]).length ? d.dynamic_agents.map(renderAgent).join('') : '<div class="empty-state">当前未发现 HR 临时配给的算力实体</div>';
+    loadDeptSkills(deptId);
+  }
+
+  async function loadDeptSkills(deptId) {
+    let box = document.getElementById('dept-skills-panel');
+    if (!box) {
+      const host = document.getElementById('dept-detail-view');
+      if (!host) return;
+      const section = document.createElement('div');
+      section.className = 'card';
+      section.style.marginTop = '24px';
+      section.innerHTML = '<div class="card-title">部门 Skill 库</div><div id="dept-skills-panel" class="list"></div>';
+      host.appendChild(section);
+      box = document.getElementById('dept-skills-panel');
+    }
+    try {
+      const r = await fetch(`${API_BASE}/api/departments/${encodeURIComponent(deptId)}/skills`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'load failed');
+      const skills = d.skills || [];
+      box.innerHTML = skills.length ? skills.map(s => `
+        <div class="list-item" style="flex-direction:column;align-items:stretch;gap:6px;">
+          <div class="list-item-title"><code>${esc(s.id)}</code> — ${esc(s.name||'')}</div>
+          <div class="list-item-desc">${esc(s.description||'')} · agents: ${(s.agents||[]).map(a=>esc(a)).join(', ')}</div>
+          <button class="btn btn-sm" onclick="openSkillEditor('${esc(s.id)}')">编辑 Skill</button>
+        </div>`).join('') : '<div class="empty-state">该部门暂无绑定 Skill · 可在 Skill 进化页新建并绑定 agent</div>';
+    } catch(e) {
+      box.innerHTML = '<div class="empty-state">Skill 加载失败</div>';
+    }
+  }
+
+  async function overrideGate(tid) {
+    if (!confirm('确认强制 Override 当前 Gate？')) return;
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/intervene`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ action: 'override_gate', actor: 'founder', reason: 'dashboard override' }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'override failed');
+      pollData();
+      viewTaskDetail(tid);
+    } catch(e) { alert('Override 失败: ' + e.message); }
   }
 
   // -- Agent 抽屉 (Drawer) --
@@ -713,7 +981,11 @@
     document.getElementById('agentDrawer').classList.add('open');
     
     // 查询该 Agent 正在处理的专属任务列表
-    const myTasks = G.tasks.filter(t => t.current_owner === a.agent_id || t.execution_owner === a.agent_id);
+    let myTasks = G.tasks.filter(t => t.current_owner === a.agent_id || t.execution_owner === a.agent_id);
+    if (a.is_dynamic && a.task_id) {
+      const bound = G.tasks.filter(t => t.task_id === a.task_id);
+      myTasks = [...new Map([...myTasks, ...bound].map(t => [t.task_id, t])).values()];
+    }
     
     const html = `
       <div class="agent-hero">
@@ -748,7 +1020,19 @@
   function navToTask(tid) {
     closeDrawer();
     switchTab('tasks');
-    // 可选：实现将页面滑到该任务的地方
+    setTimeout(() => viewTaskDetail(tid), 200);
+  }
+
+  async function loadFlowOptions() {
+    try {
+      const r = await fetch(`${API_BASE}/api/flows`);
+      const d = await r.json();
+      const sel = document.getElementById('f_flow');
+      if (!sel) return;
+      const flows = (d.flows || []).filter(f => f.id && f.id !== 'legacy');
+      sel.innerHTML = '<option value="">legacy — 默认十三部门链</option>' +
+        flows.map(f => `<option value="${esc(f.id)}">${esc(f.id)} — ${esc(f.name || '')}</option>`).join('');
+    } catch(e) { console.error('loadFlowOptions', e); }
   }
 
   // -- 任务中心渲染 --
@@ -766,29 +1050,480 @@
     if(!arr.length) { document.getElementById('tasks-container').innerHTML = '<div class="empty-state">当前信道纯净，无相关指令投递。</div>'; return; }
 
     const makeActions = (t) => {
-      let b = [];
-      if(t.status === 'executing') b.push(`<button class="btn btn-sm" onclick="appAlert('仿真：任务 ${t.task_id} 下步将推向测试')">流转下一步</button>`);
-      return b.join('');
+      const btns = [];
+      if (t.flow && t.flow.gate_pending) {
+        btns.push(`<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();approveGate('${t.task_id}')">批准 Gate</button>`);
+      }
+      if (t.flow_id && t.flow_id !== 'legacy') {
+        btns.push(`<button class="btn btn-sm" onclick="event.stopPropagation();viewTaskDetail('${t.task_id}')">Flow 详情</button>`);
+      }
+      return btns.join(' ');
     };
 
-    document.getElementById('tasks-container').innerHTML = arr.map(t => `
-      <div class="list-item" style="padding: 20px 0;">
+    document.getElementById('tasks-container').innerHTML = arr.map(t => {
+      const gateBadge = (t.flow && t.flow.gate_pending) ? '<span class="badge orange" style="margin-left:4px;">Gate 待批</span>' : '';
+      return `
+      <div class="list-item" style="padding: 20px 0;" data-task-id="${esc(t.task_id)}">
         <div class="list-item-main">
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <span class="badge gray" style="font-family:monospace;">${esc(t.task_id)}</span>
-            <span class="badge ${t.status==='completed'?'green':(t.status==='blocked'?'red':'blue')}">${S_LBL[t.status]||t.status}</span>
+            <span class="badge ${t.status==='completed'?'green':(t.status==='blocked'?'red':'blue')}">${S_LBL[t.status]||t.status}</span>${gateBadge}
           </div>
           <div class="list-item-title" style="font-size: 16px;">${esc(t.title)}</div>
           <div class="list-item-desc" style="white-space:normal; line-height:1.5;">${esc(t.description||'无需附加描绘')}</div>
           <div style="margin-top: 12px; font-size: 12px; color: var(--text-tertiary);">
             发起: ${esc(t.requester)} | 处理方: ${esc(t.current_owner)} -> 控制权: ${esc(t.execution_owner)}
+            ${t.flow_id ? ` | Flow: <b>${esc(t.flow_id)}</b> @ ${esc(t.flow_step_id||'-')}` : ''}
+            ${(t.artifacts&&t.artifacts.length) ? ` | 产出: ${t.artifacts.length} 项` : ''}
           </div>
         </div>
         <div class="list-item-action">
+          ${makeActions(t)}
+          <button class="btn btn-sm" onclick="viewTaskDetail('${t.task_id}')">详情 / 产出</button>
           <button class="btn btn-sm btn-primary" onclick="viewTimeline('${t.task_id}')">时序刻录录音</button>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
+  }
+
+  function renderFlowTimelineHtml(f) {
+    const steps = f.steps_timeline || [];
+    if (!steps.length) return '';
+    return `<div style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Flow 步骤进度</div>
+      <div class="flow-steps">${steps.map(s =>
+        `<span class="flow-step ${esc(s.status)}" title="${esc(s.role||'')} · ${esc(s.gate_mode||'auto')}">${s.index + 1}. ${esc(s.id)}</span>`
+      ).join('')}</div>
+    </div>`;
+  }
+
+  function renderFlowSkipHtml(tid, f) {
+    const pending = (f.steps_timeline || []).filter(s => s.status === 'pending' || s.status === 'current');
+    if (!pending.length) return '';
+    return `<div style="margin-top:12px;padding:12px;background:rgba(0,0,0,0.02);border-radius:8px;font-size:13px;">
+      <div style="font-weight:600;margin-bottom:8px;">跳过 Flow 步骤（紧急通道）</div>
+      ${pending.map(s => `<label style="display:block;margin:4px 0;"><input type="checkbox" class="flow-skip-cb" value="${esc(s.id)}"> ${esc(s.id)}</label>`).join('')}
+      <button class="btn btn-sm btn-danger" style="margin-top:8px" onclick="flowSkipSteps('${tid}')">执行跳步</button>
+    </div>`;
+  }
+
+  function renderPostconditionPanel(task, flowCtx) {
+    const fs = task.flow_state || {};
+    const rt = task.runtime || {};
+    const lastPc = rt.last_postcondition;
+    const lf = fs.last_failure;
+    const sb = fs.last_send_back;
+    const step = (flowCtx && flowCtx.current_step) || {};
+    let html = '<div style="margin:16px 0;padding:12px;background:rgba(0,0,0,0.03);border-radius:8px;font-size:13px;">';
+    html += '<b>机器验收 (Postcondition)</b><br>';
+    html += '<span style="color:var(--text-secondary);">每步完成后自动校验；QA 监督步失败会打回 dev 并重跑。</span>';
+    if (step.postcondition && step.postcondition.length) {
+      html += `<div style="margin-top:8px;">当前步规则: <code>${step.postcondition.map(r=>esc(String(r))).join('</code> · <code>')}</code></div>`;
+    }
+    if (step.on_fail) {
+      html += `<div style="margin-top:4px;">失败策略: <code>${esc(step.on_fail)}</code>`;
+      if (step.send_back_to) html += ` → 回退至 <code>${esc(step.send_back_to)}</code>`;
+      if (step.max_retries != null) html += ` · 最多重试 ${step.max_retries} 次`;
+      html += '</div>';
+    }
+    if (lastPc) {
+      html += `<div style="margin-top:8px;color:${lastPc.passed?'var(--green)':'var(--red)'}">最近验收: ${lastPc.passed?'通过':'未通过'}</div>`;
+      if (!lastPc.passed && (lastPc.errors||[]).length) {
+        html += `<ul style="margin:4px 0 0 16px;color:var(--red);">${lastPc.errors.map(e=>`<li>${esc(e)}</li>`).join('')}</ul>`;
+      }
+    }
+    if (lf && lf.errors && lf.errors.length) {
+      html += `<div style="margin-top:8px;color:var(--orange)">上次失败 (${esc(lf.step||'')}): ${lf.errors.map(e=>esc(e)).join('; ')}</div>`;
+    }
+    if (sb && sb.to) {
+      html += `<div style="margin-top:4px;color:var(--orange)">已打回: ${esc(sb.from||'?')} → ${esc(sb.to)}</div>`;
+    }
+    html += '</div>';
+    return html;
+  }
+
+  async function runPostconditionCheck(tid) {
+    const el = document.getElementById('task-qa-result');
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/postcondition`);
+      const d = await r.json();
+      const c = d.postcondition || {};
+      if (!r.ok) throw new Error(d.error || 'check failed');
+      const ok = c.passed;
+      let msg = ok
+        ? `<span style="color:var(--green)">当前步骤 postcondition 通过</span>`
+        : `<span style="color:var(--red)">未通过</span> — ${(c.errors||[]).map(e=>esc(e)).join('; ')}`;
+      if (d.on_fail === 'send_back' && d.send_back_to && !ok) {
+        msg += `<br><span style="color:var(--orange)">系统将打回至 <code>${esc(d.send_back_to)}</code>（Agent 完成或监督驳回时自动执行）</span>`;
+      }
+      el.innerHTML = msg;
+    } catch(e) { el.textContent = '验收检查失败'; }
+  }
+
+  async function viewTaskDetail(tid) {
+    try {
+      const [taskRes, artRes, flowRes] = await Promise.all([
+        fetch(`${API_BASE}/api/tasks/${tid}`),
+        fetch(`${API_BASE}/api/tasks/${tid}/artifacts`),
+        fetch(`${API_BASE}/api/tasks/${tid}/flow`).catch(() => null),
+      ]);
+      const task = await taskRes.json();
+      const arts = await artRes.json();
+      let flowHtml = '';
+      let flowCtx = {};
+      if (flowRes && flowRes.ok) {
+        const fd = await flowRes.json();
+        flowCtx = fd.flow || {};
+        flowHtml = `<div style="margin-bottom:16px;padding:12px;background:rgba(0,0,0,0.03);border-radius:8px;font-size:13px;">
+          <b>Flow</b>: ${esc(flowCtx.flow_id||'legacy')} — ${esc(flowCtx.flow_name||'')}
+          ${flowCtx.mode==='flow' ? `<br>步骤 ${(flowCtx.step_index||0)+1} / ${flowCtx.step_total||'?'} · <code>${esc(flowCtx.flow_step_id||'')}</code>` : ''}
+          ${flowCtx.gate_pending ? '<br><span style="color:var(--orange)">等待 Gate 确认</span>' : ''}
+        </div>${renderFlowTimelineHtml(flowCtx)}`;
+      }
+      const artList = (arts.artifacts||[]).map(a => `<li><code>${esc(a.path||'')}</code> — ${esc(a.summary||'')}</li>`).join('') || '<li>暂无产出</li>';
+      const html = `<div style="padding:24px;">
+        <h3 style="margin-bottom:16px;">${esc(task.title||tid)}</h3>
+        ${flowHtml}
+        ${renderPostconditionPanel(task, flowCtx)}
+        <p style="font-size:13px;color:var(--text-secondary);">${esc(task.description||'')}</p>
+        <h4 style="margin:20px 0 8px;">产出物</h4><ul style="font-size:13px;line-height:1.8;">${artList}</ul>
+        ${(task.flow&&task.flow.gate_pending) ? `<button class="btn btn-sm btn-primary" style="margin-top:16px" onclick="approveGate('${tid}')">${task.flow_step_id==='project_close'?'批准结案归档':'批准 Gate'}</button>
+        <button class="btn btn-sm" style="margin-top:8px;margin-left:8px" onclick="overrideGate('${tid}')">强制 Override</button>` : ''}
+        ${task.flow_step_id==='project_close' ? `<button class="btn btn-sm" style="margin-top:8px" onclick="runProjectClose('${tid}')">生成结案报告</button>` : ''}
+        ${(task.flow&&task.flow.current_step&&task.flow.current_step.type==='supervisor') ? `
+          <div style="margin-top:16px;display:flex;gap:8px;">
+            <button class="btn btn-sm btn-primary" onclick="supervisorVerdict('${tid}','${esc(task.flow.flow_step_id)}','pass')">监督通过</button>
+            <button class="btn btn-sm btn-danger" onclick="supervisorVerdict('${tid}','${esc(task.flow.flow_step_id)}','fail')">监督驳回</button>
+          </div>` : ''}
+        ${task.flow_id && task.flow_id!=='legacy' ? `<button class="btn btn-sm" style="margin-top:12px" onclick="flowAdvance('${tid}')">推进 Flow 下一步</button>` : ''}
+        ${task.flow_id && task.flow_id!=='legacy' ? `<button class="btn btn-sm" style="margin-top:8px" onclick="saveTaskAsFlow('${tid}','${esc(task.flow_id)}')">另存为 Flow 模板</button>` : ''}
+        ${renderFlowSkipHtml(tid, flowCtx)}
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-primary" onclick="runPostconditionCheck('${tid}')">运行当前步验收</button>
+          <button class="btn btn-sm" onclick="runDesignValidate('${tid}')">校验 design/</button>
+          <button class="btn btn-sm" onclick="runVisualDiff('${tid}')">视觉 diff 评分</button>
+        </div>
+        <div id="task-qa-result" style="margin-top:12px;font-size:13px;color:var(--text-secondary);"></div>
+      </div>`;
+      document.getElementById('agentDrawerContent').innerHTML = html;
+      document.getElementById('agentDrawerOverlay').classList.add('open');
+      document.getElementById('agentDrawer').classList.add('open');
+    } catch(e) { console.error(e); }
+  }
+
+  async function runDesignValidate(tid) {
+    const el = document.getElementById('task-qa-result');
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/design/validate`);
+      const d = await r.json();
+      const v = d.validation || {};
+      el.innerHTML = v.passed
+        ? `<span style="color:var(--green)">design/ 校验通过</span> — ${(v.found||[]).join(', ')}`
+        : `<span style="color:var(--red)">design/ 校验失败</span> — ${(v.errors||[]).join('; ')}`;
+    } catch(e) { el.textContent = '校验请求失败'; }
+  }
+
+  async function runVisualDiff(tid) {
+    const el = document.getElementById('task-qa-result');
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/visual-diff`);
+      const d = await r.json();
+      const v = d.visual_diff || {};
+      if (v.error) {
+        el.innerHTML = `<span style="color:var(--orange)">${esc(v.error)}</span>`;
+        return;
+      }
+      const pct = ((v.score||0)*100).toFixed(1);
+      const ok = v.score >= 0.7;
+      const detail = v.text_score != null ? ` (文本 ${(v.text_score*100).toFixed(0)}% · 结构 ${(v.tag_score*100).toFixed(0)}%)` : '';
+      const shot = v.screenshot_score != null ? ` · 截图 ${(v.screenshot_score*100).toFixed(0)}%` : '';
+      const mode = v.mode ? ` [${esc(v.mode)}]` : '';
+      const imgs = v.mock_screenshot ? `<br><img src="/${esc(v.mock_screenshot)}" style="max-width:45%;margin-top:8px;border:1px solid var(--border-color);border-radius:6px;" alt="mock"><img src="/${esc(v.impl_screenshot)}" style="max-width:45%;margin-left:8px;margin-top:8px;border:1px solid var(--border-color);border-radius:6px;" alt="impl">` : '';
+      el.innerHTML = `<span style="color:${ok?'var(--green)':'var(--red)'}">visual_diff = ${pct}%</span>${mode}${detail}${shot} (mock: ${esc(v.mock||'-')} → impl: ${esc(v.impl||'-')})${imgs}`;
+    } catch(e) { el.textContent = 'visual diff 请求失败'; }
+  }
+
+  async function loadFlowsView() {
+    try {
+      const r = await fetch(`${API_BASE}/api/flows`);
+      const d = await r.json();
+      G.flows = (d.flows || []).filter(f => f.id !== 'legacy');
+      renderFlowsView();
+    } catch(e) { console.error('loadFlowsView', e); }
+  }
+
+  function renderFlowsView() {
+    const el = document.getElementById('flows-container');
+    if (!G.flows.length) {
+      el.innerHTML = '<div class="empty-state">暂无 Flow 模板</div>';
+      return;
+    }
+    el.innerHTML = G.flows.map(f => {
+      const steps = (f.steps || []).map(s =>
+        `<span class="flow-step ${s.type==='supervisor'?'current':'pending'}" title="${esc(s.gate_mode||'auto')}">${esc(s.id)}</span>`
+      ).join('');
+      return `<div class="card">
+        <div class="card-title">${esc(f.name||f.id)} <span class="badge gray">${esc(f.id)}</span></div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">${esc(f.description||'')}</p>
+        <div style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px;">${f.step_count||0} 步</div>
+        <div class="flow-steps">${steps}</div>
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-primary" onclick="createTaskWithFlow('${esc(f.id)}')">用此 Flow 创建任务</button>
+          <button class="btn btn-sm" onclick="exportFlow('${esc(f.id)}')">导出 JSON</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function createTaskWithFlow(flowId) {
+    showModal('createTaskModal');
+    const sel = document.getElementById('f_flow');
+    if (sel) sel.value = flowId;
+  }
+
+  async function exportFlow(flowId) {
+    try {
+      const r = await fetch(`${API_BASE}/api/flows/${encodeURIComponent(flowId)}/export`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'export failed');
+      const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${flowId}.flow.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch(e) { alert('导出失败: ' + e.message); }
+  }
+
+  async function importFlowFile(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      const overwrite = confirm('若 Flow ID 已存在，是否覆盖？\n确定=覆盖，取消=仅新建');
+      const r = await fetch(`${API_BASE}/api/flows/import`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ ...payload, overwrite }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'import failed');
+      alert(`已导入 Flow「${d.flow_id}」(${d.step_count} 步)`);
+      loadFlowsView();
+    } catch(e) { alert('导入失败: ' + e.message); }
+  }
+
+  async function saveTaskAsFlow(tid, sourceFlowId) {
+    const suggested = `${sourceFlowId}-${tid.split('-').pop() || 'custom'}`.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 48);
+    const newId = prompt('新 Flow 模板 ID（小写英文）', suggested);
+    if (!newId) return;
+    const name = prompt('模板名称（可选）', `${sourceFlowId} 定制版`) || undefined;
+    const overwrite = confirm('若 ID 已存在，是否覆盖？');
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/flow/save-as-template`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ id: newId.trim(), name, overwrite }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'save failed');
+      alert(`已另存为 Flow「${d.flow_id}」(${d.step_count} 步)`);
+      loadFlowsView();
+    } catch(e) { alert('另存为模板失败: ' + e.message); }
+  }
+
+  async function loadSkillsView() {
+    try {
+      const [propRes, skillRes] = await Promise.all([
+        fetch(`${API_BASE}/api/skills/proposals?status=pending`),
+        fetch(`${API_BASE}/api/skills`),
+      ]);
+      const propData = await propRes.json();
+      const skillData = await skillRes.json();
+      G.skills = skillData.skills || [];
+      G.skillProposals = propData.proposals || [];
+      renderSkillsView();
+    } catch(e) { console.error('loadSkillsView', e); }
+  }
+
+  function renderSkillsView() {
+    const proposals = G.skillProposals || [];
+    const propEl = document.getElementById('skills-proposals-list');
+    propEl.innerHTML = proposals.length ? proposals.map(p => `
+      <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <div class="list-item-title">${esc(p.name||p.id)}</div>
+        <div class="list-item-desc">${esc(p.description||'')} · 来自 ${esc(p.task_id||'-')}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-primary" onclick="approveSkillProposal('${esc(p.id)}')">批准入库</button>
+          <button class="btn btn-sm btn-danger" onclick="rejectSkillProposal('${esc(p.id)}')">驳回</button>
+        </div>
+      </div>`).join('') : '<div class="empty-state">暂无待审批 Skill 提案</div>';
+
+    const skills = (G.skills || []).filter(s => s.type === 'local');
+    const catEl = document.getElementById('skills-catalog-list');
+    catEl.innerHTML = skills.length ? skills.map(s => `
+      <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <div class="list-item-title"><code>${esc(s.id)}</code> — ${esc(s.name||'')}</div>
+        <div class="list-item-desc">${esc(s.description||'')} · 绑定: ${(s.agents||[]).map(a=>esc(a)).join(', ')||'-'}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-primary" onclick="openSkillEditor('${esc(s.id)}')">在线编辑</button>
+          <button class="btn btn-sm" onclick="rollbackSkill('${esc(s.id)}')">回滚至上一版本</button>
+        </div>
+      </div>`).join('') : '<div class="empty-state">暂无本地 Skill</div>';
+  }
+
+  async function approveSkillProposal(pid) {
+    try {
+      await fetch(`${API_BASE}/api/skills/proposals/${pid}/approve`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+      loadSkillsView();
+    } catch(e) { alert('批准失败: ' + e); }
+  }
+
+  async function rejectSkillProposal(pid) {
+    const reason = prompt('驳回原因（可选）：') || '';
+    try {
+      await fetch(`${API_BASE}/api/skills/proposals/${pid}/reject`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({reason}) });
+      loadSkillsView();
+    } catch(e) { alert('驳回失败: ' + e); }
+  }
+
+  async function rollbackSkill(skillId) {
+    if (!confirm(`确认回滚 Skill「${skillId}」至上一备份版本？`)) return;
+    try {
+      const r = await fetch(`${API_BASE}/api/skills/${skillId}/rollback`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+      const d = await r.json();
+      if (d.error) { alert(d.error); return; }
+      alert('回滚成功');
+      loadSkillsView();
+    } catch(e) { alert('回滚失败: ' + e); }
+  }
+
+  async function openSkillEditor(skillId) {
+    try {
+      const r = await fetch(`${API_BASE}/api/skills/${encodeURIComponent(skillId)}`);
+      const s = await r.json();
+      if (!r.ok) throw new Error(s.error || 'load failed');
+      document.getElementById('se_id').value = s.id;
+      document.getElementById('se_id_display').value = s.id;
+      document.getElementById('se_id_display').readOnly = true;
+      document.getElementById('se_name').value = s.name || '';
+      document.getElementById('se_desc').value = s.description || '';
+      document.getElementById('se_agents').value = (s.agents || []).join(', ');
+      document.getElementById('se_content').value = s.content || '';
+      document.getElementById('skillEditTitle').textContent = '编辑 Skill';
+      showModal('skillEditModal');
+    } catch(e) { alert('加载 Skill 失败: ' + e.message); }
+  }
+
+  function openNewSkillEditor() {
+    document.getElementById('se_id').value = '';
+    document.getElementById('se_id_display').value = '';
+    document.getElementById('se_id_display').readOnly = false;
+    document.getElementById('se_name').value = '';
+    document.getElementById('se_desc').value = '';
+    document.getElementById('se_agents').value = 'rd_center';
+    document.getElementById('se_content').value = '# 新 Skill\n\n## 目标\n\n';
+    document.getElementById('skillEditTitle').textContent = '新建 Skill';
+    showModal('skillEditModal');
+  }
+
+  async function submitSkillEdit(ev) {
+    ev.preventDefault();
+    const skillId = (document.getElementById('se_id').value || document.getElementById('se_id_display').value).trim();
+    if (!skillId) { alert('请填写 Skill ID'); return; }
+    const agentsRaw = document.getElementById('se_agents').value.trim();
+    const body = {
+      name: document.getElementById('se_name').value.trim() || skillId,
+      description: document.getElementById('se_desc').value.trim(),
+      agents: agentsRaw ? agentsRaw.split(/[,，\s]+/).filter(Boolean) : [],
+      content: document.getElementById('se_content').value,
+    };
+    const isNew = !document.getElementById('se_id').value;
+    try {
+      const url = isNew
+        ? `${API_BASE}/api/skills`
+        : `${API_BASE}/api/skills/${encodeURIComponent(skillId)}`;
+      const r = await fetch(url, {
+        method: isNew ? 'POST' : 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(isNew ? { id: skillId, ...body } : body),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'save failed');
+      hideModal('skillEditModal');
+      loadSkillsView();
+    } catch(e) { alert('保存失败: ' + e.message); }
+  }
+
+  async function flowAdvance(tid) {
+    try {
+      await fetch(`${API_BASE}/api/tasks/${tid}/flow/advance`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'founder'}),
+      });
+      pollData();
+      viewTaskDetail(tid);
+    } catch(e) { console.error(e); }
+  }
+
+  async function supervisorVerdict(tid, stepId, verdict) {
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/supervisor/${stepId}/verdict`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'founder', verdict}),
+      });
+      const d = await r.json();
+      if (!r.ok) { appAlert(d.error || '验收失败'); return; }
+      pollData();
+      viewTaskDetail(tid);
+    } catch(e) { console.error(e); }
+  }
+
+  async function runProjectClose(tid) {
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/close/run`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'founder'}),
+      });
+      const d = await r.json();
+      if (!r.ok) { appAlert(d.error || '结案失败'); return; }
+      pollData();
+      viewTaskDetail(tid);
+    } catch(e) { console.error(e); }
+  }
+
+  async function flowSkipSteps(tid) {
+    const checked = [...document.querySelectorAll('.flow-skip-cb:checked')].map(el => el.value);
+    if (!checked.length) { appAlert('请勾选要跳过的步骤'); return; }
+    if (!confirm(`确认跳过: ${checked.join(', ')} ?`)) return;
+    try {
+      const r = await fetch(`${API_BASE}/api/tasks/${tid}/flow/skip`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({step_ids: checked, actor: 'chairman'}),
+      });
+      const d = await r.json();
+      if (!r.ok) { appAlert(d.error || '跳步失败'); return; }
+      pollData();
+      viewTaskDetail(tid);
+    } catch(e) { console.error(e); }
+  }
+
+  async function approveGate(tid) {
+    try {
+      await fetch(`${API_BASE}/api/tasks/${tid}/gate/approve`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({actor: 'founder', note: 'dashboard approve'}),
+      });
+      viewTaskDetail(tid);
+      pollData();
+    } catch(e) { console.error(e); }
   }
 
   async function viewTimeline(tid) {
@@ -827,18 +1562,87 @@
           <div class="list-item-title" style="font-size: 17px;">${esc(p.title)}</div>
           <div class="list-item-desc" style="white-space:normal; line-height:1.5;">${esc(p.content||'')}</div>
           ${p.result ? `<div style="margin-top:12px; padding:12px; border-radius: 8px; background: rgba(0,0,0,0.03); font-size:13px; font-weight:600;">裁断输出: ${esc(p.result)}</div>` : ''}
-          <div style="margin-top: 12px; font-size: 12px; color: var(--text-tertiary);">提请人: ${esc(p.proposer)} | 性质: ${esc(p.decision_type)}</div>
+          <div style="margin-top: 12px; font-size: 12px; color: var(--text-tertiary);">
+            提请人: ${esc(p.proposer)} | 性质: ${esc(p.decision_type)}
+            ${p.task_id ? ` | 关联任务: <code>${esc(p.task_id)}</code>` : ''}
+          </div>
+        </div>
+        <div class="list-item-action" style="flex-direction:column;align-items:flex-end;gap:8px;">
+          ${p.status !== 'approved' ? `<button class="btn btn-sm" onclick="boardVote('${esc(p.id)}','agree')">赞成</button>` : ''}
+          ${p.status !== 'approved' ? `<button class="btn btn-sm" onclick="boardTally('${esc(p.id)}')">计票</button>` : ''}
+          <button class="btn btn-sm btn-primary" onclick="boardDirectOrder('${esc(p.id)}','${esc(p.task_id||'')}')">董事长下令</button>
+          ${p.task_id ? `<button class="btn btn-sm" onclick="navToTask('${esc(p.task_id)}')">查看任务</button>` : ''}
         </div>
       </div>
     `).join('');
   }
 
+  function showBoardProposalModal() { showModal('boardProposalModal'); }
+  async function submitBoardProposal(e) {
+    e.preventDefault();
+    const pl = {
+      title: document.getElementById('bp_title').value,
+      content: document.getElementById('bp_content').value,
+      proposer: document.getElementById('bp_proposer').value,
+    };
+    const tid = document.getElementById('bp_task_id').value.trim();
+    if (tid) pl.task_id = tid;
+    try {
+      const r = await fetch(`${API_BASE}/api/board/proposals`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(pl) });
+      const d = await r.json();
+      if (!r.ok) { appAlert(d.error || '提交失败'); return; }
+      hideModal('boardProposalModal');
+      e.target.reset();
+      pollData();
+    } catch(err) { appAlert('网络阻断'); }
+  }
+
+  async function boardVote(pid, vote) {
+    try {
+      await fetch(`${API_BASE}/api/board/proposals/${pid}/vote`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({member_id: 'ceo', vote}),
+      });
+      pollData();
+    } catch(e) { console.error(e); }
+  }
+
+  async function boardTally(pid) {
+    try {
+      const r = await fetch(`${API_BASE}/api/board/proposals/${pid}/tally`, { method: 'POST' });
+      const d = await r.json();
+      appAlert(d.result || JSON.stringify(d));
+      pollData();
+    } catch(e) { console.error(e); }
+  }
+
+  async function boardDirectOrder(pid, taskId) {
+    const order = prompt('董事长下令内容\n（支持 skip:product_demo,prd_generation 或关键词 demo/紧急/hotfix）');
+    if (!order) return;
+    const tid = taskId || prompt('关联 Flow 任务 ID（可留空）') || undefined;
+    try {
+      const r = await fetch(`${API_BASE}/api/board/proposals/${pid}/order`, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({order, task_id: tid || undefined, actor: 'chairman'}),
+      });
+      const d = await r.json();
+      if (!r.ok) { appAlert(d.error || '下令失败'); return; }
+      appAlert(d.message || '下令成功');
+      pollData();
+    } catch(e) { appAlert(String(e)); }
+  }
+
   // -- 辅助与表单 --
-  function showModal(id) { document.getElementById(id).classList.add('show'); }
+  function showModal(id) {
+    document.getElementById(id).classList.add('show');
+    if (id === 'createTaskModal') loadFlowOptions();
+  }
   function hideModal(id) { document.getElementById(id).classList.remove('show'); }
   async function submitTask(e) {
     e.preventDefault();
+    const flowVal = document.getElementById('f_flow').value;
     const pl = { title:document.getElementById('f_title').value, type:document.getElementById('f_type').value, priority:document.getElementById('f_priority').value, requester:document.getElementById('f_requester').value, description:document.getElementById('f_desc').value };
+    if (flowVal) pl.flow_id = flowVal;
     try {
       const res=await fetch(`${API_BASE}/api/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pl)});
       const data=await res.json();
@@ -878,57 +1682,202 @@
     }
   }
 
+  let g_trafficWindow = '1h';
+  let g_trafficStats = {};
+  let g_gatewayPanel = 'usage';
+
+  function setTrafficWindow(win, btn) {
+    g_trafficWindow = win;
+    document.querySelectorAll('#gw-window-pills .segment-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const badge = document.getElementById('traffic-window-badge');
+    if (badge) badge.textContent = win === '1h' ? '最近 1 小时' : (win === '24h' ? '最近 24 小时' : '全部历史');
+    loadTrafficStats();
+  }
+
+  function switchGatewayPanel(panel, btn) {
+    g_gatewayPanel = panel;
+    document.querySelectorAll('#gw-panel-tabs .segment-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    document.querySelectorAll('.gw-panel').forEach(p => p.classList.remove('active'));
+    const el = document.getElementById('gw-panel-' + panel);
+    if (el) el.classList.add('active');
+  }
+
+  async function loadGateway() {
+    await loadModels();
+    await loadTrafficStats();
+  }
+
+  function gwEmpty(msg) {
+    return `<div style="color:var(--text-tertiary);font-size:13px;padding:12px 0;">${msg}</div>`;
+  }
+
+  function renderBreakdownTable(elId, rows, cols) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (!rows.length) { el.innerHTML = gwEmpty('暂无数据'); return; }
+    el.innerHTML = `<table class="gw-data-table"><thead><tr>${cols.map(c =>
+      `<th class="${c.align === 'right' ? 'num' : ''}">${c.label}</th>`
+    ).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map(c =>
+      `<td class="${c.align === 'right' ? 'num' : ''}${c.mono ? ' mono' : ''}">${r[c.key]}</td>`
+    ).join('')}</tr>`).join('')}</tbody></table>`;
+  }
+
+  function progressBar(label, used, limit, unit) {
+    const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+    const cls = pct >= 90 ? 'danger' : (pct >= 70 ? 'warn' : '');
+    return `<div class="gw-progress">
+      <div class="gw-progress-head"><span>${esc(label)}</span><span>${used.toFixed ? used.toFixed(4) : used}${unit ? ' ' + unit : ''} / ${limit}${unit ? ' ' + unit : ''}</span></div>
+      <div class="gw-progress-bar"><div class="gw-progress-fill ${cls}" style="width:${pct.toFixed(1)}%"></div></div>
+    </div>`;
+  }
+
+  function renderProviderCards() {
+    const el = document.getElementById('gw-providers');
+    if (!el) return;
+    const byModel = g_trafficStats.by_model || {};
+    const chatRoute = g_llmConfig.global_routes?.chat || {};
+    const models = g_llmConfig.models || [];
+    if (!models.length) {
+      el.innerHTML = `<div class="card" style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text-tertiary);">尚未配置 Provider，请在「模型池」中添加。</div>`;
+      return;
+    }
+    el.innerHTML = models.map(m => {
+      const statKey = m.model || m.id;
+      const usage = byModel[statKey] || byModel[m.id] || { calls: 0, tokens: 0, cost_usd: 0 };
+      const isPrimary = chatRoute.primary === m.id;
+      const isFallback = chatRoute.fallback === m.id;
+      const roleBadge = isPrimary ? '<span class="badge green">Primary</span>' :
+        (isFallback ? '<span class="badge orange">Fallback</span>' : '<span class="badge gray">Pool</span>');
+      const hasKey = !!(m.api_key_env && m.api_key_env.trim());
+      return `<div class="gw-provider-card">
+        <div class="gw-provider-head">
+          <span class="gw-provider-name">${esc(m.provider)}</span>
+          ${roleBadge}
+        </div>
+        <div class="gw-provider-meta">${esc(m.id)} · ${esc(m.model || '—')}</div>
+        <div style="margin-bottom:8px;"><span class="badge ${m.type === 'image' ? 'blue' : 'gray'}">${esc(m.type || 'chat')}</span>
+          <span class="badge ${hasKey ? 'green' : 'orange'}" style="margin-left:6px;">${hasKey ? 'Key 已配置' : '待配置 Key'}</span></div>
+        <div class="gw-provider-stats">
+          <span>${usage.calls || 0} 次</span>
+          <span>${(usage.tokens || 0).toLocaleString()} tok</span>
+          <span>$${(usage.cost_usd || 0).toFixed(4)}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderBudgetBars() {
+    const el = document.getElementById('gw-budget-bars');
+    if (!el) return;
+    const t = g_llmConfig.traffic || {};
+    const budgets = t.budgets || {};
+    const rpm = g_trafficStats.current_rpm ?? 0;
+    const rpmLimit = t.rate_limit_rpm ?? 60;
+    const deptBudgets = budgets.per_department_daily_usd || {};
+    const deptCost24 = (g_trafficStats.dept24 || {});
+    let html = progressBar('全局 RPM 限流', rpm, rpmLimit, 'req/min');
+    for (const [dept, limit] of Object.entries(deptBudgets)) {
+      const used = deptCost24[dept]?.cost_usd ?? 0;
+      html += progressBar(`部门日预算 · ${dept}`, used, limit, 'USD');
+    }
+    const taskDefault = budgets.per_task_default_usd ?? 5;
+    html += `<div style="font-size:12px;color:var(--text-secondary);margin-top:8px;">单任务默认预算上限：<strong>$${taskDefault}</strong> USD（按任务归因在下方表格查看）</div>`;
+    el.innerHTML = html;
+  }
+
   async function loadTrafficStats() {
     try {
-      const r = await fetch('/api/traffic?window=1h');
+      const win = g_trafficWindow || '1h';
+      const [r, rDept, rTask, r24Dept] = await Promise.all([
+        fetch(`/api/traffic?window=${win}`),
+        fetch(`/api/traffic?window=${win}&group_by=department`),
+        fetch(`/api/traffic?window=${win}&group_by=task`),
+        fetch('/api/traffic?window=24h&group_by=department'),
+      ]);
       const d = await r.json();
+      const dDept = await rDept.json();
+      const dTask = await rTask.json();
+      const d24 = await r24Dept.json();
       const s = d.stats || {};
+      g_trafficStats = s;
+      g_trafficStats.dept24 = (d24.stats && d24.stats.by_department) || {};
+
       document.getElementById('tr-calls').textContent = s.total_calls ?? '-';
       document.getElementById('tr-tokens').textContent = s.total_tokens ? s.total_tokens.toLocaleString() : '-';
       document.getElementById('tr-cost').textContent = s.total_cost_usd != null ? `$${s.total_cost_usd.toFixed(4)}` : '$-';
       document.getElementById('tr-latency').textContent = s.avg_latency_ms ?? '-';
-      // 按模型分布
+      const rpmEl = document.getElementById('tr-rpm');
+      if (rpmEl) rpmEl.textContent = s.current_rpm ?? '-';
+      const rpmLimitEl = document.getElementById('tr-rpm-limit');
+      if (rpmLimitEl) rpmLimitEl.textContent = g_llmConfig.traffic?.rate_limit_rpm ?? 60;
+
       const byModel = s.by_model || {};
-      const byModelEl = document.getElementById('tr-by-model');
-      if (Object.keys(byModel).length === 0) {
-        byModelEl.innerHTML = '<div style="color:var(--text-tertiary);font-size:13px;">暂无数据</div>';
-      } else {
-        byModelEl.innerHTML = Object.entries(byModel).map(([mdl, info]) =>
-          `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);">
-            <span style="font-weight:500;">${esc(mdl)}</span>
-            <span style="color:var(--text-secondary);">${info.calls} 次 · ${(info.tokens||0).toLocaleString()} tok · $${(info.cost_usd||0).toFixed(4)}</span>
-          </div>`
-        ).join('');
-      }
-      // 最近记录
+      renderBreakdownTable('tr-by-model', Object.entries(byModel).map(([mdl, info]) => ({
+        model: esc(mdl),
+        calls: info.calls,
+        tokens: (info.tokens || 0).toLocaleString(),
+        cost: `$${(info.cost_usd || 0).toFixed(4)}`,
+      })), [
+        { key: 'model', label: '模型', mono: true },
+        { key: 'calls', label: '次数', align: 'right' },
+        { key: 'tokens', label: 'Tokens', align: 'right' },
+        { key: 'cost', label: '成本', align: 'right' },
+      ]);
+
+      const byDept = (dDept.stats && dDept.stats.by_department) || {};
+      renderBreakdownTable('tr-by-dept', Object.entries(byDept).map(([dept, info]) => ({
+        dept: esc(dept),
+        calls: info.calls,
+        tokens: (info.tokens || 0).toLocaleString(),
+        cost: `$${(info.cost_usd || 0).toFixed(4)}`,
+      })), [
+        { key: 'dept', label: '部门' },
+        { key: 'calls', label: '次数', align: 'right' },
+        { key: 'tokens', label: 'Tokens', align: 'right' },
+        { key: 'cost', label: '成本', align: 'right' },
+      ]);
+
+      const byTask = (dTask.stats && dTask.stats.by_task) || {};
+      renderBreakdownTable('gw-by-task', Object.entries(byTask).sort((a,b) => (b[1].cost_usd||0)-(a[1].cost_usd||0)).map(([tid, info]) => ({
+        task: esc(tid),
+        calls: info.calls,
+        tokens: (info.tokens || 0).toLocaleString(),
+        cost: `$${(info.cost_usd || 0).toFixed(4)}`,
+      })), [
+        { key: 'task', label: '任务 ID', mono: true },
+        { key: 'calls', label: '次数', align: 'right' },
+        { key: 'tokens', label: 'Tokens', align: 'right' },
+        { key: 'cost', label: '成本', align: 'right' },
+      ]);
+
+      renderProviderCards();
+      renderBudgetBars();
+
       const recent = d.recent || [];
       const listEl = document.getElementById('tr-recent-list');
       if (recent.length === 0) {
         listEl.innerHTML = '<div class="empty-state"><p>暂无调用记录</p></div>';
       } else {
-        listEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead><tr style="color:var(--text-secondary);">
-            <th style="text-align:left;padding:8px 0;font-weight:500;">时间</th>
-            <th style="text-align:left;padding:8px;font-weight:500;">Agent</th>
-            <th style="text-align:left;padding:8px;font-weight:500;">模型</th>
-            <th style="text-align:right;padding:8px;font-weight:500;">Tokens</th>
-            <th style="text-align:right;padding:8px;font-weight:500;">延迟 ms</th>
-            <th style="text-align:right;padding:8px 0;font-weight:500;">成本 USD</th>
-          </tr></thead>
-          <tbody>${recent.map(r => `<tr style="border-top:1px solid var(--border-light);">
-            <td style="padding:8px 0;color:var(--text-tertiary);">${fmt(new Date(r.ts*1000))}</td>
-            <td style="padding:8px;">${esc(r.agent_id||'-')}</td>
-            <td style="padding:8px;">${esc(r.model||'-')}</td>
-            <td style="padding:8px;text-align:right;">${(r.total_tokens||0).toLocaleString()}</td>
-            <td style="padding:8px;text-align:right;">${r.latency_ms||'-'}</td>
-            <td style="padding:8px 0;text-align:right;">$${(r.cost_usd||0).toFixed(5)}</td>
-          </tr>`).join('')}</tbody></table>`;
+        listEl.innerHTML = `<table class="gw-data-table"><thead><tr>
+          <th>时间</th><th>Agent</th><th>模型</th><th>任务</th>
+          <th class="num">Tokens</th><th class="num">延迟</th><th class="num">成本</th>
+        </tr></thead><tbody>${recent.map(r => `<tr>
+          <td style="color:var(--text-tertiary);">${fmt(new Date(r.ts*1000))}</td>
+          <td>${esc(r.agent_id||'-')}</td>
+          <td class="mono">${esc(r.model||'-')}</td>
+          <td class="mono">${esc(r.task_id||'-')}</td>
+          <td class="num">${(r.total_tokens||0).toLocaleString()}</td>
+          <td class="num">${r.latency_ms||'-'} ms</td>
+          <td class="num">$${(r.cost_usd||0).toFixed(5)}</td>
+        </tr>`).join('')}</tbody></table>`;
       }
     } catch(e) { console.error('loadTrafficStats error:', e); }
   }
 
   // ──────────────────── 模型配置管理 (v2) ────────────────────
-  let g_llmConfig = {models:[], global_routes:{}, department_routes:{}, role_routes:{}, agent_routes:{}};
+  let g_llmConfig = {models:[], global_routes:{}, department_routes:{}, role_routes:{}, agent_routes:{}, traffic:{}};
   let g_currentRouteTarget = 'agent'; // 'agent', 'role', 'department'
 
   async function loadModels() {
@@ -941,7 +1890,8 @@
         global_routes: d.config.global_routes || { chat: { primary: '', fallback: '', max_retries: 3 } },
         department_routes: d.config.department_routes || {},
         role_routes: d.config.role_routes || {},
-        agent_routes: d.config.agent_routes || {}
+        agent_routes: d.config.agent_routes || {},
+        traffic: d.config.traffic || { budgets: {}, token_pricing: {}, rate_limit_rpm: 60 },
       };
       // 预填充缺失的基础结构
       if (!g_llmConfig.global_routes.chat) g_llmConfig.global_routes.chat = { primary: '', fallback: '', max_retries: 3 };
@@ -949,7 +1899,11 @@
       
       renderModelPool();
       renderGlobalRoutes();
+      renderTrafficConfig();
+      renderTokenPricing();
       renderOverrides();
+      renderProviderCards();
+      renderBudgetBars();
     } catch(e) { console.error('loadModels error:', e); alert('加载模型配置失败'); }
   }
 
@@ -1021,7 +1975,7 @@
 
   // == 层级覆盖渲染 ==
   function switchRouteTab(btn, targetType) {
-    document.querySelectorAll('#models .segment-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#gw-panel-routes .segment-control .segment-btn').forEach(b => b.classList.remove('active'));
     if(btn) btn.classList.add('active');
     g_currentRouteTarget = targetType;
     renderOverrides();
@@ -1072,10 +2026,63 @@
     renderOverrides();
   }
 
+  function updateTokenPricing(modelKey, field, rawVal) {
+    if (!g_llmConfig.traffic.token_pricing) g_llmConfig.traffic.token_pricing = {};
+    if (!g_llmConfig.traffic.token_pricing[modelKey]) g_llmConfig.traffic.token_pricing[modelKey] = {};
+    g_llmConfig.traffic.token_pricing[modelKey][field] = parseFloat(rawVal) || 0;
+  }
+
+  function renderTokenPricing() {
+    const el = document.getElementById('models-token-pricing');
+    if (!el) return;
+    if (!g_llmConfig.traffic.token_pricing) g_llmConfig.traffic.token_pricing = {};
+    const pricing = g_llmConfig.traffic.token_pricing;
+    const modelKeys = new Set([
+      ...g_llmConfig.models.map(m => m.model || m.id).filter(Boolean),
+      ...Object.keys(pricing),
+    ]);
+    if (!modelKeys.size) {
+      el.innerHTML = gwEmpty('添加模型池条目后可编辑定价');
+      return;
+    }
+    el.innerHTML = [...modelKeys].map(key => {
+      const p = pricing[key] || { input_per_1k: 0, output_per_1k: 0 };
+      const safeKey = JSON.stringify(key);
+      return `<div class="gw-pricing-row">
+        <label>${esc(key)}</label>
+        <input type="number" step="0.0001" placeholder="输入/1K" value="${p.input_per_1k ?? 0}"
+          onchange="updateTokenPricing(${safeKey}, 'input_per_1k', this.value)">
+        <input type="number" step="0.0001" placeholder="输出/1K" value="${p.output_per_1k ?? 0}"
+          onchange="updateTokenPricing(${safeKey}, 'output_per_1k', this.value)">
+      </div>`;
+    }).join('');
+  }
+
+  function renderTrafficConfig() {
+    const el = document.getElementById('models-traffic-config');
+    if (!el) return;
+    const t = g_llmConfig.traffic || {};
+    const budgets = t.budgets || {};
+    const deptBudgets = budgets.per_department_daily_usd || {};
+    el.innerHTML = `
+      <div class="field"><label>单任务默认预算 (USD)</label>
+        <input type="number" step="0.1" value="${budgets.per_task_default_usd ?? 5}" onchange="g_llmConfig.traffic.budgets.per_task_default_usd=parseFloat(this.value)||0"></div>
+      <div class="field"><label>全局 RPM 限流</label>
+        <input type="number" value="${t.rate_limit_rpm ?? 60}" onchange="g_llmConfig.traffic.rate_limit_rpm=parseInt(this.value)||60"></div>
+      <div class="field" style="grid-column:1/-1;"><label>研发部门日预算 rd_center (USD)</label>
+        <input type="number" step="0.1" value="${deptBudgets.rd_center ?? 20}" onchange="(g_llmConfig.traffic.budgets.per_department_daily_usd=g_llmConfig.traffic.budgets.per_department_daily_usd||{}).rd_center=parseFloat(this.value)||0"></div>`;
+    if (!g_llmConfig.traffic.budgets) g_llmConfig.traffic.budgets = {};
+    if (!g_llmConfig.traffic.budgets.per_department_daily_usd) g_llmConfig.traffic.budgets.per_department_daily_usd = {};
+  }
+
   function renderAll() {
     renderModelPool();
     renderGlobalRoutes();
+    renderTrafficConfig();
+    renderTokenPricing();
     renderOverrides();
+    renderProviderCards();
+    renderBudgetBars();
   }
 
   async function saveAllModelsConfig() {
@@ -1103,9 +2110,11 @@
   // 页面切换时按需加载新视图数据
   const _origSwitchTab = switchTab;
   switchTab = function(tab) {
+    if (tab === 'runtime' || tab === 'models') tab = 'gateway';
     _origSwitchTab(tab);
-    if (tab === 'runtime') loadTrafficStats();
-    if (tab === 'models') loadModels();
+    if (tab === 'gateway') loadGateway();
+    if (tab === 'skills') loadSkillsView();
+    if (tab === 'flows') loadFlowsView();
   };
 
 </script>

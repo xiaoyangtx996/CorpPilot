@@ -1,0 +1,26 @@
+# CorpPilot Hotfix 流程模板（✅ 已接入 FlowEngine，自动跳过 product_demo）
+id: hotfix
+name: 紧急修复
+description: 跳过产品 Demo，直达研发与测试
+
+steps:
+  - id: triage
+    role: president_office
+    outputs: [hotfix_brief.md]
+    gate_mode: auto
+
+  - id: dev_loop
+    role: rd_center
+    skills: [coding]
+    inputs: [hotfix_brief.md]
+    outputs: [src/]
+    postcondition:
+      - tests_pass == true
+    gate_mode: auto
+
+  - id: qa_gate
+    role: rd_center
+    type: supervisor
+    postcondition:
+      - tests_pass == true
+    on_fail: send_back

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 CorpPilot 核心领域模型与服务。统一任务流、董事会提案流、Agent 配置与 Skill 配置。
 """
@@ -301,6 +301,7 @@ class TaskService:
         priority: TaskPriority,
         requester: str,
         description: str = "",
+        flow_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         task: Dict[str, Any] = {}
 
@@ -320,6 +321,9 @@ class TaskService:
                 "created_at": now,
                 "updated_at": now,
                 "history": [{"action": "created", "timestamp": now, "actor": requester}],
+                "artifacts": [],
+                "runtime": {},
+                "auto_execute": True,
             }
             tasks.append(task)
             return tasks
@@ -332,6 +336,13 @@ class TaskService:
             subject_id=task["task_id"],
             detail={"type": task["type"], "priority": task["priority"], "current_owner": task["current_owner"]},
         )
+        if flow_id and flow_id not in ("legacy", ""):
+            try:
+                from flow_engine import FlowEngine
+
+                task = FlowEngine(self).attach_flow(task["task_id"], flow_id, requester)
+            except Exception as exc:
+                task["flow_attach_error"] = str(exc)
         return task
 
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
@@ -342,6 +353,62 @@ class TaskService:
         if not task:
             raise ValueError(f"任务不存在: {task_id}")
         return list(task.get("history", []))
+
+    def get_task_artifacts(self, task_id: str) -> List[Dict[str, Any]]:
+        task = self.get_task(task_id)
+        if not task:
+            raise ValueError(f"任务不存在: {task_id}")
+        return list(task.get("artifacts", []))
+
+    def append_artifacts(
+        self,
+        task_id: str,
+        entries: List[Dict[str, Any]],
+        actor: str = "system",
+    ) -> Dict[str, Any]:
+        if not entries:
+            return self.get_task(task_id) or {}
+        task: Dict[str, Any] = {}
+
+        def mutate(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal task
+            task = self._find_task(tasks, task_id)
+            artifacts = list(task.get("artifacts", []))
+            artifacts.extend(entries)
+            task["artifacts"] = artifacts
+            task["updated_at"] = utc_now_iso()
+            self._append_history(
+                task,
+                "artifacts_added",
+                actor,
+                {"count": len(entries), "paths": [e.get("path") for e in entries]},
+            )
+            return tasks
+
+        self.store.update([], mutate)
+        self.event_log.append(
+            "task",
+            "artifacts_added",
+            actor,
+            task_id,
+            {"count": len(entries)},
+        )
+        return task
+
+    def patch_runtime(self, task_id: str, patch: Dict[str, Any]) -> Dict[str, Any]:
+        task: Dict[str, Any] = {}
+
+        def mutate(tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            nonlocal task
+            task = self._find_task(tasks, task_id)
+            runtime = dict(task.get("runtime", {}))
+            runtime.update(patch)
+            task["runtime"] = runtime
+            task["updated_at"] = utc_now_iso()
+            return tasks
+
+        self.store.update([], mutate)
+        return task
 
     def list_tasks(self, status: Optional[TaskStatus] = None, limit: int = 20) -> List[Dict[str, Any]]:
         tasks = self._load()
@@ -504,11 +571,86 @@ class TaskService:
         return self.list_tasks(limit=100000)
 
 
+def _write_compliance_stub(task_id: str, task_service: TaskService) -> None:
+    """项目结案法务报告（委托 project_close）。"""
+    try:
+        from project_close import write_compliance_report
+
+        write_compliance_report(task_id, task_service)
+    except Exception:
+        pass
+
+
 class WorkflowEngine:
     """统一编排入口，供 API 和 CLI 复用。"""
 
-    def __init__(self, task_service: Optional[TaskService] = None):
+    def __init__(
+        self,
+        task_service: Optional[TaskService] = None,
+        runtime_orchestrator: Optional[Any] = None,
+        auto_runtime: bool = True,
+        flow_engine: Optional[Any] = None,
+    ):
         self.task_service = task_service or TaskService()
+        self._flow_engine = flow_engine
+        self._runtime_orchestrator = runtime_orchestrator
+        if runtime_orchestrator is None and auto_runtime:
+            try:
+                from runtime_bridge import RuntimeOrchestrator
+
+                self._runtime_orchestrator = RuntimeOrchestrator(self)
+            except ImportError:
+                self._runtime_orchestrator = None
+        if self._flow_engine is None:
+            try:
+                from flow_engine import FlowEngine
+
+                self._flow_engine = FlowEngine(self.task_service)
+            except ImportError:
+                self._flow_engine = None
+
+    @property
+    def flow_engine(self) -> Optional[Any]:
+        return self._flow_engine
+
+    def _notify_status_enter(
+        self,
+        task: Dict[str, Any],
+        old_status: TaskStatus,
+        new_status: TaskStatus,
+    ) -> None:
+        if self._runtime_orchestrator:
+            self._runtime_orchestrator.on_status_enter(task, old_status, new_status)
+        if new_status == TaskStatus.COMPLETED:
+            try:
+                from cost_report import emit_budget_alert_if_needed, write_cost_report_artifact
+                from runtime.model_router import ModelRouter
+
+                router = ModelRouter()
+                report = write_cost_report_artifact(
+                    task["task_id"],
+                    router=router,
+                    task_service=self.task_service,
+                )
+                emit_budget_alert_if_needed(
+                    task["task_id"], report, self.task_service.event_log, self.task_service
+                )
+                try:
+                    from skill_evolution import create_proposal_from_task
+                    create_proposal_from_task(task)
+                except Exception:
+                    pass
+                try:
+                    _write_compliance_stub(task["task_id"], self.task_service)
+                except Exception:
+                    pass
+                try:
+                    from hr_scaling import release_dynamic_agents
+                    release_dynamic_agents(task["task_id"], self.task_service)
+                except Exception:
+                    pass
+            except Exception:
+                pass
 
     def available_transitions(self, task_id: str) -> List[str]:
         task = self.task_service.get_task(task_id)
@@ -518,7 +660,13 @@ class WorkflowEngine:
         return [item.value for item in VALID_TASK_TRANSITIONS[current]]
 
     def transition(self, task_id: str, new_status: TaskStatus, actor: str) -> Dict[str, Any]:
-        return self.task_service.update_task_status(task_id, new_status, actor)
+        existing = self.task_service.get_task(task_id)
+        if not existing:
+            raise ValueError(f"任务不存在: {task_id}")
+        old_status = TaskStatus(existing["status"])
+        task = self.task_service.update_task_status(task_id, new_status, actor)
+        self._notify_status_enter(task, old_status, new_status)
+        return task
 
     def routing_snapshot(self, task_id: str) -> Dict[str, Any]:
         task = self.task_service.get_task(task_id)
@@ -529,11 +677,23 @@ class WorkflowEngine:
             "status": task["status"],
             "current_owner": task.get("current_owner"),
             "execution_owner": task.get("execution_owner"),
+            "artifacts_count": len(task.get("artifacts", [])),
+            "runtime": task.get("runtime", {}),
             "next_statuses": self.available_transitions(task_id),
         }
 
     def intervene(self, task_id: str, action: str, actor: str, reason: str = "") -> Dict[str, Any]:
-        return self.task_service.intervene_task(task_id, action, actor, reason)
+        existing = self.task_service.get_task(task_id)
+        if not existing:
+            raise ValueError(f"任务不存在: {task_id}")
+        if action == "override_gate":
+            from flow_engine import FlowEngine
+
+            return FlowEngine(self.task_service).override_gate(task_id, self, actor, reason)
+        old_status = TaskStatus(existing["status"])
+        task = self.task_service.intervene_task(task_id, action, actor, reason)
+        self._notify_status_enter(task, old_status, TaskStatus(task["status"]))
+        return task
 
     def timeline(self, task_id: str) -> List[Dict[str, Any]]:
         return self.task_service.get_task_timeline(task_id)
@@ -624,58 +784,63 @@ class AgentMonitorService:
                 detail = event.get("detail", {})
                 if actor == agent_id or detail.get("owner") == agent_id:
                     timestamps.append(event["timestamp"])
-        return max(timestamps) if timestamps else None
-
-    def get_department_health(self) -> Dict[str, Any]:
-        """聚合各部门所有 Agent 的健康状态。供 /api/departments 端点调用。"""
-        roster_path = self.task_service.data_dir / "department_roster.json"
-        if not roster_path.exists():
-            return {"departments": {}}
-        try:
-            with open(roster_path, "r", encoding="utf-8") as f:
-                roster: Dict[str, Any] = json.load(f)
-        except Exception:
-            return {"departments": {}}
-
-        tasks = self.task_service.all_tasks()
-        depts: Dict[str, Any] = roster.get("departments", {})
-
-        for dept_id, dept_data in depts.items():
-            all_agents: List[Dict[str, Any]] = []
-            if dept_data.get("head"):
-                all_agents.append(dept_data["head"])
-            all_agents.extend(dept_data.get("default_roles", []))
-            all_agents.extend(dept_data.get("dynamic_agents", []))
-
-            active_count = busy_count = blocked_count = 0
-            for agent in all_agents:
-                aid = agent.get("agent_id", "")
-                owned = [t for t in tasks if t.get("current_owner") == aid or t.get("execution_owner") == aid]
-                blocked = [t for t in owned if t.get("status") == TaskStatus.BLOCKED.value]
-                executing = [t for t in owned if t.get("status") == TaskStatus.EXECUTING.value]
-                if blocked:
-                    health = "blocked"; blocked_count += 1
-                elif executing:
-                    health = "busy"; busy_count += 1
-                elif owned:
-                    health = "active"; active_count += 1
-                else:
-                    health = "idle"
-                agent["health_status"] = health
-                agent["owned_task_count"] = len(owned)
-                agent["executing_task_count"] = len(executing)
-                agent["blocked_task_count"] = len(blocked)
-                agent["completed_task_count"] = len(
-                    [t for t in owned if t.get("status") == TaskStatus.COMPLETED.value]
-                )
-            dept_data["stats"] = {
-                "total_agents": len(all_agents),
-                "active_agents": active_count,
-                "busy_agents": busy_count,
-                "blocked_agents": blocked_count,
-            }
-        return roster
-
+        return max(timestamps) if timestamps else None
+
+    def get_department_health(self) -> Dict[str, Any]:
+        """聚合各部门所有 Agent 的健康状态。供 /api/departments 端点调用。"""
+        from hr_scaling import load_or_bootstrap_roster, merge_runtime_dynamic_agents
+
+        roster = load_or_bootstrap_roster(self.task_service.data_dir, AGENT_ROLES)
+        tasks = self.task_service.all_tasks()
+        merge_runtime_dynamic_agents(roster, tasks)
+        depts: Dict[str, Any] = roster.get("departments", {})
+
+        for dept_id, dept_data in depts.items():
+            all_agents: List[Dict[str, Any]] = []
+            if dept_data.get("head"):
+                all_agents.append(dept_data["head"])
+            all_agents.extend(dept_data.get("default_roles", []))
+            all_agents.extend(dept_data.get("dynamic_agents", []))
+
+            active_count = busy_count = blocked_count = 0
+            for agent in all_agents:
+                aid = agent.get("agent_id", "")
+                if agent.get("is_dynamic") and agent.get("task_id"):
+                    owned = [t for t in tasks if t.get("task_id") == agent["task_id"]]
+                else:
+                    owned = [
+                        t for t in tasks
+                        if t.get("current_owner") == aid or t.get("execution_owner") == aid
+                    ]
+                blocked = [t for t in owned if t.get("status") == TaskStatus.BLOCKED.value]
+                executing = [t for t in owned if t.get("status") == TaskStatus.EXECUTING.value]
+                if blocked:
+                    health = "blocked"
+                    blocked_count += 1
+                elif executing:
+                    health = "busy"
+                    busy_count += 1
+                elif owned:
+                    health = "active"
+                    active_count += 1
+                else:
+                    health = "idle"
+                agent["health_status"] = health
+                agent["owned_task_count"] = len(owned)
+                agent["executing_task_count"] = len(executing)
+                agent["blocked_task_count"] = len(blocked)
+                agent["completed_task_count"] = len(
+                    [t for t in owned if t.get("status") == TaskStatus.COMPLETED.value]
+                )
+            dept_data["stats"] = {
+                "total_agents": len(all_agents),
+                "active_agents": active_count,
+                "busy_agents": busy_count,
+                "blocked_agents": blocked_count,
+                "runtime_dynamic_agents": dept_data.get("runtime_dynamic_count", 0),
+            }
+        return roster
+
 
 
 
@@ -707,6 +872,7 @@ class BoardRoom:
         content: str,
         proposer: str,
         decision_type: DecisionType = DecisionType.STRATEGIC,
+        task_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         proposal_dict: Dict[str, Any] = {}
 
@@ -721,6 +887,8 @@ class BoardRoom:
                 created_at=utc_now_iso(),
             )
             proposal_dict = asdict(proposal)
+            if task_id:
+                proposal_dict["task_id"] = task_id
             proposals.append(proposal_dict)
             return proposals
 
@@ -730,7 +898,7 @@ class BoardRoom:
             "created",
             proposer,
             proposal_dict["id"],
-            {"decision_type": decision_type.value, "title": title},
+            {"decision_type": decision_type.value, "title": title, "task_id": task_id},
         )
         return proposal_dict
 
@@ -871,7 +1039,13 @@ class BoardRoom:
         )
         return result
 
-    def direct_order(self, proposal_id: str, order: str) -> Dict[str, Any]:
+    def direct_order(
+        self,
+        proposal_id: str,
+        order: str,
+        task_id: Optional[str] = None,
+        step_ids: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
 
         def mutate(proposals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -883,13 +1057,28 @@ class BoardRoom:
             proposal["decision_type"] = DecisionType.EMERGENCY.value
             proposal["status"] = "approved"
             proposal["result"] = f"\u8463\u4e8b\u957f\u76f4\u63a5\u4e0b\u4ee4\uff1a{order}"
-            result = {"proposal_id": proposal_id, "result": "approved", "message": proposal["result"]}
+            if task_id:
+                proposal["task_id"] = task_id
+            if step_ids:
+                proposal["skip_step_ids"] = step_ids
+            result = {
+                "proposal_id": proposal_id,
+                "result": "approved",
+                "message": proposal["result"],
+                "task_id": proposal.get("task_id"),
+            }
             return proposals
 
         self.store.update([], mutate)
         if "error" in result:
             return result
-        self.event_log.append("proposal", "direct_order", "chairman", proposal_id, {"order": order})
+        self.event_log.append(
+            "proposal",
+            "direct_order",
+            "chairman",
+            proposal_id,
+            {"order": order, "task_id": task_id, "step_ids": step_ids},
+        )
         return result
 
     def get_summary(self) -> Dict[str, Any]:

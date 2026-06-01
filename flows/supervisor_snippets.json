@@ -1,0 +1,16 @@
+{
+  "qa_gate": {
+    "postcondition": ["tests_pass == true", "PRD.md"],
+    "on_fail": "send_back",
+    "type": "supervisor"
+  },
+  "risk_gate": {
+    "postcondition": ["file_exists:.env.example"],
+    "on_fail": "send_back",
+    "type": "supervisor"
+  },
+  "legal_gate": {
+    "postcondition": ["compliance_report.md"],
+    "type": "supervisor"
+  }
+}

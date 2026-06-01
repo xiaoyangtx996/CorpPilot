@@ -81,14 +81,12 @@ except Exception as e:
 try:
     html = open('dashboard/dashboard.html', encoding='utf-8').read()
     checks = {
-        'nav runtime btn': "switchTab('runtime')" in html,
-        'nav models btn': "switchTab('models')" in html,
-        'runtime view': 'id="runtime"' in html,
-        'models view': 'id="models"' in html,
+        'nav gateway btn': "switchTab('gateway')" in html,
+        'gateway view': 'id="gateway"' in html,
         'triggerRunTask fn': 'triggerRunTask' in html,
         'loadTrafficStats fn': 'loadTrafficStats' in html,
+        'loadGateway fn': 'loadGateway' in html,
         'loadModels fn': 'loadModels' in html,
-        'saveGlobalPrimary fn': 'saveGlobalPrimary' in html,
         'no duplicate </script>': html.count('</script>') == 1,
     }
     failed = [k for k, v in checks.items() if not v]
