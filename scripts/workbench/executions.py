@@ -9,6 +9,7 @@ from .tasks import Tasks, TaskVersionConflict
 from . import artifacts as artifact_store
 from . import dependencies
 from . import memories
+from . import reconciliations
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -43,6 +44,7 @@ class Executions:
             artifact_store.initialize(db)
             dependencies.initialize_inputs(db)
             memories.initialize(db)
+            reconciliations.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -92,7 +94,7 @@ class Executions:
                     raise ValueError("request_id 已用于不同任务执行")
                 return dict(previous)
             task = self.tasks._task(db, task_id)
-            if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state='unknown'", (task_id,)).fetchone():
+            if reconciliations.unresolved(db, task_id):
                 raise ValueError("本任务存在未核实的执行，不能启动替代实例")
             self._authorize(db, {"task_id": task_id, "requirement_version": version, "agent_id": task["agent_id"]})
             if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state IN ('queued','running','stopping')",
@@ -136,7 +138,7 @@ class Executions:
             run = self._run(db, identity)
             if run["state"] != "queued":
                 return False
-            if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state='unknown'", (run["task_id"],)).fetchone():
+            if reconciliations.unresolved(db, run["task_id"]):
                 return False
             try:
                 self._authorize(db, run)
@@ -190,7 +192,8 @@ class Executions:
         """Call only under the controller's exclusive lifetime lock after restart.
 
         This records uncertainty, not proof that an orphan process has stopped.
-        The runner must reconcile orphan processes before admitting a replacement.
+        Admission stays paused until the Owner records a stopped-process and
+        external-effects check. That declaration is not a machine exit result.
         """
         with self.store.connect() as db:
             return db.execute("""UPDATE task_executions SET state='unknown',

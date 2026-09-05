@@ -7,6 +7,7 @@ from .cli import run_codex, InputPreparationError
 from .cli_settings import CLISettings
 from .executions import Executions
 from .artifacts import capture
+from .reconciliations import Reconciliations, unresolved
 
 
 class CLIController:
@@ -15,6 +16,7 @@ class CLIController:
         self.store = store
         self.settings = CLISettings(store)
         self.executions = Executions(store)
+        self.reconciliations = Reconciliations(store)
         self.executions.recover()
         self.pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="task-cli")
         self.active = {}
@@ -105,7 +107,7 @@ class CLIController:
             self._reconcile()
             self.error = ""
             with self.store.connect() as db:
-                unknown = db.execute("SELECT 1 FROM task_executions WHERE state='unknown' LIMIT 1").fetchone()
+                unknown = unresolved(db)
             if unknown:
                 self.error = "存在未核实的 CLI 实例或结果，执行队列暂停；请核查后再恢复"
                 return
@@ -150,6 +152,15 @@ class CLIController:
             raise ValueError("CLI 控制器正在关闭，不能创建执行")
         self.settings.resolve()
         return self.executions.create(task_id, payload)
+
+    def reconcile_unknown(self, identity, payload):
+        if self.closed:
+            raise ValueError("CLI 控制器正在关闭，不能核查执行")
+        # Unknown execution IDs never become active again. A concurrent removal
+        # only causes a conservative rejection; it cannot hide a new worker.
+        if identity in self.active:
+            raise ValueError("执行仍由当前控制器持有，请等待执行线程及结果处理结束")
+        return self.reconciliations.save(identity, payload)
 
     def close(self):
         self.closed = True

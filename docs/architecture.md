@@ -373,3 +373,15 @@ Owner API：GET /api/workbench/memories/{scope}/{id}；GET history、GET/POST ca
 ## F32：后续桌面宿主边界
 
 [Tauri 2 迁移方案](tauri-migration.md) 给出静态前端复用、受限Rust通信和Python sidecar生命周期。业务状态与权限仍由现有Python服务持有；桌面握手/会话鉴权、持久待确认请求及冻结worker入口是后续实际改造点，尚未实现。
+
+## F33：未知执行的人工核查记录
+
+未知执行不再只能通过修改数据库解除阻塞。新增独立 execution_reconciliations 记录，绑定原 execution_id、attempt 和 requirement_version；要求 Owner 明确声明进程已停止、外部影响已核查，并填写核查证据说明。记录不是机器退出证据，不能把声明当作已观测退出码。实际停止和外部结果不明时不得提交，也不能由助手替用户确认真实未知执行。
+
+原执行仍保持 unknown、原 exit_code/summary 不变；不批准成果、不产生新执行，不使迟到回调成为成功。BEGIN IMMEDIATE 写入唯一不可变记录，UPDATE/DELETE/REPLACE 禁止；精确同请求重放原记录，不同内容拒绝。核对历史事实不要求当前任务仍为原版本、原成员仍启用，避免失效任务永久卡住全局队列；新执行仍独立验证当前权限与版本。
+
+全局和任务阻塞判断仅考虑没有核查记录的 unknown。所有未知项核查后，既有已授权 queued 任务可继续调度；同任务新尝试仍须明确引用最近执行、写明再次执行理由并使用新请求。当前控制器 active 集合仍持有的执行及关闭中的控制器拒绝人工核查，不能用表单取代本地运行线程结束。
+
+GET /api/workbench/execution-reconciliations/pending 返回最多100条未核查未知执行，按时间与ID排序；GET /api/workbench/executions/{id}/reconciliation 返回记录或null；POST 同路径只接收 request_id、attempt、requirement_version、process_stopped=true、external_effects_checked=true、note。核查字段绑定原run，不允许上传退出码或成功标志。保留同源检查和版本不符409。
+
+本增量先完成服务能力，浏览器全局核查入口及解除旧unknown提示在后续增量接入。该能力不是自动孤儿进程探测或检查点续跑，不满足所有恢复要求；真实进程/容器识别与恢复仍需继续完成。

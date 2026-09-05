@@ -392,3 +392,12 @@
 - 明确静态前端复用、小型Rust宿主、Python业务保留、鉴权握手、有序退出、模板资源、凭据、下载、WAL备份和升级回退；D1–D6分工与验收门可逐项实施。
 - 本增量是明确要求的迁移规划文档，未创建Rust空壳、冻结exe或安装器，不宣称完成桌面能力。浏览器剩余功能与真实双Docker/模型验收保持未完成。
 - 提交标识：docs(workbench): F32 define Tauri migration and acceptance boundaries；独立文档增量审查后单独提交并立即推送。
+
+- F32 提交 a60af43 后立即推送仍 GitHub403，远端目标分支回读为空。
+
+## F33：未知执行 Owner 核查服务
+
+- execution_reconciliation 子代理负责不可变核查模块和单元测试；主代理集成控制器持有检查、全局/任务阻塞门、HTTP与跨层测试。
+- 保留unknown历史和未观测退出码，追加人工核查声明；只有所有未知项核查后才恢复已授权队列；新尝试仍需前次引用与当前权限。核查不复活旧回调、不批准成果。
+- 本增量仅后端能力；浏览器核查入口、自动进程识别与检查点恢复未完成。
+- 提交标识：feat(workbench): F33 reconcile unknown executions without rewriting outcomes；测试审查通过后立即独立提交并推送。
