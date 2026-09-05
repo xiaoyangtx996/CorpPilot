@@ -5,6 +5,7 @@ import json
 import uuid
 
 from .store import Store, _text
+from . import planning
 
 
 class Runs:
@@ -34,6 +35,8 @@ class Runs:
                 UNIQUE(conversation_id,request_id)
             )""")
 
+            planning.initialize(db)
+
     @staticmethod
     def _run(db, identity):
         row = db.execute("SELECT * FROM runs WHERE id=?", (identity,)).fetchone()
@@ -50,29 +53,35 @@ class Runs:
             raise ValueError("会话已归档，不能生成回复")
 
     def create(self, conversation_id, payload):
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            return self._create(db, conversation_id, payload)
+
+    def _create(self, db, conversation_id, payload, *, is_planning=False):
         if not isinstance(payload, dict) or set(payload) != {"agent_id", "source_message_id", "request_id"}:
             raise ValueError("Run 必须只含 agent_id、source_message_id 和 request_id")
         agent_id = _text(payload["agent_id"], "Agent ID")
         source = _text(payload["source_message_id"], "源消息 ID")
         request = _text(payload["request_id"], "请求 ID", 120)
-        with self.store.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            previous = db.execute("SELECT id,agent_id,source_message_id FROM runs WHERE conversation_id=? AND request_id=?",
-                                  (conversation_id, request)).fetchone()
-            if previous:
-                if (previous["agent_id"], previous["source_message_id"]) != (agent_id, source):
-                    raise ValueError("request_id 已用于不同 Run")
-                return self._run(db, previous["id"])
-            self._authorize(db, {"conversation_id": conversation_id, "agent_id": agent_id})
-            if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
-                              (source, conversation_id)).fetchone():
-                raise ValueError("源消息必须是本会话中的 Owner 消息")
-            if db.execute("SELECT count(*) FROM runs WHERE state IN ('queued','running')").fetchone()[0] >= 100:
-                raise ValueError("回复队列已满，请等待现有请求完成或取消排队")
-            identity = str(uuid.uuid4())
-            db.execute("INSERT INTO runs(id,conversation_id,agent_id,source_message_id,request_id) VALUES(?,?,?,?,?)",
-                       (identity, conversation_id, agent_id, source, request))
-            return self._run(db, identity)
+        previous = db.execute("SELECT id,agent_id,source_message_id FROM runs WHERE conversation_id=? AND request_id=?",
+                              (conversation_id, request)).fetchone()
+        if previous:
+            existing_kind = db.execute("SELECT 1 FROM planning_requests WHERE run_id=?", (previous["id"],)).fetchone() is not None
+            if existing_kind != is_planning:
+                raise ValueError("request_id 已用于不同类型的 Run")
+            if (previous["agent_id"], previous["source_message_id"]) != (agent_id, source):
+                raise ValueError("request_id 已用于不同 Run")
+            return self._run(db, previous["id"])
+        self._authorize(db, {"conversation_id": conversation_id, "agent_id": agent_id})
+        if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
+                          (source, conversation_id)).fetchone():
+            raise ValueError("源消息必须是本会话中的 Owner 消息")
+        if db.execute("SELECT count(*) FROM runs WHERE state IN ('queued','running')").fetchone()[0] >= 100:
+            raise ValueError("回复队列已满，请等待现有请求完成或取消排队")
+        identity = str(uuid.uuid4())
+        db.execute("INSERT INTO runs(id,conversation_id,agent_id,source_message_id,request_id) VALUES(?,?,?,?,?)",
+                   (identity, conversation_id, agent_id, source, request))
+        return self._run(db, identity)
 
     def get(self, identity):
         with self.store.connect() as db:
@@ -84,8 +93,8 @@ class Runs:
             self.store._conversation(db, conversation_id)
             # Keep every active request discoverable; the global admission cap bounds this list.
             return [self._run(db, row[0]) for row in db.execute("""SELECT id FROM runs WHERE conversation_id=?
-                AND (state IN ('queued','running') OR id IN (SELECT id FROM runs WHERE conversation_id=?
-                    AND state NOT IN ('queued','running') ORDER BY updated_at DESC,id DESC LIMIT 100))
+                AND id NOT IN (SELECT run_id FROM planning_requests) AND (state IN ('queued','running') OR id IN (SELECT id FROM runs WHERE conversation_id=?
+                    AND id NOT IN (SELECT run_id FROM planning_requests) AND state NOT IN ('queued','running') ORDER BY updated_at DESC,id DESC LIMIT 100))
                 ORDER BY created_at DESC,id DESC""", (conversation_id, conversation_id))]
 
     def pending(self, limit=100):
@@ -117,6 +126,8 @@ class Runs:
                                   (run["source_message_id"], run["conversation_id"])).fetchone()
             if sequence is None:
                 raise ValueError("源消息必须是本会话中的 Owner 消息")
+            if proposal := planning.snapshot(db, run, agent, instructions):
+                return proposal
             # ponytail: bound context to 100 messages; add token budgeting if large inputs require it.
             rows = list(db.execute("""SELECT * FROM messages WHERE conversation_id=? AND sequence<=?
                 ORDER BY sequence DESC LIMIT 101""", (run["conversation_id"], sequence[0])))
@@ -137,6 +148,10 @@ class Runs:
             if run["state"] != "running":
                 return run
             self._authorize(db, run)
+            if planning.finish(db, run, content):
+                db.execute("""UPDATE runs SET state='completed',model=?,usage=?,error=NULL,
+                    updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""", (model, usage, identity))
+                return self._run(db, identity)
             reply_id = str(uuid.uuid4())
             db.execute("INSERT INTO messages(id,conversation_id,sender_kind,sender_id,content,request_id) VALUES(?,?,'agent',?,?,?)",
                        (reply_id, run["conversation_id"], run["agent_id"], content, str(uuid.uuid4())))

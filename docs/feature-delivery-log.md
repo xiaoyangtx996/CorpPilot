@@ -431,3 +431,15 @@
 - 首次明确拒绝后可显式重新编辑；原请求再次发送先去除旧拒绝标记，之后结果未知时禁止创建替代项目。GET回读完整比较approved_plan，不只核对请求ID。
 - TypeScript/Vite42模块通过，浏览器普通两任务/依赖、首发400重新编辑、重试后响应丢失+GET503+刷新换会话+归档来源、历史改名回读通过；实际数据仅两个项目/三个任务，无模型/CLI运行。
 - 提交标识：feat(workbench): F36 compose collaboration projects from chat；按单功能测试审查后立即提交并推送。
+
+- F36 提交 `4f24ea0` 后立即推送仍返回 GitHub 403；此处补记上轮实际记录，不代表本轮重新推送。
+
+## F37：Owner 候选白名单内的模型协作提案
+
+- corppilot_backend_review 负责设计审查；task_execution_ui 负责后端；主代理集成 Runs、控制器与 HTTP；verify_prompt_push 独立成品静态审查 Pass；verify_history_scope 负责 Doc/PM 文档核对。
+- POST严格接受agent_id/source_message_id/request_id/candidate_ids，1–100个启用候选按原顺序冻结公开id/name/template_id/skills。上下文仅目标Owner消息、协调人指令与候选资料；执行前和完成前分别复查权限，不复制其他历史或个人记忆。
+- 提案复用Run ID和聊天并发/RPM/100活动上限，配置未就绪保持queued；取消沿用Run接口，失败/重启unknown不自动重试。严格JSON、白名单和1–16任务DAG校验；成功只写提案与Run状态，不写普通聊天消息或创建项目/任务/CLI执行。
+- 根集成定向8项通过，既有规划/Runs定向23项通过；完整440项及8子用例通过。随后只增加5条测试、生产代码未改，规划模块最终20项通过；未再跑全量，详见验收报告。
+- 本增量纯后端/API；提案浏览器入口、导入F36并再次Owner确认、真实供应商/CLI/Docker仍待完成。模型建议不是approved_plan，不直接触发F35组建事务。
+- F37尚待主代理独立提交后实际尝试推送及远端回读；本条不预报提交ID、推送成功或沿用旧403代替本次结果。
+- 提交标识：`feat(workbench): F37 generate scoped collaboration proposals`；测试与审查通过后单独提交并立即推送。

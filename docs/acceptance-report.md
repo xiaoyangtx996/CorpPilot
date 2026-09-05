@@ -202,3 +202,19 @@ F35 最终全量：421 passed、8 subtests passed（65.34s），实际收集核�
 第一项目改名后，归档来源的批准历史仍显示原名称与原计划，打开动作导航到同一已改名项目。重启测试API前后f36_verify.py均Pass：恰好2个项目/3任务，所有任务v1及实际依赖与批准计划一致，原源会话成员不变、消息仍2条，未建执行或模型回复，CLI与model均disabled且活动0。固定测试不代表模型提案、技能路由、真实CLI或双Docker已验收。
 
 F36测试API、Vite和故障代理均经实际会话句柄确认退出；正常7892服务直接读取新静态构建，HTTP页面已回读index-DS6DJ8Di.js，本轮无后端变更故未重启正常服务或写入测试项目。
+
+## F37 模型协作提案后端验收
+
+复现命令（仓库根目录）：`.\.venv\Scripts\python.exe -m pytest tests/test_workbench_planning_api.py tests/test_workbench_controller.py -q`、`.\.venv\Scripts\python.exe -m pytest tests/test_workbench_planning.py -q`；完整回归使用 `.\.venv\Scripts\python.exe -m pytest tests/ -q`。
+
+task_execution_ui 负责提案后端；主代理集成 Runs、控制器和 Owner API；corppilot_backend_review 负责设计审查，verify_prompt_push 独立成品静态审查 Pass；verify_history_scope 负责 Doc/PM 文档核对。提案沿用聊天队列的 Run ID、并发/RPM和活动上限，未增加第二套调度器。
+
+Owner 请求显式传入协调人、本会话 Owner 目标消息及1–100个启用候选白名单。仅冻结候选公开字段并结合目标消息和协调人指令构造上下文；执行前复查全部候选，完成前复查实际选中成员及协调人/会话权限。严格 JSON、候选范围、1–16任务与DAG校验后才保存提案。成功只形成提案和 completed Run，普通聊天列表不展示该请求，不写聊天答复、项目、任务或CLI执行。缺配置排队等待、queued取消复用Run入口、running重启unknown，失败和未知均不自动重试。
+
+主代理实际执行：规划API与控制器定向 **8 passed（10.64s）**；此前规划模块与既有Runs定向 **23 passed（2.93s）**。完整 `tests/` 回归 **440 passed、8 subtests passed（73.50s）**，此时包含规划15项与新增API4项。
+
+全量通过后仅追加5条故障/边界测试，生产代码未修改。主代理最终规划模块定向 **20 passed（1.14s）**：补充SQLite元数据INSERT失败无Run残留、completed状态UPDATE失败时proposal为NULL且Run保持running并在恢复后成为unknown，以及双节点循环、17任务和超过100候选。最终collect-only为 **445 tests collected**；追加测试后没有再次执行全量，不将收集结果记为完整445项通过。
+
+上述证据为后端/API及注入模型边界验证，未调用真实供应商、CLI或Docker。F37未改前端，不重复F36构建/浏览器路径来替代新提案界面验收；提案浏览器入口、导入F36后的Owner再次确认仍待实现，不能将模型建议标为approved_plan或宣称自治协作完成。提交与远端交付结果以台账中的后续实际回读为准。
+
+正常7892服务加载F37前，主代理确认旧会话22073仍运行、聊天/CLI活动均0且error为空，再Ctrl+C退出（退出码1）。通过SQLite backup保存外部快照 `H:\item\CorpPilot-test-evidence-20260906\f37-before-108197c5-be85-46f9-bcda-1010550a9e7d.sqlite3`，integrity_check为ok。新会话61822启动后health为200，新提案GET为200且返回空列表，聊天/CLI活动仍0、error为空；未向正常数据创建提案或调用模型。

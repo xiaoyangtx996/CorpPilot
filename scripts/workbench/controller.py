@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from runtime.traffic_monitor import TrafficMonitor
 from .provider import ProviderError, run_reply
 from .runs import Runs
+from .planning import PlanningError
 from .cli_controller import CLIController
 
 
@@ -105,6 +106,8 @@ class ReplyController:
             self.runs.finish(identity, **result)
         except ProviderError as exc:
             self.runs.fail(identity, str(exc), state="unknown" if exc.unknown else "failed")
+        except PlanningError:
+            self.runs.fail(identity, "模型协作提案无效，未创建项目或自动重试")
         except (PermissionError, ValueError, KeyError):
             self.runs.fail(identity, "会话或身份授权已变化，回复未发布")
         except Exception:

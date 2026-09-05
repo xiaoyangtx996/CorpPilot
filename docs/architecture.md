@@ -404,7 +404,7 @@ POST 前持久保存原路径和 payload；断线、刷新及 GET 失败后保�
 
 Owner HTTP 提供 `GET/POST /api/workbench/conversations/{id}/collaboration-plans` 和 `GET /api/workbench/collaboration-plans/{id}`。创建、同键重放、单条读取及列表均返回创建回执，包含项目/共享消息 ID、协调人、成员、局部 key 到任务 ID 的映射，以及 `approved_plan` 原计划。`approved_plan` 从既有不可变 payload 列读取，不另存副本或拼接当前任务字段；后续编辑、归档或成员改变不改写历史计划。
 
-此事务不调用模型、不创建聊天 Run 或任务执行，也不自动派发。协调与拆分由 Owner 明确提交；智能组队、预算约束和真实模型/双 Docker 运行仍不在本增量已验收范围。后端及 HTTP 定向 30 项通过、Tech Lead 审查 Pass；主代理全量 421 项及 8 子用例通过（65.34s）。F36 已补齐浏览器入口，模型生成提案与按技能路由仍未完成，不据此宣布完整协作产品交付。
+此事务不调用模型、不创建聊天 Run 或任务执行，也不自动派发。协调与拆分由 Owner 明确提交；智能组队、预算约束和真实模型/双 Docker 运行仍不在本增量已验收范围。后端及 HTTP 定向 30 项通过、Tech Lead 审查 Pass；主代理全量 421 项及 8 子用例通过（65.34s）。F36 已补齐浏览器入口，F37 已提供模型提案后端；提案导入确认界面和自动组队仍未完成，不据此宣布完整协作产品交付。
 
 ## F36：浏览器协作计划与原请求恢复
 
@@ -413,3 +413,15 @@ Owner HTTP 提供 `GET/POST /api/workbench/conversations/{id}/collaboration-plan
 当前标签页使用一条全局 sessionStorage 待确认记录，保存原 source_id 和完整 plan；从左侧“协作计划与恢复”可跨当前会话恢复原来源，普通未提交草稿不保证刷新恢复。每次 POST 前先持久保存原内容，存储无效或失败禁止发送。首次明确 4xx 拒绝后可主动保留全文重新编辑并生成新请求；若选择核对原请求，发送前清除旧 rejected 标记，之后出现断线或未知结果只能继续同键核对，不能沿用早先拒绝证据改建替代项目。源会话后来归档不妨碍已提交原请求的历史回读与重放。
 
 确认创建须同时匹配回执中的源会话、request_id 和完整 approved_plan；GET 失败不表示没有项目，已确认回执不因后续历史读取失败消失。主代理浏览器验证正常双任务依赖、循环阻止、停用成员拒绝后重编辑，以及 POST 已提交但响应断开、GET 503、跨会话刷新恢复和同键核对；独立数据回读为两项目三任务，成员及依赖准确，无私聊历史复制或 CLI/模型调用。最终构建 42 modules、index-DS6DJ8Di.js；本增量无后端修改，沿用 F35 的 421 项及 8 子用例证据，不将其记录为新一轮后端回归或真实自治执行验收。
+
+## F37：共享 Runs 队列的模型协作提案
+
+Owner API：`GET/POST /api/workbench/conversations/{id}/collaboration-proposals`、`GET /api/workbench/collaboration-proposals/{id}`。POST 严格接受 agent_id、source_message_id、request_id、candidate_ids；agent_id 为协调人。候选为 1–100 个不重复、已启用身份，按 Owner 输入顺序保存，调换顺序属于不同请求内容；协调人无需列入候选，除非也将承担子任务。源消息必须属于该会话并由 Owner 发出。
+
+创建时冻结候选公开 id、name、template_id、skills；模型上下文只使用目标 Owner 消息、协调人指令和这些候选资料，不读取其他聊天历史或个人记忆。执行前检查全部候选仍启用；完成前检查实际选中成员仍启用、协调人仍启用且属于未归档源会话。候选改名、技能或模板编辑不覆盖创建时快照；模型输出不能扩大白名单，最终 F35 创建事务再次核对当前身份与权限。
+
+提案 ID 复用 Run ID，与普通回复共享活动上限100、并发和 RPM 限制，不另设调度器。普通聊天列表不展示提案 Run；专用端点查询其状态与结果。模型配置未就绪时 queued 等待，排队取消沿用 `POST /api/workbench/runs/{id}/cancel`。失败不自动重试；控制器重启把遗留 running 记为 unknown，不据此重发模型请求。
+
+返回内容必须满足严格 JSON 结构、1–16 项任务、本计划局部 key 的 DAG 及负责人白名单。解析或校验错误以专门的安全错误归入 failed，不把非法模型内容当作已接受提案。成功仅保存提案并将 Run 记为 completed，不插入普通聊天消息、不创建协作项目/任务或 CLI 执行；提案结果写入与完成状态保持事务一致，不能留下半成功结果。
+
+F37 只交付后端/API。后续浏览器须显式导入 F36，由 Owner 重新审阅共享摘要、成员、任务与依赖后提交 F35；模型提案不能冒充不可变 approved_plan。主代理全量440项及8子用例通过后，仅追加5条故障/边界测试且生产代码未改，规划模块最终20项定向通过，未重跑全量；详细证据见 [F37 验收记录](acceptance-report.md#f37-模型协作提案后端验收)。无新增浏览器、真实供应商、CLI或Docker验收。

@@ -18,6 +18,7 @@ from . import artifacts
 from .reviews import Reviews
 from .memories import Memories
 from .collaboration import Collaboration
+from .planning import Planning
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -31,6 +32,7 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.reviews = Reviews(store)
         self.memories = Memories(store)
         self.collaboration = Collaboration(store)
+        self.planning = Planning(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
         try:
@@ -232,6 +234,11 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.collaboration.list(conversation_id))
                     if self.command == "POST":
                         return self.respond(201, self.server.collaboration.create(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "collaboration-proposals":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.planning.list(conversation_id))
+                    if self.command == "POST":
+                        return self.respond(202, self.server.planning.create(conversation_id, self.read_json()))
                 if len(parts) == 3 and parts[1] == "members" and parts[2] and self.command == "PATCH":
                     payload = self.read_json()
                     if set(payload) != {"joined"}:
@@ -293,6 +300,11 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.write(artifact["data"])
                     return
             prefix = "/api/workbench/runs/"
+            proposal_prefix = "/api/workbench/collaboration-proposals/"
+            if path.startswith(proposal_prefix) and self.command == "GET":
+                identity = path[len(proposal_prefix):]
+                if identity and "/" not in identity:
+                    return self.respond(200, self.server.planning.get(identity))
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")
                 if len(parts) == 1 and parts[0] and self.command == "GET":
