@@ -344,3 +344,13 @@
 - HTTP GET/PATCH dependencies返回清单与阻塞原因；现有UI还未接入，CLI消费前置文件也未完成。
 - 全量325项及8子测试通过；后补依赖22项独立QA和主代理复跑通过，详见acceptance-report。
 - 提交标识：feat(workbench): F27 gate executions on versioned task dependencies；提交后立即推送并核对远端。
+
+- F27 提交 0ddec29 后立即推送仍 GitHub 403；远端目标分支回读为空，尚未远端交付。
+
+## F28：前置成果副本传递到下游CLI
+
+- input_materialization实现输入校验/落盘及定向测试，主代理实现同事务授权读取与控制器集成；交叉Ponytail审查Pass。
+- 只读直接冻结前置的批准清单；校验ID全量匹配、大小/hash及100文件/4MiB单文件/16MiB总量。新执行inputs/{artifact_id}独立副本，不沿用原名配置或其他工作区。
+- prompt提供元数据映射，状态轮询不加载文件字节；准备失败明确not_started，真实runner异常仍unknown，后置依赖失效保护保留。
+- 全量358项及8子测试通过，真实文件/SQLite与注入进程跨层证据见acceptance-report；未调用真实模型，双Docker与依赖UI仍待完成。
+- 提交标识：feat(workbench): F28 copy approved dependency artifacts into CLI inputs；单独提交后立即推送并回读。

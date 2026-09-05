@@ -8,9 +8,35 @@ import stat
 import uuid
 
 from .store import _text
+from . import artifacts
 
 
-def prepare_workspace(data_dir: Path, execution_id: str) -> dict[str, Path]:
+class InputPreparationError(ValueError):
+    """Workspace/input preparation failed before any CLI process was started."""
+
+
+def prepare_workspace(data_dir: Path, execution_id: str, input_artifacts=None) -> dict[str, Path]:
+    inputs = [] if input_artifacts is None else input_artifacts
+    if not isinstance(inputs, list) or len(inputs) > artifacts.MAX_FILES:
+        raise ValueError(artifacts.ERROR)
+    verified, identities, total = [], set(), 0
+    for item in inputs:
+        if (not isinstance(item, dict)
+                or set(item) != {"id", "execution_id", "path", "size", "sha256", "data"}
+                or type(item["size"]) is not int or item["size"] < 0):
+            raise ValueError(artifacts.ERROR)
+        item = dict(item)
+        identity = artifacts._identity(item["id"])
+        artifacts._identity(item["execution_id"])
+        if identity in identities:
+            raise ValueError(artifacts.ERROR)
+        identities.add(identity)
+        item["content"] = item.pop("data")
+        item = artifacts.verify_snapshot(item)
+        total += item["size"]
+        if total > artifacts.MAX_TOTAL_BYTES:
+            raise ValueError(artifacts.ERROR)
+        verified.append(item)
     if not isinstance(execution_id, str) or str(uuid.UUID(execution_id)) != execution_id:
         raise ValueError("执行 ID 必须是标准 UUID")
     base = Path(data_dir).absolute()
@@ -30,6 +56,13 @@ def prepare_workspace(data_dir: Path, execution_id: str) -> dict[str, Path]:
                  localappdata=paths["home"] / "AppData" / "Local")
     for path in paths.values():
         path.mkdir(parents=True, exist_ok=True)
+    if verified:
+        inputs_dir = paths["work"] / "inputs"
+        inputs_dir.mkdir()
+        for item in verified:
+            # UUID filenames cannot become ambient executable configuration or instructions.
+            with (inputs_dir / item["id"]).open("xb") as stream:
+                stream.write(item["data"])
     return paths
 
 
@@ -81,7 +114,7 @@ def parse_result(process: dict, api_key: str) -> dict:
 
 
 def run_codex(executable: Path, data_dir: Path, execution_id: str, prompt: str,
-              model: str, api_key: str, timeout_seconds: int, cancel=None) -> dict:
+              model: str, api_key: str, timeout_seconds: int, cancel=None, input_artifacts=None) -> dict:
     """No automatic login, ambient credentials, repository copying, or retry."""
     executable = Path(executable)
     if not executable.is_absolute() or not executable.is_file() or executable.suffix.lower() != ".exe":
@@ -93,7 +126,10 @@ def run_codex(executable: Path, data_dir: Path, execution_id: str, prompt: str,
         raise ValueError("CLI 总时限必须为1–3600秒")
     if cancel is not None and cancel.is_set():
         return {"success": False, "exit_code": None, "reason": "cancelled", "summary": "启动前已取消", "usage": None, "workspace": None}
-    paths = prepare_workspace(data_dir, execution_id)
+    try:
+        paths = prepare_workspace(data_dir, execution_id, input_artifacts)
+    except (ValueError, OSError, TypeError) as exc:
+        raise InputPreparationError("CLI 输入或工作目录准备失败，进程尚未启动") from exc
     env = execution_environment(paths, api_key)
     argv = [str(executable), "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--json",
             "--sandbox", "workspace-write", "--skip-git-repo-check", "--color", "never", "--model", model,

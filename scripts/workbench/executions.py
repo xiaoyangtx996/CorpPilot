@@ -153,7 +153,7 @@ class Executions:
             self._set(db, identity, "running", None)
             return True
 
-    def snapshot(self, identity):
+    def snapshot(self, identity, *, include_artifacts=False):
         with self.store.connect() as db:
             db.execute("BEGIN")
             run = self._run(db, identity)
@@ -164,8 +164,12 @@ class Executions:
             instructions = db.execute("SELECT instructions FROM templates WHERE id=?", (agent["template_id"],)).fetchone()[0]
             source = db.execute("SELECT * FROM messages WHERE id=?", (task["source_message_id"],)).fetchone()
             # Only explicit task requirements and their source, never all private conversations.
-            return {"task": task, "agent": agent, "instructions": instructions, "source_message": dict(source),
-                    "dependency_inputs": dependencies.bound_inputs(db, identity)}
+            bindings = dependencies.bound_inputs(db, identity)
+            result = {"task": task, "agent": agent, "instructions": instructions, "source_message": dict(source),
+                      "dependency_inputs": bindings}
+            if include_artifacts:
+                result["input_artifacts"] = artifact_store.input_snapshots(db, bindings)
+            return result
 
     def cancel(self, identity):
         with self.store.connect() as db:

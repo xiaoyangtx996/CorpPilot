@@ -1,6 +1,7 @@
 """Bounded, immutable copies of explicitly exported CLI artifacts."""
 from contextlib import ExitStack, contextmanager
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -195,3 +196,25 @@ def verify_snapshot(row):
         raise ValueError(ERROR)
     _path(result["path"])
     return {**result, "data": content}
+
+
+def input_snapshots(db, bindings):
+    """Read only direct, frozen inputs; caller holds the authorization transaction."""
+    selected, total = [], 0
+    for binding in bindings:
+        identity = binding["upstream_execution_id"]
+        review = db.execute("SELECT decision,artifact_ids FROM execution_reviews WHERE execution_id=?",
+                            (identity,)).fetchone()
+        metadata = db.execute("""SELECT id,size,length(content) byte_count FROM execution_artifacts
+            WHERE execution_id=? ORDER BY id LIMIT ?""", (identity, MAX_FILES + 1)).fetchall()
+        if (review is None or review["decision"] != "approved" or not metadata
+                or [row["id"] for row in metadata] != json.loads(review["artifact_ids"])):
+            raise ValueError("前置成果与已批准清单不一致，未启动执行")
+        for row in metadata:
+            total += row["byte_count"]
+            if (len(selected) >= MAX_FILES or row["size"] != row["byte_count"]
+                    or row["byte_count"] > MAX_FILE_BYTES or total > MAX_TOTAL_BYTES):
+                raise ValueError("前置成果超过输入限额或大小不一致，未启动执行")
+            stored = db.execute("SELECT * FROM execution_artifacts WHERE id=?", (row["id"],)).fetchone()
+            selected.append(verify_snapshot(stored))
+    return selected
