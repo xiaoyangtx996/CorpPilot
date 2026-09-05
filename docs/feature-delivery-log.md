@@ -141,3 +141,13 @@
 - 390px截图检查表单内部滚动、保存按钮可达；Escape焦点返回“模型设置”。主代理TypeScript/Vite构建通过，33模块。
 - 现阶段凭据来自服务启动环境，尚未提供软件内密钥录入/系统凭据保管；连接验证和真实回复仍未完成，界面已明确说明。
 - 提交标识：`feat(workbench): F11 add in-app model settings`；提交后立即推送，结果另记。
+- 提交`726e53b`后立即推送仍GitHub403，未交付远端。
+
+## F12：持久回复 Run 与上下文授权快照
+
+- 实现：reply_runs；独立代码/Ponytail审查：reply_review，Pass；主代理Runs/Store定向复验11 passed。
+- Run与Agent身份/会话分离，记录源Owner消息、request_id、状态、实际回复消息、模型及用量；相同请求幂等，事务claim与finish确保不会重复回复。
+- 上下文仅来自该群截至源消息的最新100条，snapshot和finish再次检查成员/启用/归档；退群后的新结果不得发布。超出窗口明确返回context_truncated，不宣称完整历史注入。
+- 排队可取消，运行中不伪称已停止；重启running标unknown且不自动重发，recover须由后续唯一控制服务启动锁保护。
+- attempt与requirement_version首版固定1，版本变更/重试任务仍待后续实现；不是完整任务调度验收。
+- 提交标识：`feat(workbench): F12 persist authorized reply runs`；提交后立即推送，结果另记。

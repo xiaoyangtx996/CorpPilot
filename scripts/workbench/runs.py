@@ -1,0 +1,168 @@
+"""Durable, single-agent replies with transactional authority and idempotency."""
+from __future__ import annotations
+
+import json
+import uuid
+
+from .store import Store, _text
+
+
+class Runs:
+    def __init__(self, store: Store):
+        self.store = store
+        with store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("CREATE TABLE IF NOT EXISTS runs_schema_version (version INTEGER PRIMARY KEY)")
+            versions = [row[0] for row in db.execute("SELECT version FROM runs_schema_version")]
+            if versions and versions != [1]:
+                raise ValueError("不支持的 Run 数据库版本")
+            db.execute("INSERT OR IGNORE INTO runs_schema_version VALUES (1)")
+            db.execute("""CREATE TABLE IF NOT EXISTS runs (
+                id TEXT PRIMARY KEY,
+                conversation_id TEXT NOT NULL REFERENCES conversations(id),
+                agent_id TEXT NOT NULL REFERENCES agents(id),
+                source_message_id TEXT NOT NULL REFERENCES messages(id),
+                request_id TEXT NOT NULL,
+                attempt INTEGER NOT NULL DEFAULT 1 CHECK(attempt=1),
+                requirement_version INTEGER NOT NULL DEFAULT 1 CHECK(requirement_version=1),
+                state TEXT NOT NULL DEFAULT 'queued' CHECK(state IN
+                    ('queued','running','completed','failed','cancelled','unknown')),
+                model TEXT, usage TEXT, error TEXT,
+                created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                reply_message_id TEXT UNIQUE REFERENCES messages(id),
+                UNIQUE(conversation_id,request_id)
+            )""")
+
+    @staticmethod
+    def _run(db, identity):
+        row = db.execute("SELECT * FROM runs WHERE id=?", (identity,)).fetchone()
+        if row is None:
+            raise KeyError("Run 不存在")
+        result = dict(row)
+        result["usage"] = json.loads(result["usage"]) if result["usage"] else None
+        return result
+
+    def _authorize(self, db, run):
+        conversation = self.store._conversation(db, run["conversation_id"], run["agent_id"])
+        self.store._enabled_member(db, run["agent_id"])
+        if conversation["archived"]:
+            raise ValueError("会话已归档，不能生成回复")
+
+    def create(self, conversation_id, payload):
+        if not isinstance(payload, dict) or set(payload) != {"agent_id", "source_message_id", "request_id"}:
+            raise ValueError("Run 必须只含 agent_id、source_message_id 和 request_id")
+        agent_id = _text(payload["agent_id"], "Agent ID")
+        source = _text(payload["source_message_id"], "源消息 ID")
+        request = _text(payload["request_id"], "请求 ID", 120)
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            previous = db.execute("SELECT id,agent_id,source_message_id FROM runs WHERE conversation_id=? AND request_id=?",
+                                  (conversation_id, request)).fetchone()
+            if previous:
+                if (previous["agent_id"], previous["source_message_id"]) != (agent_id, source):
+                    raise ValueError("request_id 已用于不同 Run")
+                return self._run(db, previous["id"])
+            self._authorize(db, {"conversation_id": conversation_id, "agent_id": agent_id})
+            if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
+                              (source, conversation_id)).fetchone():
+                raise ValueError("源消息必须是本会话中的 Owner 消息")
+            identity = str(uuid.uuid4())
+            db.execute("INSERT INTO runs(id,conversation_id,agent_id,source_message_id,request_id) VALUES(?,?,?,?,?)",
+                       (identity, conversation_id, agent_id, source, request))
+            return self._run(db, identity)
+
+    def get(self, identity):
+        with self.store.connect() as db:
+            return self._run(db, identity)
+
+    def list(self, conversation_id):
+        with self.store.connect() as db:
+            db.execute("BEGIN")
+            self.store._conversation(db, conversation_id)
+            return [self._run(db, row[0]) for row in db.execute(
+                "SELECT id FROM runs WHERE conversation_id=? ORDER BY created_at DESC,id DESC LIMIT 100", (conversation_id,))]
+
+    def pending(self, limit=100):
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("队列读取上限必须为 1–100")
+        with self.store.connect() as db:
+            db.execute("BEGIN")
+            return [self._run(db, row[0]) for row in db.execute(
+                "SELECT id FROM runs WHERE state='queued' ORDER BY created_at,id LIMIT ?", (limit,))]
+
+    def claim(self, identity):
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._run(db, identity)
+            return db.execute("""UPDATE runs SET state='running',
+                updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND state='queued'""", (identity,)).rowcount == 1
+
+    def snapshot(self, identity):
+        """Internal model input only; never expose this private snapshot in API output."""
+        with self.store.connect() as db:
+            db.execute("BEGIN")
+            run = self._run(db, identity)
+            if run["state"] != "running":
+                raise ValueError("只有运行中的 Run 可以读取模型上下文")
+            self._authorize(db, run)
+            agent = self.store._agent(db.execute("SELECT * FROM agents WHERE id=?", (run["agent_id"],)).fetchone())
+            instructions = db.execute("SELECT instructions FROM templates WHERE id=?", (agent["template_id"],)).fetchone()[0]
+            sequence = db.execute("SELECT sequence FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
+                                  (run["source_message_id"], run["conversation_id"])).fetchone()
+            if sequence is None:
+                raise ValueError("源消息必须是本会话中的 Owner 消息")
+            # ponytail: bound context to 100 messages; add token budgeting if large inputs require it.
+            rows = list(db.execute("""SELECT * FROM messages WHERE conversation_id=? AND sequence<=?
+                ORDER BY sequence DESC LIMIT 101""", (run["conversation_id"], sequence[0])))
+            return {"agent": agent, "instructions": instructions,
+                    "messages": [dict(row) for row in reversed(rows[:100])],
+                    "context_truncated": len(rows) > 100, "source_sequence": sequence[0]}
+
+    def finish(self, identity, content, model, prompt_tokens, completion_tokens):
+        content = _text(content, "模型回复", 16000)
+        model = _text(model, "模型", 200)
+        for count in (prompt_tokens, completion_tokens):
+            if count is not None and (type(count) is not int or count < 0):
+                raise ValueError("Token 数量必须为非负整数或 null")
+        usage = json.dumps({"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens})
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            run = self._run(db, identity)
+            if run["state"] != "running":
+                return run
+            self._authorize(db, run)
+            reply_id = str(uuid.uuid4())
+            db.execute("INSERT INTO messages(id,conversation_id,sender_kind,sender_id,content,request_id) VALUES(?,?,'agent',?,?,?)",
+                       (reply_id, run["conversation_id"], run["agent_id"], content, str(uuid.uuid4())))
+            db.execute("""UPDATE runs SET state='completed', model=?, usage=?, error=NULL,
+                reply_message_id=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
+                       (model, usage, reply_id, identity))
+            db.execute("UPDATE conversations SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (run["conversation_id"],))
+            return self._run(db, identity)
+
+    def fail(self, identity, error, state="failed"):
+        if state not in ("failed", "unknown"):
+            raise ValueError("无效的失败状态")
+        error = _text(error, "错误", 2000)
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._run(db, identity)
+            db.execute("""UPDATE runs SET state=?, error=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                WHERE id=? AND state IN ('queued','running')""", (state, error, identity))
+            return self._run(db, identity)
+
+    def cancel(self, identity):
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            run = self._run(db, identity)
+            if run["state"] == "running":
+                raise ValueError("模型请求已开始，不能保证停止，无法取消")
+            db.execute("""UPDATE runs SET state='cancelled', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                WHERE id=? AND state='queued'""", (identity,))
+            return self._run(db, identity)
+
+    def recover(self):
+        with self.store.connect() as db:
+            return db.execute("""UPDATE runs SET state='unknown', error='服务重启，模型请求结果未知；未自动重发',
+                updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE state='running'""").rowcount
