@@ -119,3 +119,14 @@
 - 主代理全量85 passed、8 subtests passed。SDK禁重试按构造参数审查；没有用模型真实请求冒充测试。
 - 本项为进程内单控制器RPM，不声称跨进程或重启持久限流；并发执行上限、费用硬预算和取消仍待后续运行调度实现。
 - 提交标识：`fix(runtime): F09 reserve RPM before each provider attempt`；提交后立即推送，结果另记。
+- 提交：`5258be3`；立即推送仍同一GitHub403，远端交付未完成。
+
+## F10：显式模型配置持久层与本机 API
+
+- 实现：model_settings及主代理API集成；独立代码/Ponytail审查：admission_review，Pass。
+- 复用工作台SQLite，单独版本化配置记录；默认禁用且不默认选模型，model/base_url/api_key_env与输出上限、超时、RPM、并发参数严格校验。
+- `GET/PATCH /api/workbench/model-settings`只提供配置及configured/credential_available；密钥从服务进程环境读取，不落数据库、不经公开API返回。保存配置不会触发模型调用。
+- PATCH事务内读取合并，未来配置版本拒绝改写。HTTPS/本机HTTP校验属于输入与明文保护，不声称构成DNS或Worker网络隔离。
+- 配置定向50 passed；主代理配置及真实HTTP回归66 passed，包含重启恢复、密钥不回传、移除环境变量后状态变化。
+- 当前只交付配置能力；界面入口、真正模型调用和这些执行参数的工作台调度执行仍待接入，不能把配置已保存当作连接验证。
+- 提交标识：`feat(workbench): F10 persist explicit model settings and expose API`；提交后立即推送，结果另记。

@@ -175,3 +175,23 @@ def test_conversation_http_rejects_impersonation_and_bad_paging(tmp_path):
         assert request(port, "PATCH", path + "/members/" + actor, {"joined": False})[0] == 400
         assert request(port, "GET", base + "/missing/messages")[0] == 404
         assert request(port, "GET", path + "/messages")[1] == []
+
+
+def test_model_settings_api_never_returns_credential(tmp_path, monkeypatch):
+    monkeypatch.setenv("CORPPILOT_TEST_KEY", "test-secret-not-for-output")
+    path = "/api/workbench/model-settings"
+    with running(tmp_path) as port:
+        status, initial = request(port, "GET", path)
+        assert status == 200 and not initial["enabled"] and not initial["configured"]
+        payload = {"model": "test-model", "base_url": "http://127.0.0.1:8999/v1",
+                   "api_key_env": "CORPPILOT_TEST_KEY", "max_output_tokens": 512,
+                   "timeout_seconds": 30, "rpm": 10, "max_concurrency": 2, "enabled": True}
+        status, saved = request(port, "PATCH", path, payload)
+        assert status == 200 and saved["credential_available"] and saved["configured"]
+        assert "test-secret-not-for-output" not in json.dumps(saved)
+        assert request(port, "PATCH", path, {"api_key": "test-secret-not-for-output"})[0] == 400
+        assert request(port, "PATCH", path, {"rpm": 0})[0] == 400
+    with running(tmp_path) as port:
+        assert request(port, "GET", path) == (200, saved)
+        monkeypatch.delenv("CORPPILOT_TEST_KEY")
+        assert not request(port, "GET", path)[1]["credential_available"]

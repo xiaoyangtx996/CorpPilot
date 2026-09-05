@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from .store import REPO_ROOT, Store
+from .settings import Settings
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -17,6 +18,7 @@ MAX_BODY_BYTES = 64 * 1024
 class WorkbenchServer(ThreadingHTTPServer):
     def __init__(self, store: Store, port: int = 7892, frontend_dir: Path | None = None):
         self.store = store
+        self.settings = Settings(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
 
@@ -104,6 +106,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(404, {"error": "浏览器界面尚未构建，请先在 frontend 运行 npm run build"})
             if self.command == "GET" and path == "/health":
                 return self.respond(200, {"status": "ok"})
+            if path == "/api/workbench/model-settings":
+                if self.command == "GET":
+                    return self.respond(200, self.server.settings.get())
+                if self.command == "PATCH":
+                    return self.respond(200, self.server.settings.save(self.read_json()))
             if self.command == "GET" and path == "/api/workbench/templates":
                 return self.respond(200, store.templates())
             if path == "/api/workbench/agents":
