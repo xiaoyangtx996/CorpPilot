@@ -230,3 +230,16 @@
 - 定向测试最终17 passed；主代理全量185 passed、8 subtests passed（32.53s），含同角色多任务、并发创建/领取、权限撤销、版本变更、停止/unknown、队列上限与恢复。
 - 内部记录契约可用，但没有接HTTP创建、真实CLI、容器或产物验收；本轮不把注入的退出码当作真实进程证据。
 - 提交标识：`feat(workbench): F18 persist version-bound task execution lifecycle`；提交后立即推送并另记结果。
+
+- F18 提交 `23fcb30`，立即推送仍 GitHub 403，未交付远端。
+
+## F19：独立 CLI 目录与 Windows 进程树控制
+
+- CLI适配/集成：主代理；进程树及真实测试：managed_process；独立PM/技术/Ponytail审查：cli_review，修正后Pass。
+- 独立执行UUID目录、HOME/CODEX_HOME/临时目录，固定Codex参数，stdin任务，环境白名单及单一显式API key；不复制登录、配置或会话，不复用旧执行目录。
+- Windows挂起创建→加入Job→恢复，KILL_ON_JOB_CLOSE、有限双流输出、含stdin的时限，取消/超时/主进程退出清理孙进程，未知退出不返回虚假数值状态。
+- CLI成功需退出0+有效完成事件/最终文本，失败事件或缺完成不通过；物理exit0而协议失败的success=false必须由后续控制器视为失败。原始stdout/stderr不进入API结果，凭据摘要隐藏。
+- 审查修复默认目录祖先.codex误拒绝（固定project_root_markers=[]），修复带空格凭据规范化，禁用login shell；补NaN/inf超时与非法输出上限拒绝。
+- 独立CLI/进程树20 passed；主代理全量205 passed、8 subtests passed（35.15s）。真实Python子孙进程覆盖退出、取消、超时、输出溢出与controller os._exit崩溃；本机Codex版本探针经相同Job后端返回exit0、codex-cli 0.153.3，未调用模型。
+- 尚未接任务控制器、配置UI、checkout、产物验收；本机目录分离不是Docker/OS权限隔离，真实模型及双Docker验收仍待完成。
+- 提交标识：`feat(workbench): F19 isolate Codex CLI directories and process trees`；提交后立即推送并另记结果。

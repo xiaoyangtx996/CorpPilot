@@ -35,6 +35,29 @@ superseded，保留历史但不推进新需求。回调核对 execution ID、att
 这不证明孤儿进程已停止。当前核查说明只记录调用方声明，真实 runner 接入时仍必须核对进程和副作用。
 F18 只提供内部持久化与回调契约，不开放 HTTP 创建或伪造 CLI；配置、真实执行、产物审核及恢复接入待续。
 
+### 本机 CLI 适配与进程树（F19）
+
+`cli.run_codex` 固定调用 Codex `.exe`，任务通过 stdin，模型单独参数；不接收任意附加参数，
+不复制用户登录会话。每个执行 UUID 新建独立 work/home/tmp/CODEX_HOME，已有目录拒绝复用，
+链接和 Windows 重解析路径拒绝。环境仅保留必要系统路径与本次显式 API key，不继承其他密钥、
+PYTHONPATH、NODE_OPTIONS 或 Git 配置；工具 shell 的环境另排除 API key。
+
+固定 `--ignore-user-config --ignore-rules --ephemeral --json --sandbox workspace-write`，
+并以 `project_root_markers=[]` 停止父级项目发现、`allow_login_shell=false` 避免登录 shell 配置。
+这些参数依据本机 CLI 0.153.3 帮助与 [官方配置文档](https://learn.chatgpt.com/docs/config-file/config-advanced)；
+凭据使用与 JSONL 完成事件见 [官方非交互文档](https://learn.chatgpt.com/docs/non-interactive-mode)。
+成功同时要求物理退出0、单次 turn.completed、有效最终 Agent 文本且无 turn.failed；
+结果不返回原始 stdout/stderr，已知凭据在摘要中隐藏。`success=false` 即使物理退出0也不可提交待评审。
+
+`process_tree.run_process` 使用 Windows Job Object：挂起创建，加入 Job 后恢复，杜绝子进程先逃逸的窗口。
+双流合计输出默认上限4MiB，stdin写入与运行共用执行时限；超时、取消、溢出及主进程退出均清理剩余后代。
+确认 Job 无活动进程且主进程退出才返回数值退出码；清理无法证实时为unknown。
+执行时限后允许有界清理等待；Job句柄随控制进程关闭自动终止后代，已用真实崩溃场景验证。
+
+这是可信本机工具的配置/会话分离，不阻止同一Windows用户读取其他宿主文件；Docker权限隔离仍为必做项。
+本轮只验收适配函数、真实进程树和 CLI 版本探针，未接入任务控制器/配置UI、代码checkout或产物提取，
+也未调用真实模型。部署需使用相同平台验证；非Windows进程后端目前明确返回start_failed。
+
 ## 1. 目标
 
 CorpPilot 用“组织架构”来表达多 Agent 系统中的职责边界。
