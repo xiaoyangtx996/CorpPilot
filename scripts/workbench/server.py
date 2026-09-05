@@ -17,6 +17,7 @@ from .cli_settings import CLISettings
 from . import artifacts
 from .reviews import Reviews
 from .memories import Memories
+from .collaboration import Collaboration
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -29,6 +30,7 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.cli_settings = CLISettings(store)
         self.reviews = Reviews(store)
         self.memories = Memories(store)
+        self.collaboration = Collaboration(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
         try:
@@ -171,6 +173,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, self.server.memories.candidate(parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == "decision" and self.command == "POST":
                     return self.respond(201, self.server.memories.decide(parts[0], self.read_json()))
+            prefix = "/api/workbench/collaboration-plans/"
+            if path.startswith(prefix):
+                identity = path[len(prefix):]
+                if identity and "/" not in identity and self.command == "GET":
+                    return self.respond(200, self.server.collaboration.get(identity))
             if self.command == "GET" and path == "/api/workbench/templates":
                 return self.respond(200, store.templates())
             if path == "/api/workbench/agents":
@@ -220,6 +227,11 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.tasks.list(conversation_id))
                     if self.command == "POST":
                         return self.respond(201, self.server.tasks.create(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "collaboration-plans":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.collaboration.list(conversation_id))
+                    if self.command == "POST":
+                        return self.respond(201, self.server.collaboration.create(conversation_id, self.read_json()))
                 if len(parts) == 3 and parts[1] == "members" and parts[2] and self.command == "PATCH":
                     payload = self.read_json()
                     if set(payload) != {"joined"}:

@@ -411,3 +411,13 @@
 - 原请求持久保存后才发送，断线同键恢复；不同不可变声明成功读回后可明确结束本地等待，不覆盖、不误称原请求成功。
 - TypeScript/Vite 41 modules 构建通过。浏览器普通保存、双确认、断线刷新/GET503、历史v1对应当前v2、归档停用、并发声明冲突、任务入口与重启回读通过；四条固定unknown与四条声明，无实际模型/CLI调用。
 - 提交标识：feat(workbench): F34 reconcile unknown executions from browser；独立提交后立即推送并回读。
+
+- F34 提交 3fe9cf7 后立即推送仍返回 GitHub403：suiyue1990 无目标仓库写权限；目标实施分支远端回读为空。
+
+## F35：Owner 批准协作项目组建服务
+
+- corppilot_backend_review 完成 PM/Tech Lead/Ponytail 方案与成品审查Pass；task_execution_ui 本轮承担后端角色，负责 collaboration.py、共享Tasks创建事务与单元测试；主代理集成HTTP与跨层测试，verify_history_scope 承担Doc/PM文档核对。
+- 从源会话的Owner消息组建独立项目：成员仅协调人与任务负责人，显式共享摘要为新群源消息，1–16个任务及批内DAG依赖一次原子保存，任务初始v1。源私聊历史和其他身份记忆不复制，不授予额外工具，不启动模型/CLI。
+- 复用现有任务、依赖和执行权限；不可变收据返回原approved_plan及任务映射，幂等重放不受后续任务修订、归档或停用影响。错误循环或中途写入失败全量回滚。
+- 定向30项测试通过；完整回归结果见验收报告。本增量为后端与HTTP能力，浏览器计划编辑/确认、模型提案、技能路由和自动组队后续继续实现。
+- 提交标识：feat(workbench): F35 atomically create approved collaboration projects；测试审查通过后独立提交并立即推送。

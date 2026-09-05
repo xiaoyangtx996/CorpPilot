@@ -174,3 +174,17 @@ reconciliation_ui 实现，corppilot_backend_review 独立源码/Ponytail审查P
 API服务确认终止后重新启动，f34_verify.py重启前后均通过：四条执行全部unknown、退出码未确认、attempt/version均原值，四条不可变声明，没有新执行，CLI disabled且active_requests=0。固定样本没有实际进程，不代表已完成真实CLI/双Docker/自动恢复验证。
 
 F34 测试API与故障代理均通过实际会话句柄确认退出。正常7892服务先核对聊天/CLI活动均为0，再有序重启加载F33后端与F34静态页面；原数据保留，CLI核查待办为空、控制器active_requests=0。
+
+## F35 协作组建服务验收
+
+后端新增collaboration.py，Tasks.create仅提取可复用现有db的内部方法，HTTP接入来源会话的collaboration-plans及按收据ID读取。计划和创建收据持久不可变，业务任务继续使用原tasks/task_revisions/task_dependencies；没有第二套任务状态或调度器。
+
+定向30项（协作21、原Tasks6、跨层HTTP3）通过。真实loopback HTTP验证从私聊创建项目、精确成员、仅共享摘要、新任务v1与依赖、无运行副作用、跨来源拒绝、跨会话源消息拒绝、原请求重放及控制服务重启后收据一致。记录内approved_plan保持原批准字段，可供浏览器准确核对待确认请求。
+
+临时SQLite故障注入覆盖循环/自依赖/重复或未知key、非Owner来源、归档/停用/非成员协调者、UTF-8非法值、体积上限、空与17项任务、16项链有效、晚期第二任务写入失败整体回滚。8次并发重复请求只有一个项目；receipt的UPDATE/DELETE/REPLACE被拒绝，任务修订后创建收据不变。
+
+执行上下文跨层测试：计划本身没有task_executions/聊天runs；另行显式创建固定执行后，snapshot只含共享摘要，不含私聊前史或原私密目标，也不读取其他身份记忆。此测试未启动实际进程，不替代真实模型与双Docker验收。前端本增量未修改，不重复构建或用旧界面宣称协作UI已完成。
+
+F35 最终全量：421 passed、8 subtests passed（65.34s），实际收集核对新增协作21项和HTTP3项，原Tasks6项。PM/Tech Lead/Ponytail成品审查Pass，主代理复核事务与隐私边界；未完成浏览器组建和真实自治协作验收。
+
+正常7892服务在聊天和CLI均active_requests=0后，经实际会话句柄有序停止并重启，已加载F35 API；既有会话的协作计划GET返回空列表且CLI活动仍为0。没有为正常用户数据创建测试项目。

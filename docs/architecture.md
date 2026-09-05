@@ -360,7 +360,7 @@ claim 同事务冻结本身份及本群记忆版本，包括 v0；CLI 启动授�
 
 Owner API：GET /api/workbench/memories/{scope}/{id}；GET history、GET/POST candidates、POST rollback 子路径；GET /api/workbench/memory-candidates/{id}；POST 其 decision 子路径。提案字段 request_id/expected_version/source_execution_id/content；决定 request_id/decision/note；回滚 request_id/expected_version/target_version/note。沿用同源限制、严格字段和 HTTP 409 版本冲突。
 
-这是应用层上下文选择，不是对同一 Windows 用户恶意进程的 OS 隔离；Owner 管理 API 可查看全部范围，未来 Docker Worker 不得取得该管理接口。当前候选为有来源的显式文本，尚未提供记忆浏览器入口、自动复盘或 Skill 发布，不能称完整自我进化。
+这是应用层上下文选择，不是对同一 Windows 用户恶意进程的 OS 隔离；Owner 管理 API 可查看全部范围，未来 Docker Worker 不得取得该管理接口。当前候选为有来源的显式文本，浏览器入口已由 F31 补齐；自动复盘和 Skill 发布尚未实现，不能称完整自我进化。
 
 ## F31：记忆浏览器入口与恢复
 
@@ -384,4 +384,24 @@ Owner API：GET /api/workbench/memories/{scope}/{id}；GET history、GET/POST ca
 
 GET /api/workbench/execution-reconciliations/pending 返回最多100条未核查未知执行，按时间与ID排序；GET /api/workbench/executions/{id}/reconciliation 返回记录或null；POST 同路径只接收 request_id、attempt、requirement_version、process_stopped=true、external_effects_checked=true、note。核查字段绑定原run，不允许上传退出码或成功标志。保留同源检查和版本不符409。
 
-本增量先完成服务能力，浏览器全局核查入口及解除旧unknown提示在后续增量接入。该能力不是自动孤儿进程探测或检查点续跑，不满足所有恢复要求；真实进程/容器识别与恢复仍需继续完成。
+F33 完成服务能力，F34 已接入浏览器全局核查入口并修正已核查 unknown 的任务提示。该能力不是自动孤儿进程探测或检查点续跑，不满足所有恢复要求；真实进程/容器识别与恢复仍需继续完成。
+
+## F34：浏览器未知执行核查与请求恢复
+
+全局核查窗口读取 F33 的未核查清单与原执行记录，展示任务、身份、attempt、requirement_version，并要求 Owner 填写依据和分别确认两项声明。核查针对历史事实，不以当前任务版本、会话归档或身份启用状态替代原执行身份；后端仍拒绝控制器持有或关闭中的执行核查。
+
+POST 前持久保存原路径和 payload；断线、刷新及 GET 失败后保留原请求，同键重试核对。未成功读取不得显示空清单。若另一请求已写入不同的不可变声明，必须先成功读取该声明，再由 Owner 明确结束本地等待；不覆盖记录，也不把另一请求的成功冒认为原请求已接受。
+
+任务执行窗口区分 unknown 结果与人工核查记录，只有未核查项继续阻断。全部未知项核查后，既有已授权队列可继续调度，新尝试仍走当前版本、权限、配置与前次执行引用检查。浏览器保存不改写退出码、批准成果或创建新尝试。构建、固定样本浏览器交互及服务重启回读已通过，证据见 [验收报告 F34](acceptance-report.md#f34-浏览器未知执行核查验收)；不据此宣称真实孤儿进程、模型或双 Docker 恢复完成。
+
+## F35：Owner 确认的项目建立事务（后端与 HTTP 已验证）
+
+`Collaboration` 复用同一 SQLite、`Tasks._create` 和现有依赖校验，不增加第二套任务或调度器。源为私聊或群聊的一条 Owner 消息；创建计划严格包含 request_id、source_message_id、title、shared_brief、coordinator_id、tasks。每计划 1–16 项任务，以唯一局部 key 引用前置；每项提供 title、scope、acceptance、agent_id、depends_on。请求上限 64KiB，共享摘要上限 16000 字符，依赖仅能引用计划内任务且必须无环。
+
+新建前核对源会话未归档、源消息属于该会话且由 Owner 发出、协调人属于源会话，以及协调人和各负责人均启用。新项目成员为协调人与负责人的去重集合，不把获邀成员加入源会话。Owner 明确提供的 shared_brief 写成新项目的首条 Owner 消息，新任务绑定这条共享消息；源会话/消息 ID 保留在创建回执，不复制私聊/群聊历史或个人记忆。
+
+`BEGIN IMMEDIATE` 内创建项目会话、成员、共享摘要、所有 v1 任务和 v1 依赖，通过现有 DAG 校验后保存不可变 `collaboration_receipts`。任何失败整体回滚。回执以源会话和 request_id 唯一，保存原请求与创建结果快照；同键同内容重放原结果，异内容拒绝，后续任务编辑不改变该创建回执。成员邀请只建立本项目范围，不赋予 execute 权限。
+
+Owner HTTP 提供 `GET/POST /api/workbench/conversations/{id}/collaboration-plans` 和 `GET /api/workbench/collaboration-plans/{id}`。创建、同键重放、单条读取及列表均返回创建回执，包含项目/共享消息 ID、协调人、成员、局部 key 到任务 ID 的映射，以及 `approved_plan` 原计划。`approved_plan` 从既有不可变 payload 列读取，不另存副本或拼接当前任务字段；后续编辑、归档或成员改变不改写历史计划。
+
+此事务不调用模型、不创建聊天 Run 或任务执行，也不自动派发。协调与拆分由 Owner 明确提交；智能组队、预算约束和真实模型/双 Docker 运行仍不在本增量已验收范围。后端及 HTTP 定向 30 项通过、Tech Lead 审查 Pass；主代理全量 421 项及 8 子用例通过（65.34s）。浏览器入口、模型生成提案与按技能路由未完成，不据此宣布完整协作产品交付。

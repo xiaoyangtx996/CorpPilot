@@ -68,6 +68,11 @@ class Tasks:
             raise ValueError("会话已归档，不能更改任务")
 
     def create(self, conversation_id, payload):
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            return self._create(db, conversation_id, payload)
+
+    def _create(self, db, conversation_id, payload):
         if not isinstance(payload, dict) or set(payload) != {
                 "source_message_id", "request_id", "title", "scope", "acceptance", "agent_id"}:
             raise ValueError("Task 必须只含 source_message_id、request_id、title、scope、acceptance、agent_id")
@@ -76,24 +81,22 @@ class Tasks:
         request = _text(payload["request_id"], "请求 ID", 120)
         fields = self._requirements(payload)
         original = json.dumps(payload, sort_keys=True, ensure_ascii=False)
-        with self.store.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            previous = db.execute("SELECT id,creation_payload FROM tasks WHERE conversation_id=? AND request_id=?",
-                                  (conversation_id, request)).fetchone()
-            if previous:
-                if previous["creation_payload"] != original:
-                    raise ValueError("request_id 已用于不同 Task")
-                return self._task(db, previous["id"])
-            self._authorize(db, conversation_id, fields[3])
-            if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
-                              (source, conversation_id)).fetchone():
-                raise ValueError("源消息必须是本会话中的 Owner 消息")
-            identity = str(uuid.uuid4())
-            db.execute("""INSERT INTO tasks(id,conversation_id,source_message_id,request_id,creation_payload,
-                requirement_version) VALUES(?,?,?,?,?,1)""", (identity, conversation_id, source, request, original))
-            db.execute("""INSERT INTO task_revisions(task_id,requirement_version,title,scope,acceptance,agent_id)
-                VALUES(?,1,?,?,?,?)""", (identity, *fields))
-            return self._task(db, identity)
+        previous = db.execute("SELECT id,creation_payload FROM tasks WHERE conversation_id=? AND request_id=?",
+                              (conversation_id, request)).fetchone()
+        if previous:
+            if previous["creation_payload"] != original:
+                raise ValueError("request_id 已用于不同 Task")
+            return self._task(db, previous["id"])
+        self._authorize(db, conversation_id, fields[3])
+        if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
+                          (source, conversation_id)).fetchone():
+            raise ValueError("源消息必须是本会话中的 Owner 消息")
+        identity = str(uuid.uuid4())
+        db.execute("""INSERT INTO tasks(id,conversation_id,source_message_id,request_id,creation_payload,
+            requirement_version) VALUES(?,?,?,?,?,1)""", (identity, conversation_id, source, request, original))
+        db.execute("""INSERT INTO task_revisions(task_id,requirement_version,title,scope,acceptance,agent_id)
+            VALUES(?,1,?,?,?,?)""", (identity, *fields))
+        return self._task(db, identity)
 
     def get(self, identity):
         with self.store.connect() as db:
