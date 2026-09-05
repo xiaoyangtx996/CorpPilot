@@ -199,21 +199,24 @@ class Memories:
         return run
 
     def propose(self, scope, identity, payload):
-        p = _payload(payload, "request_id expected_version source_execution_id content")
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            encoded, old = _replay(db, "propose", [scope, identity], p)
-            if old is not None:
-                return old
-            _scope(db, scope, identity, True)
-            if _document(db, scope, identity)["version"] != p["expected_version"]:
-                raise TaskVersionConflict("记忆版本已变化")
-            run = self._source(db, scope, identity, p["source_execution_id"])
-            candidate = str(uuid.uuid4())
-            db.execute("""INSERT INTO memory_candidates(id,scope,scope_id,expected_version,source_execution_id,
-                source_task_id,source_requirement_version,content) VALUES(?,?,?,?,?,?,?,?)""",
-                (candidate, scope, identity, p["expected_version"], run["id"], run["task_id"], run["requirement_version"], p["content"]))
-            return _record(db, p, encoded, self._candidate(db, candidate))
+            return self._propose(db, scope, identity, payload)
+
+    def _propose(self, db, scope, identity, payload):
+        p = _payload(payload, "request_id expected_version source_execution_id content")
+        encoded, old = _replay(db, "propose", [scope, identity], p)
+        if old is not None:
+            return old
+        _scope(db, scope, identity, True)
+        if _document(db, scope, identity)["version"] != p["expected_version"]:
+            raise TaskVersionConflict("记忆版本已变化")
+        run = self._source(db, scope, identity, p["source_execution_id"])
+        candidate = str(uuid.uuid4())
+        db.execute("""INSERT INTO memory_candidates(id,scope,scope_id,expected_version,source_execution_id,
+            source_task_id,source_requirement_version,content) VALUES(?,?,?,?,?,?,?,?)""",
+            (candidate, scope, identity, p["expected_version"], run["id"], run["task_id"], run["requirement_version"], p["content"]))
+        return _record(db, p, encoded, self._candidate(db, candidate))
 
     def decide(self, identity, payload):
         p = _payload(payload, "request_id decision note")

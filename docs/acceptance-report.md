@@ -279,4 +279,12 @@ F39交付范围为每启动随机token的Owner API鉴权、浏览器授权恢复
 
 Doc/PM只读系统核查：Windows 11 Pro 26200.8737、WSL 2.6.2.0；固件虚拟化与SLAT为True，HypervisorPresent为False、vmcompute不存在。唯一现有分发 `alpine-ai-yss` 为Stopped/WSL1，未启动、转换或配置集成。Docker Desktop 4.88.1.237512和CLI 29.7.2文件存在，但HKLM/HKCU未发现Docker安装注册；8月27日安装日志退出1，9月6日启动日志因缺少Docker注册键失败，daemon管道不存在。VMP只读查询返回0x80040154，DISM日志为CBS package identity/Foundation package创建失败；不能把无法读取状态写成Disabled。`DISM /Online /Cleanup-Image /CheckHealth` 虽退出0，正文明确“无法修复组件存储”，不是健康通过。
 
-Windows保留应用/数据修复及重启窗口的授权已异步待答，未执行系统配置写入、安装、重启或其他项目服务启停。分阶段修复建议及微软/Docker官方依据见 [环境阻塞与修复前提](docker-worker.md#环境阻塞与修复前提)。当前不能宣称F40真实容器验收完成，提交和推送结果须待实际执行补记。
+Windows保留应用/数据修复及重启窗口的授权已异步待答，未执行系统配置写入、安装、重启或其他项目服务启停。分阶段修复建议及微软/Docker官方依据见 [环境阻塞与修复前提](docker-worker.md#环境阻塞与修复前提)。F40实际提交 `a632631` 并立即推送，GitHub403拒绝当前账号suiyue1990，远端实施分支回读为空；外部证据为 `f40-delivery-result.json`。不能宣称真实容器验收或远端交付完成。
+
+## F41 模型复盘后端验收
+
+主代理全量 **532 passed、8 subtests passed（85.60s）**，执行会话51604退出0。全量开始后只新增一项隐私测试，生产代码未改；最终 `tests/test_workbench_retrospective_api.py` **4 passed（5.96s）**。使用本地模型HTTP替身和真实请求子进程，覆盖：Owner访问鉴权、创建202、只调用一次、候选生成后批准版本仍为0、Owner明确批准成为v1、重启回读和回滚v2；排队取消不生成候选；非法模型输出标记failed、不写候选、不重试。项目范围模型输入包含选定成果正文，不含未选正文、个人私密记忆或无关聊天前史；公共复盘GET不返回输入正文，复盘结果未发布为群聊消息。
+
+独立审查Pass：21项复盘单元及HTTP定向通过（6.33s），另在临时数据中核验项目输入排除个人记忆/未选成果/聊天前史、GET不返回正文，以及错误范围、未选证据、撤销execute权限被拒绝。候选与Run原子写入故障回滚、幂等和重启unknown均有直接测试。
+
+这验证实际控制器/协议/持久化链路，不验证真实供应商经验质量、真实CLI或Docker。F41仅为后端/API增量，浏览器复盘入口与其故障恢复另列F42；Skill发布、自动闭环协作等其余目标仍未完成。实际提交/推送回读证据写入外部f41-delivery-result.json。

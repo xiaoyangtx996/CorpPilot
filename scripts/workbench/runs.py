@@ -5,12 +5,14 @@ import json
 import uuid
 
 from .store import Store, _text
-from . import planning
+from . import planning, retrospectives
+from .memories import Memories
 
 
 class Runs:
     def __init__(self, store: Store):
         self.store = store
+        self.memories = Memories(store)
         with store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             db.execute("CREATE TABLE IF NOT EXISTS runs_schema_version (version INTEGER PRIMARY KEY)")
@@ -36,6 +38,7 @@ class Runs:
             )""")
 
             planning.initialize(db)
+            retrospectives.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -57,7 +60,7 @@ class Runs:
             db.execute("BEGIN IMMEDIATE")
             return self._create(db, conversation_id, payload)
 
-    def _create(self, db, conversation_id, payload, *, is_planning=False):
+    def _create(self, db, conversation_id, payload, *, is_planning=False, is_retrospective=False):
         if not isinstance(payload, dict) or set(payload) != {"agent_id", "source_message_id", "request_id"}:
             raise ValueError("Run 必须只含 agent_id、source_message_id 和 request_id")
         agent_id = _text(payload["agent_id"], "Agent ID")
@@ -67,7 +70,8 @@ class Runs:
                               (conversation_id, request)).fetchone()
         if previous:
             existing_kind = db.execute("SELECT 1 FROM planning_requests WHERE run_id=?", (previous["id"],)).fetchone() is not None
-            if existing_kind != is_planning:
+            existing_retro = db.execute("SELECT 1 FROM retrospective_requests WHERE run_id=?", (previous["id"],)).fetchone() is not None
+            if (existing_kind, existing_retro) != (is_planning, is_retrospective):
                 raise ValueError("request_id 已用于不同类型的 Run")
             if (previous["agent_id"], previous["source_message_id"]) != (agent_id, source):
                 raise ValueError("request_id 已用于不同 Run")
@@ -93,8 +97,8 @@ class Runs:
             self.store._conversation(db, conversation_id)
             # Keep every active request discoverable; the global admission cap bounds this list.
             return [self._run(db, row[0]) for row in db.execute("""SELECT id FROM runs WHERE conversation_id=?
-                AND id NOT IN (SELECT run_id FROM planning_requests) AND (state IN ('queued','running') OR id IN (SELECT id FROM runs WHERE conversation_id=?
-                    AND id NOT IN (SELECT run_id FROM planning_requests) AND state NOT IN ('queued','running') ORDER BY updated_at DESC,id DESC LIMIT 100))
+                AND id NOT IN (SELECT run_id FROM planning_requests) AND id NOT IN (SELECT run_id FROM retrospective_requests) AND (state IN ('queued','running') OR id IN (SELECT id FROM runs WHERE conversation_id=?
+                    AND id NOT IN (SELECT run_id FROM planning_requests) AND id NOT IN (SELECT run_id FROM retrospective_requests) AND state NOT IN ('queued','running') ORDER BY updated_at DESC,id DESC LIMIT 100))
                 ORDER BY created_at DESC,id DESC""", (conversation_id, conversation_id))]
 
     def pending(self, limit=100):
@@ -126,6 +130,8 @@ class Runs:
                                   (run["source_message_id"], run["conversation_id"])).fetchone()
             if sequence is None:
                 raise ValueError("源消息必须是本会话中的 Owner 消息")
+            if retrospective := retrospectives.snapshot(db, run, agent, instructions, self.memories):
+                return retrospective
             if proposal := planning.snapshot(db, run, agent, instructions):
                 return proposal
             # ponytail: bound context to 100 messages; add token budgeting if large inputs require it.
@@ -148,7 +154,7 @@ class Runs:
             if run["state"] != "running":
                 return run
             self._authorize(db, run)
-            if planning.finish(db, run, content):
+            if retrospectives.finish(db, run, content, self.memories) or planning.finish(db, run, content):
                 db.execute("""UPDATE runs SET state='completed',model=?,usage=?,error=NULL,
                     updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""", (model, usage, identity))
                 return self._run(db, identity)

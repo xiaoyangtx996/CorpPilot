@@ -22,6 +22,7 @@ from .reviews import Reviews
 from .memories import Memories
 from .collaboration import Collaboration
 from .planning import Planning
+from .retrospectives import Retrospectives
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -41,6 +42,7 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.memories = Memories(store)
         self.collaboration = Collaboration(store)
         self.planning = Planning(store)
+        self.retrospectives = Retrospectives(store)
         super().__init__(("127.0.0.1", port), Handler)
         try:
             self.controller = ReplyController(store, self.settings)
@@ -172,6 +174,11 @@ class Handler(BaseHTTPRequestHandler):
                     if len(parts) == 2 and self.command == "GET":
                         return self.respond(200, memory.get(scope, identity))
                     if len(parts) == 3:
+                        if parts[2] == "retrospectives":
+                            if self.command == "GET":
+                                return self.respond(200, self.server.retrospectives.list(scope, identity))
+                            if self.command == "POST":
+                                return self.respond(202, self.server.retrospectives.create(scope, identity, self.read_json()))
                         if parts[2] == "history" and self.command == "GET":
                             return self.respond(200, memory.history(scope, identity))
                         if parts[2] == "candidates":
@@ -181,6 +188,11 @@ class Handler(BaseHTTPRequestHandler):
                                 return self.respond(201, memory.propose(scope, identity, self.read_json()))
                         if parts[2] == "rollback" and self.command == "POST":
                             return self.respond(201, memory.rollback(scope, identity, self.read_json()))
+            prefix = "/api/workbench/retrospectives/"
+            if path.startswith(prefix):
+                identity = path[len(prefix):]
+                if identity and "/" not in identity and self.command == "GET":
+                    return self.respond(200, self.server.retrospectives.get(identity))
             prefix = "/api/workbench/memory-candidates/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")

@@ -459,3 +459,13 @@ completed结果作为待审阅建议显示，不能因模型完成就创建项�
 Owner API 增加 `GET /api/workbench/executions/{id}/worker` 与 `POST /api/workbench/executions/{id}/worker/stop`，均沿用 F39 鉴权。仍由控制器持有的执行使用原任务停止请求；恢复入口只停止未被当前控制器持有的 unknown Docker 实例，先核实身份，stop 后再次 inspect，仍 running 才 kill 并回读，不自动启动或删除历史容器。机器证据未知时禁止“已停止”声明；本地记录缺失不是 absent，必须成功核对 daemon 的完整容器清单及执行标签。首次保存声明前服务端再次核查，浏览器旧的 exited 状态不能绕过当前 running；既有不可变声明按原请求精确重放，不要求 daemon 后来仍可用。
 
 浏览器已验证禁用配置保存、真实 probe 失败，以及受控 Worker 状态的核查、两次停止、提交前状态竞争拒绝和原键恢复；这些替身未创建真实容器。最终主代理全量511项及8子用例通过，Tech Lead独立36项与Worker定向37项通过、审查Pass；QA新标签页恢复原执行、声明和禁用配置，测试服务经实际句柄中断并确认退出。详细结果与环境证据见 [F40 验收记录](acceptance-report.md#f40-docker-worker-适配与恢复验收)，安装/操作及未验收边界见 [Docker Worker](docker-worker.md)。本机 Windows 修复授权待答，尚未进行系统写入，F40 不代表真实 CLI、双 Worker 或整体目标通过。
+
+## F41：模型复盘生成待批准经验候选
+
+复用模型 Runs 队列、配置、并发/RPM限制、子进程总时限和未知恢复；复盘不是普通群聊回复，不向消息历史发布结果。Owner 指定目标记忆范围、当前版本、来源执行和选定的已批准成果 ID，服务端派生原执行负责人及会话。来源必须仍为当前需求下最新且获 Owner 批准的执行，满足成员、工具、依赖与成果完整性检查。
+
+`retrospective_requests` 冻结原请求和模型输入：当前任务需求、目标范围已批准记忆的全文/版本，以及所选成果的 ID、路径、哈希和完整 UTF-8 正文。选择1–100项，拒绝二进制、异常控制符及总输入快照超过64KiB的情况，不静默截断；不附加聊天前史、未选择成果正文或其他身份私有记忆。模型只允许输出 `content`（8000字符以内的完整替换文档）与非空 `evidence_artifact_ids`（所选清单子集），保留有效旧经验并描述适用边界。
+
+创建、模型读取与完成时重新校验授权、成果及记忆基准版本；完成事务同时创建既有 `memory_candidates`、记录证据并结束Run。模型完成不等于记忆批准，不更新批准版本、不发布Skill。Owner继续使用原审批/回滚接口，批准前再次核查；已经开始执行的记忆快照保持原版本。精确同键重放不重复模型或候选，跨请求类型及异内容复用键被拒绝；queued可以取消，running在服务重启后为unknown且不自动重发。
+
+Owner鉴权接口：`POST/GET /api/workbench/memories/{scope}/{id}/retrospectives` 创建或列出记录；POST字段为 `request_id、expected_version、source_execution_id、artifact_ids`，返回202。`GET /api/workbench/retrospectives/{run_id}` 返回状态、原请求、成果元数据、候选ID和引用ID，不公开冻结输入全文。取消使用已有 `POST /api/workbench/runs/{run_id}/cancel`。本增量是后端/API；浏览器复盘入口另作F42验收，真实供应商的经验质量仍待验证。
