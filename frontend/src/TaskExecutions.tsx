@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExecutionReview } from './ExecutionReview';
-import { api, ApiError, type Agent, type Conversation, type Task, type TaskExecution, type ExecutionRequest, type CliSettingsValue, type ReplyRuntime } from './api';
+import { api, ApiError, type Agent, type Conversation, type Task, type TaskExecution, type ExecutionRequest, type CliSettingsValue, type ReplyRuntime, type TaskDependencyStatus } from './api';
 
 const labels = { queued: '排队中', running: '运行中', stopping: '正在停止', awaiting_review: '执行已结束', failed: '失败', cancelled: '已取消', unknown: '结果未知', superseded: '需求已过期' };
 const active = (run: TaskExecution) => ['queued', 'running', 'stopping'].includes(run.state);
@@ -19,6 +19,7 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
   const [runs, setRuns] = useState<TaskExecution[]>([]);
   const [config, setConfig] = useState<CliSettingsValue | null>(null);
   const [runtime, setRuntime] = useState<ReplyRuntime | null>(null);
+  const [dependencies, setDependencies] = useState<TaskDependencyStatus | null>(null);
   const [pending, setPending] = useState<ExecutionRequest | null>(null);
   const [rejected, setRejected] = useState(false);
   const pendingRef = useRef<ExecutionRequest | null>(null);
@@ -48,13 +49,14 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
   async function load() {
     if (reading.current !== null || writing.current) return;
     const request = ++serial.current; reading.current = request; setLoading(true);
-    const results = await Promise.allSettled([api<TaskExecution[]>(`/tasks/${task.id}/executions`), api<CliSettingsValue>('/cli-settings'), api<ReplyRuntime>('/cli-runtime')]);
+    const results = await Promise.allSettled([api<TaskExecution[]>(`/tasks/${task.id}/executions`), api<CliSettingsValue>('/cli-settings'), api<ReplyRuntime>('/cli-runtime'), api<TaskDependencyStatus>(`/tasks/${task.id}/dependencies`)]);
     if (alive.current && request === serial.current) {
-      const [records, settings, status] = results;
+      const [records, settings, status, prerequisites] = results;
       const errors: string[] = [];
       if (records.status === 'fulfilled') { setRuns(records.value); setLoaded(true); reconcile(records.value); } else errors.push(`执行历史：${failure(records.reason)}`);
       if (settings.status === 'fulfilled') setConfig(settings.value); else { setConfig(null); errors.push(`CLI 配置：${failure(settings.reason)}`); }
       if (status.status === 'fulfilled') setRuntime(status.value); else { setRuntime(null); errors.push(`调度状态：${failure(status.reason)}`); }
+      if (prerequisites.status === 'fulfilled') setDependencies(prerequisites.value); else { setDependencies(null); errors.push(`前置状态：${failure(prerequisites.reason)}`); }
       setReadError(errors.join('；')); setLoading(false);
     }
     if (reading.current === request) reading.current = null;
@@ -70,6 +72,7 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
   const latest = runs[0];
   const confirmationKey = `${task.requirement_version}:${latest?.id ?? 'first'}`;
   const blocked = !loaded || loading || !!readError ? '请先成功读取执行历史、配置和调度状态。'
+    : dependencies?.requirement_version !== task.requirement_version ? '任务需求版本已变化，请关闭窗口并刷新任务后重新确认。'
     : conversation.archived ? '会话已归档，不能新建执行。'
     : !agent?.enabled || !conversation.member_ids.includes(task.agent_id) ? '负责人未启用或已不在会话中。'
     : !agent.tools.includes('execute') ? '负责人缺少 execute 工具权限，请编辑身份工具范围。'
@@ -110,6 +113,7 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
     <p className="muted">确认执行会调用配置的 CLI 和模型，可能产生费用。工作区按执行隔离；退出成功仅进入待评审，不代表成果已通过验收。</p>
     <button disabled={loading || busy} onClick={() => void load()}>{loading ? '读取执行中…' : '刷新执行状态'}</button>
     {runtime && <p className="muted">CLI 控制服务：{runtime.running ? '运行中' : '未运行'} · 活动请求 {runtime.active_requests}{runtime.error && ` · ${runtime.error}`}</p>}
+    {dependencies && <p className="muted">前置状态（需求 v{dependencies.requirement_version}）：{dependencies.ready ? dependencies.task_ids.length ? '前置验收条件已满足，执行时仍会重新核查。' : '未设置前置任务。' : `等待前置验收：${dependencies.blocked_reason}。确认执行后会先排队等待。`}此状态不表示本任务已完成。</p>}
     {readError && <p className="error" role="alert">{readError}。已有状态可能过期。</p>}
     {error && <p className="error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     {storageError && <p className="error" role="alert">{storageError}<button disabled={busy} onClick={() => { restore(); void load(); }}>重新读取待确认执行</button></p>}

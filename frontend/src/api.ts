@@ -10,7 +10,8 @@ export type ReplyRun = { id: string; conversation_id: string; agent_id: string; 
 export type ReplyRuntime = { error: string; active_requests: number; running: boolean };
 export type TaskFields = { title: string; scope: string; acceptance: string; agent_id: string };
 export type Task = TaskFields & { id: string; conversation_id: string; source_message_id: string; request_id: string; requirement_version: number; created_at: string; updated_at: string };
-export type TaskRevision = TaskFields & { task_id: string; requirement_version: number; created_at: string };
+export type TaskRevision = TaskFields & { task_id: string; requirement_version: number; created_at: string; dependency_task_ids: string[] };
+export type TaskDependencyStatus = { task_id: string; requirement_version: number; task_ids: string[]; ready: boolean; blocked_reason: string | null };
 export type TaskDraft = TaskFields & { id?: string; source_message_id: string; source_content: string; request_id: string; expected_version?: number; pending?: boolean; conflict?: boolean };
 
 export class ApiError extends Error {

@@ -354,3 +354,13 @@
 - prompt提供元数据映射，状态轮询不加载文件字节；准备失败明确not_started，真实runner异常仍unknown，后置依赖失效保护保留。
 - 全量358项及8子测试通过，真实文件/SQLite与注入进程跨层证据见acceptance-report；未调用真实模型，双Docker与依赖UI仍待完成。
 - 提交标识：feat(workbench): F28 copy approved dependency artifacts into CLI inputs；单独提交后立即推送并回读。
+
+- F28 提交7e79377后立即推送仍GitHub403，远端目标分支回读为空。
+
+## F29：浏览器配置前置任务与版本恢复
+
+- dependencies_ui前端实现；主代理契约/Ponytail审查和真实浏览器验收Pass，复用原生dialog/checkbox和既有API，无新依赖。
+- 同会话选择/清空、历史稳定ID、前置等待与满足、归档只读；保存新增需求版本，执行窗口显示等待原因并拦截已变化版本确认。
+- 原版本请求sessionStorage持久保留，未知响应刷新可重试；409须明确对照后重编辑，读取不覆盖草稿、不误认状态相同为请求确认。
+- 浏览器普通/循环拒绝/版本冲突/上游保存后丢响应/恢复/归档只读均通过；构建39 modules及TypeScript通过。详细证据见acceptance-report F29。
+- 提交标识：feat(workbench): F29 configure task dependencies in browser；单独提交后立即推送并回读。
