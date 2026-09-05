@@ -421,3 +421,13 @@
 - 复用现有任务、依赖和执行权限；不可变收据返回原approved_plan及任务映射，幂等重放不受后续任务修订、归档或停用影响。错误循环或中途写入失败全量回滚。
 - 定向30项测试通过；完整回归结果见验收报告。本增量为后端与HTTP能力，浏览器计划编辑/确认、模型提案、技能路由和自动组队后续继续实现。
 - 提交标识：feat(workbench): F35 atomically create approved collaboration projects；测试审查通过后独立提交并立即推送。
+
+- F35 提交77d3132后立即推送仍返回GitHub403，目标实施分支远端回读为空。
+
+## F36：聊天中的协作计划编排与恢复
+
+- reconciliation_ui负责CollaborationPanel及三处前端接线；corppilot_backend_review独立Tech Lead/Ponytail审查Pass；主代理完成开发StrictMode与构建页面浏览器测试；verify_history_scope负责文档更新。
+- Owner消息入口可填明确共享摘要、协调人、1–16任务和按名称选择的依赖；循环阻断，成员与完整计划确认后生成真实项目。全局入口恢复原请求及查看不可变批准历史，打开项目仅GET并按ID导航。
+- 首次明确拒绝后可显式重新编辑；原请求再次发送先去除旧拒绝标记，之后结果未知时禁止创建替代项目。GET回读完整比较approved_plan，不只核对请求ID。
+- TypeScript/Vite42模块通过，浏览器普通两任务/依赖、首发400重新编辑、重试后响应丢失+GET503+刷新换会话+归档来源、历史改名回读通过；实际数据仅两个项目/三个任务，无模型/CLI运行。
+- 提交标识：feat(workbench): F36 compose collaboration projects from chat；按单功能测试审查后立即提交并推送。

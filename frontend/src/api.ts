@@ -39,3 +39,6 @@ export type MemoryDecision = { candidate_id: string; request_id: string; decisio
 export type MemoryCandidate = { id: string; scope: 'agent' | 'project'; scope_id: string; expected_version: number; source_execution_id: string; source_task_id: string; source_requirement_version: number; content: string; created_at: string; decision: MemoryDecision | null };
 export type ExecutionReconciliationRequest = { request_id: string; attempt: number; requirement_version: number; process_stopped: true; external_effects_checked: true; note: string };
 export type ExecutionReconciliationRecord = ExecutionReconciliationRequest & { execution_id: string; reconciled_at: string };
+export type CollaborationTask = { key: string; title: string; scope: string; acceptance: string; agent_id: string; depends_on: string[] };
+export type CollaborationPlan = { request_id: string; source_message_id: string; title: string; shared_brief: string; coordinator_id: string; tasks: CollaborationTask[] };
+export type CollaborationReceipt = { id: string; source_conversation_id: string; source_message_id: string; request_id: string; project_conversation_id: string; shared_message_id: string; coordinator_id: string; member_ids: string[]; task_ids: Record<string, string>; created_at: string; approved_plan: CollaborationPlan };

@@ -5,9 +5,11 @@ import { ConversationEditor, ConversationMessages, type Draft } from './Conversa
 import { ModelSettings } from './ModelSettings';
 import { CliSettings } from './CliSettings';
 import { ExecutionReconciliation } from './ExecutionReconciliation';
+import { CollaborationPanel } from './CollaborationPanel';
 import { MemoryPanel } from './MemoryPanel';
 
 export default function App() {
+  const [collaboration, setCollaboration] = useState<{ conversationId: string; source?: Message } | null>(null);
   const [memory, setMemory] = useState<{ scope: 'agent' | 'project'; identity: string; title: string; conversationId: string } | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -143,13 +145,13 @@ export default function App() {
           <span className="avatar">{person.name.charAt(0)}</span><span><strong>{person.name}</strong><small>{person.enabled ? '可用' : '已停用'}</small></span>
         </button>)}{!loading && agents.length > 0 && !agents.some(person => person.name.toLowerCase().includes(query.toLowerCase())) && <p className="muted">没有匹配的 Agent</p>}</div>
       </section>
-      <div className="navigation-settings"><button onClick={() => { setNavigation(false); setReconciliation(true); }}>执行核查</button><button onClick={() => setModelSettings(true)}>模型设置</button><button onClick={() => setCliSettings(true)}>CLI 设置</button></div>
+      <div className="navigation-settings"><button onClick={() => { setNavigation(false); setCollaboration({ conversationId }); }}>协作计划与恢复</button><button onClick={() => { setNavigation(false); setReconciliation(true); }}>执行核查</button><button onClick={() => setModelSettings(true)}>模型设置</button><button onClick={() => setCliSettings(true)}>CLI 设置</button></div>
     </aside>
     <main className="workspace" inert={navigation || inspector}>
       <header className="topbar"><button className="mobile" aria-expanded={navigation} onClick={() => setNavigation(true)}>会话与 Agent</button><h1>{conversation?.title ?? agent?.name ?? 'Agent 工作台'}</h1><button className="inspector-toggle" aria-expanded={inspector} onClick={() => setInspector(true)}>Agent 视角</button></header>
       {error && <div className="error-banner" role="alert">{error}<button onClick={() => void load()}>重新连接</button></div>}
       {conversationError && <div className="error-banner" role="alert">{conversationError}<button onClick={() => void loadConversations()}>刷新会话列表</button></div>}
-      {conversation ? <><div className="conversation-toolbar"><span className="muted">{conversation.type === 'dm' ? '私聊' : conversation.type === 'board' ? '董事会' : '项目群'} · {conversation.member_ids.length} 位 Agent{conversation.archived ? ' · 已归档' : ''}</span><button onClick={() => setConversationEditor(conversation)}>管理会话</button>{conversation.type !== 'dm' && <button onClick={() => setMemory({ scope: 'project', identity: conversation.id, title: conversation.title, conversationId: conversation.id })}>项目共享记忆</button>}<button disabled={conversationBusy} onClick={() => void archive()}>{conversation.archived ? '恢复会话' : '归档会话'}</button></div><ConversationMessages key={conversation.id} conversation={conversation} agents={agents} draft={drafts.current[conversation.id]} onMessage={receivedMessage} onSettings={() => setModelSettings(true)} /></> : <div className="empty-workspace"><div className="large-avatar">{agent?.name.charAt(0) ?? 'C'}</div><h2>{loading ? '正在读取工作台…' : '选择会话开始讨论'}</h2><p>选择左侧 Agent 开启私聊，或创建董事会与项目群。消息会持久保存；选定成员并确认后，才会调用已配置模型回复。</p>{agent && <button onClick={() => setEditor(agent)}>编辑身份</button>}</div>}
+      {conversation ? <><div className="conversation-toolbar"><span className="muted">{conversation.type === 'dm' ? '私聊' : conversation.type === 'board' ? '董事会' : '项目群'} · {conversation.member_ids.length} 位 Agent{conversation.archived ? ' · 已归档' : ''}</span><button onClick={() => setConversationEditor(conversation)}>管理会话</button>{conversation.type !== 'dm' && <button onClick={() => setMemory({ scope: 'project', identity: conversation.id, title: conversation.title, conversationId: conversation.id })}>项目共享记忆</button>}<button disabled={conversationBusy} onClick={() => void archive()}>{conversation.archived ? '恢复会话' : '归档会话'}</button></div><ConversationMessages key={conversation.id} conversation={conversation} agents={agents} draft={drafts.current[conversation.id]} onMessage={receivedMessage} onCollaboration={source => setCollaboration({ conversationId: conversation.id, source })} onSettings={() => setModelSettings(true)} /></> : <div className="empty-workspace"><div className="large-avatar">{agent?.name.charAt(0) ?? 'C'}</div><h2>{loading ? '正在读取工作台…' : '选择会话开始讨论'}</h2><p>选择左侧 Agent 开启私聊，或创建董事会与项目群。消息会持久保存；选定成员并确认后，才会调用已配置模型回复。</p>{agent && <button onClick={() => setEditor(agent)}>编辑身份</button>}</div>}
     </main>
     <aside ref={inspectorRef} className={`inspector ${inspector ? 'open' : ''}`} aria-label="Agent 视角" role={inspector ? 'dialog' : undefined} aria-modal={inspector || undefined} inert={navigation}><header><h2>Agent 视角</h2><button className="inspector-toggle" onClick={() => setInspector(false)}>关闭</button></header>
       {conversation && <section><label>查看会话成员<select aria-label="查看会话成员" value={conversation.member_ids.includes(selected) ? selected : ''} onChange={event => setSelected(event.target.value)}><option value="" disabled>选择 Agent</option>{agents.filter(person => conversation.member_ids.includes(person.id)).map(person => <option value={person.id} key={person.id}>{person.name}{person.enabled ? '' : ' · 已停用'}</option>)}</select></label></section>}
@@ -160,6 +162,7 @@ export default function App() {
     </aside>
     {editor !== undefined && <AgentEditor agent={editor} templates={templates} onClose={() => setEditor(undefined)} onSaved={saved} />}
     {modelSettings && <ModelSettings onClose={() => setModelSettings(false)} />}
+    {collaboration && <CollaborationPanel {...collaboration} onClose={() => setCollaboration(null)} onOpenProject={value => { changedConversation(value); chooseConversation(value); }} />}
     {memory && <MemoryPanel key={`${memory.scope}.${memory.identity}`} {...memory} onClose={() => setMemory(null)} />}
     {reconciliation && <ExecutionReconciliation onClose={() => setReconciliation(false)} />}
     {cliSettings && <CliSettings onClose={() => setCliSettings(false)} />}
