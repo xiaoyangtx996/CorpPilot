@@ -5,7 +5,7 @@ import json
 import os
 import sqlite3
 import uuid
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -56,11 +56,17 @@ class Store:
         with self.connect() as db:
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_version'").fetchone():
                 versions = [row[0] for row in db.execute("SELECT version FROM schema_version")]
-                if versions != [1]:
+                if versions not in ([1], [2]):
                     raise ValueError("不支持的工作台数据库版本，请使用匹配版本的软件")
+                if versions == [1]:
+                    # Concurrent startups must never overwrite another startup's recovery snapshot.
+                    # The snapshot's schema_version is authoritative if migration races this backup.
+                    backup_path = self.data_dir / f"workbench-before-migration-{uuid.uuid4()}.sqlite3"
+                    with closing(sqlite3.connect(backup_path)) as backup:
+                        db.backup(backup)
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);
-                INSERT OR IGNORE INTO schema_version VALUES (1);
+                INSERT INTO schema_version SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM schema_version);
                 CREATE TABLE IF NOT EXISTS templates (
                     id TEXT PRIMARY KEY, name TEXT NOT NULL, department TEXT NOT NULL,
                     source TEXT NOT NULL UNIQUE, instructions TEXT NOT NULL
@@ -74,6 +80,29 @@ class Store:
                     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
                     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
                 );
+            """)
+            db.executescript("""
+                BEGIN IMMEDIATE;
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id TEXT PRIMARY KEY, type TEXT NOT NULL CHECK(type IN ('dm','board','project')),
+                    title TEXT NOT NULL, archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0,1)),
+                    dm_agent_id TEXT UNIQUE REFERENCES agents(id),
+                    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+                );
+                CREATE TABLE IF NOT EXISTS members (
+                    conversation_id TEXT NOT NULL REFERENCES conversations(id),
+                    agent_id TEXT NOT NULL REFERENCES agents(id), PRIMARY KEY(conversation_id,agent_id)
+                );
+                CREATE TABLE IF NOT EXISTS messages (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE,
+                    conversation_id TEXT NOT NULL REFERENCES conversations(id),
+                    sender_kind TEXT NOT NULL CHECK(sender_kind IN ('owner','agent')),
+                    sender_id TEXT REFERENCES agents(id), content TEXT NOT NULL, request_id TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+                    UNIQUE(conversation_id,request_id)
+                );
+                UPDATE schema_version SET version=2;
             """)
             for role in roles:
                 db.execute("""INSERT INTO templates VALUES (:id,:name,:department,:source,:instructions)
@@ -155,3 +184,123 @@ class Store:
                 db.execute("INSERT INTO agents(template_id,name,model,skills,tools,enabled,id) VALUES(?,?,?,?,?,?,?)",
                            (*fields, identity))
         return self.agent(identity)
+
+    @staticmethod
+    def _conversation(db, identity, actor_id=None):
+        row = db.execute("SELECT * FROM conversations WHERE id=?", (identity,)).fetchone()
+        if row is None:
+            raise KeyError("会话不存在")
+        members = [r[0] for r in db.execute("SELECT agent_id FROM members WHERE conversation_id=? ORDER BY agent_id", (identity,))]
+        if actor_id is not None and actor_id not in members:
+            raise PermissionError("Agent 不是会话成员")
+        value = dict(row)
+        value["archived"] = bool(value["archived"])
+        value["member_ids"] = members
+        last = db.execute("SELECT * FROM messages WHERE conversation_id=? ORDER BY sequence DESC LIMIT 1", (identity,)).fetchone()
+        value["last_message"] = dict(last) if last else None
+        return value
+
+    def conversations(self, actor_id=None):
+        with self.connect() as db:
+            db.execute("BEGIN")
+            rows = db.execute("""SELECT id FROM conversations WHERE ? IS NULL OR id IN
+                (SELECT conversation_id FROM members WHERE agent_id=?) ORDER BY updated_at DESC,id""", (actor_id, actor_id))
+            return [self._conversation(db, r[0], actor_id) for r in rows]
+
+    def conversation(self, identity, actor_id=None):
+        with self.connect() as db:
+            db.execute("BEGIN")
+            return self._conversation(db, identity, actor_id)
+
+    @staticmethod
+    def _enabled_member(db, agent_id):
+        row = db.execute("SELECT enabled FROM agents WHERE id=?", (agent_id,)).fetchone()
+        if row is None or not row[0]:
+            raise ValueError("成员必须是存在且启用的 Agent")
+
+    def save_conversation(self, payload, identity=None):
+        allowed = {"title", "archived"} if identity is not None else {"title", "type", "member_ids"}
+        if not isinstance(payload, dict) or set(payload) - allowed:
+            raise ValueError("包含不支持的会话字段")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if identity is not None:
+                current = self._conversation(db, identity)
+                title = _text(payload.get("title", current["title"]), "会话标题", 120)
+                archived = payload.get("archived", current["archived"])
+                if type(archived) is not bool:
+                    raise ValueError("归档状态必须为布尔值")
+                db.execute("UPDATE conversations SET title=?, archived=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?",
+                           (title, archived, identity))
+            else:
+                kind = payload.get("type")
+                if kind not in ("dm", "board", "project"):
+                    raise ValueError("未知会话类型")
+                members = _strings(payload.get("member_ids"), "会话成员")
+                if not members or (kind == "dm" and len(members) != 1):
+                    raise ValueError("私聊必须为一名成员，群聊至少一名成员")
+                for member in members:
+                    self._enabled_member(db, member)
+                title = _text(payload.get("title"), "会话标题", 120)
+                existing = db.execute("SELECT id FROM conversations WHERE dm_agent_id=?", (members[0],)).fetchone() if kind == "dm" else None
+                if existing:
+                    return self._conversation(db, existing[0])
+                identity = str(uuid.uuid4())
+                db.execute("INSERT INTO conversations(id,type,title,dm_agent_id) VALUES (?,?,?,?)",
+                           (identity, kind, title, members[0] if kind == "dm" else None))
+                db.executemany("INSERT INTO members VALUES (?,?)", [(identity, member) for member in members])
+            return self._conversation(db, identity)
+
+    def set_member(self, conversation_id, agent_id, joined):
+        if type(joined) is not bool:
+            raise ValueError("成员加入状态必须为布尔值")
+        agent_id = _text(agent_id, "Agent ID")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            current = self._conversation(db, conversation_id)
+            if current["type"] == "dm":
+                raise ValueError("私聊成员不可更改")
+            if current["archived"]:
+                raise ValueError("归档会话不可更改成员")
+            if joined:
+                self._enabled_member(db, agent_id)
+                db.execute("INSERT OR IGNORE INTO members VALUES (?,?)", (conversation_id, agent_id))
+            else:
+                if agent_id in current["member_ids"] and len(current["member_ids"]) == 1:
+                    raise ValueError("群聊必须保留至少一名成员")
+                db.execute("DELETE FROM members WHERE conversation_id=? AND agent_id=?", (conversation_id, agent_id))
+            db.execute("UPDATE conversations SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (conversation_id,))
+            return self._conversation(db, conversation_id)
+
+    def messages(self, conversation_id, actor_id=None, after=0, limit=100):
+        if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 200:
+            raise ValueError("消息分页参数无效")
+        with self.connect() as db:
+            db.execute("BEGIN")
+            self._conversation(db, conversation_id, actor_id)
+            return [dict(row) for row in db.execute("SELECT * FROM messages WHERE conversation_id=? AND sequence>? ORDER BY sequence LIMIT ?",
+                                                    (conversation_id, after, limit))]
+
+    def send_message(self, conversation_id, payload, actor_id=None):
+        if not isinstance(payload, dict) or set(payload) != {"content", "request_id"}:
+            raise ValueError("消息必须只含 content 和 request_id")
+        content = _text(payload["content"], "消息", 16000)
+        request_id = _text(payload["request_id"], "请求 ID", 120)
+        sender_kind = "owner" if actor_id is None else "agent"
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            current = self._conversation(db, conversation_id, actor_id)
+            if actor_id is not None:
+                self._enabled_member(db, actor_id)
+            previous = db.execute("SELECT * FROM messages WHERE conversation_id=? AND request_id=?", (conversation_id, request_id)).fetchone()
+            if previous:
+                if (previous["content"], previous["sender_id"]) != (content, actor_id):
+                    raise ValueError("request_id 已用于不同消息")
+                return dict(previous)
+            if current["archived"]:
+                raise ValueError("会话已归档，不能发送消息")
+            identity = str(uuid.uuid4())
+            db.execute("INSERT INTO messages(id,conversation_id,sender_kind,sender_id,content,request_id) VALUES(?,?,?,?,?,?)",
+                       (identity, conversation_id, sender_kind, actor_id, content, request_id))
+            db.execute("UPDATE conversations SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (conversation_id,))
+            return dict(db.execute("SELECT * FROM messages WHERE id=?", (identity,)).fetchone())

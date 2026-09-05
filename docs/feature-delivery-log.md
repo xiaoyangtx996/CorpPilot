@@ -73,3 +73,13 @@
 - 提交标识：`feat(workbench): F05 manage persistent identities in browser`；远端仍受 GitHub 403 阻塞。
 - 提交：`52e5710`；立即推送仍返回403，不能标记为远端已交付。
 - 下一阶段：持久会话/成员/消息权限与幂等投递、真实模型配置和回复，再接任务/Run、Worker与记忆。完整需求范围保留不变。
+
+## F06：持久会话、成员权限与消息幂等
+
+- 实现：runtime_reliability；独立代码/Ponytail审查：conversation_review；主代理修正、集成及复验，Pass。
+- SQLite v2 保存 DM、董事会/项目群、成员、归档及带稳定序号的消息；并发创建 DM 和相同 request_id 发送均保持唯一。
+- 成员撤销后禁止后续读取/发言，停用身份不得发言/新邀请；读取使用一致快照，不能混入撤销后的新消息。Owner 身份只由内部调用确定。
+- v1 升级前保存独立 `workbench-before-migration-{uuid}.sqlite3` 快照；并发启动不覆盖旧备份，快照内 schema_version 是其真实版本依据。
+- 审查发现并修复备份覆盖和会话详情读权限竞态，新增受控交错回归；12 项 Store/会话检查通过。主代理含在途 API 的全量回归 82 passed、8 subtests passed；最终备份连接关闭修正后会话 8 passed。
+- 当前只证明存储能力，聊天界面、模型、任务和 Worker 权限边界仍未完成。
+- 提交标识：`feat(workbench): F06 persist conversations and permission-scoped messages`；提交后立即推送，远端结果另记。

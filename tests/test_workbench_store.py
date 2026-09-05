@@ -74,8 +74,8 @@ def test_concurrent_patches_preserve_other_fields(tmp_path, monkeypatch):
 def test_future_database_version_is_not_silently_changed(tmp_path):
     store = Store(tmp_path)
     with sqlite3.connect(store.db_path) as db:
-        db.execute("UPDATE schema_version SET version=2")
+        db.execute("UPDATE schema_version SET version=999")
     with pytest.raises(ValueError, match="数据库版本"):
         Store(tmp_path)
     with sqlite3.connect(store.db_path) as db:
-        assert db.execute("SELECT version FROM schema_version").fetchall() == [(2,)]
+        assert db.execute("SELECT version FROM schema_version").fetchall() == [(999,)]
