@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { ExecutionReview } from './ExecutionReview';
 import { api, ApiError, type Agent, type Conversation, type Task, type TaskExecution, type ExecutionRequest, type CliSettingsValue, type ReplyRuntime } from './api';
 
-const labels = { queued: '排队中', running: '运行中', stopping: '正在停止', awaiting_review: '待评审', failed: '失败', cancelled: '已取消', unknown: '结果未知', superseded: '需求已过期' };
+const labels = { queued: '排队中', running: '运行中', stopping: '正在停止', awaiting_review: '执行已结束', failed: '失败', cancelled: '已取消', unknown: '结果未知', superseded: '需求已过期' };
 const active = (run: TaskExecution) => ['queued', 'running', 'stopping'].includes(run.state);
 const failure = (error: unknown) => error instanceof Error ? error.message : '请求失败';
 function decode(raw: string): ExecutionRequest {
@@ -119,6 +120,6 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
         <button className="primary" disabled={confirmed !== confirmationKey || !!latest && !note.trim()}>{latest ? '确认再次执行任务' : '确认执行任务'}</button>
       </fieldset>{blocked && <p className="muted">{blocked}</p>}</form>}
     {loaded && !runs.length && <p className="muted">暂无执行记录，尚未启动任务。</p>}
-    {runs.map(run => <article className="task-card" key={run.id}><header><h3>第 {run.attempt} 次执行 · 需求 v{run.requirement_version}</h3><span>{labels[run.state]}</span></header><small>执行 ID：{run.id}</small><p>退出码：{run.exit_code ?? '尚未确认'} · {new Date(run.created_at).toLocaleString()}</p>{run.summary && <p className="task-source">{run.summary}</p>}{run.reconciliation_note && <p className="task-source">执行前核查：{run.reconciliation_note}</p>}{run.state === 'unknown' && <p className="error">实例和副作用未核实，不能启动替代执行。</p>}{run.state === 'awaiting_review' && <p className="muted">执行结果等待评审，尚未验收或批准。</p>}{run.state === 'stopping' && <p role="status">停止请求已记录，等待实际执行实例退出确认。</p>}{['queued', 'running'].includes(run.state) && <button disabled={busy} onClick={() => void cancel(run)}>{run.state === 'queued' ? '取消排队执行' : '请求停止执行'}</button>}</article>)}
+    {runs.map(run => <article className="task-card" key={run.id}><header><h3>第 {run.attempt} 次执行 · 需求 v{run.requirement_version}</h3><span>{labels[run.state]}</span></header><small>执行 ID：{run.id}</small><p>退出码：{run.exit_code ?? '尚未确认'} · {new Date(run.created_at).toLocaleString()}</p>{run.summary && <p className="task-source">{run.summary}</p>}{run.reconciliation_note && <p className="task-source">执行前核查：{run.reconciliation_note}</p>}{run.state === 'unknown' && <p className="error">实例和副作用未核实，不能启动替代执行。</p>}{run.state === 'stopping' && <p role="status">停止请求已记录，等待实际执行实例退出确认。</p>}{['queued', 'running'].includes(run.state) && <button disabled={busy} onClick={() => void cancel(run)}>{run.state === 'queued' ? '取消排队执行' : '请求停止执行'}</button>}<ExecutionReview run={run} /></article>)}
   </dialog>;
 }

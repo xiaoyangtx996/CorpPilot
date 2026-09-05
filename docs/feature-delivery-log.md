@@ -322,3 +322,14 @@
 - 后续需求或执行更新后，旧批准只属于原版本/执行，不能作为新任务版本验收；浏览器成果/评审入口仍待后续增量。
 - 提交标识：`feat(workbench): F25 record immutable Owner artifact reviews`；提交后立即推送并回读。
 - 主代理全量回归309 passed、8 subtests（52.17s）；独立评审结论Pass。
+
+- F25 提交 da029db 后立即推送仍 GitHub 403（当前账号 suiyue1990 无目标仓库写权限）；远端目标分支回读为空，尚未远端交付。
+
+## F26：浏览器成果下载与不可变 Owner 评审
+
+- 前端子代理实现，主代理集成验收，Ponytail审查Pass；在执行记录内按需读取成果与决定，批准需查验确认和理由，拒绝需理由。
+- 实时读取版本、最新执行及权限；评审独立于CLI配置。历史决定只读，版本未核对时不猜测完成状态。
+- 请求先持久保存到sessionStorage，未知结果刷新后沿原键核对；首次明确拒绝才可撤销。错误读取不隐藏已回读的决定。
+- 浏览器批准、空成果拒绝、下载、版本更新后的历史标识、上游实际保存后丢响应及刷新同键核对通过；远端/真实模型证据与QA固定样本分开。
+- 最终构建38 modules，TypeScript通过；详细HTTP/浏览器证据见acceptance-report F26。
+- 提交标识：feat(workbench): F26 review execution artifacts in browser；独立提交后立即推送和远端回读。

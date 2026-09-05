@@ -28,4 +28,7 @@ export async function api<T>(path: string, method = 'GET', body?: unknown, timeo
   return result;
 }
 export type ExecutionRequest = { request_id: string; expected_version: number; reconciliation_note: string; previous_execution_id: string | null };
+export type ExecutionArtifact = { id: string; execution_id: string; path: string; size: number; sha256: string };
+export type ReviewRequest = { request_id: string; expected_version: number; decision: 'approved' | 'rejected'; note: string; artifact_ids: string[] };
+export type OwnerReview = Omit<ReviewRequest, 'expected_version'> & { execution_id: string; requirement_version: number; reviewed_at: string };
 export type TaskExecution = { id: string; task_id: string; agent_id: string; requirement_version: number; attempt: number; request_id: string; reconciliation_note: string; previous_execution_id: string | null; state: 'queued' | 'running' | 'stopping' | 'awaiting_review' | 'failed' | 'cancelled' | 'unknown' | 'superseded'; exit_code: number | null; summary: string | null; created_at: string; updated_at: string };
