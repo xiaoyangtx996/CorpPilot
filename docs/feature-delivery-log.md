@@ -333,3 +333,14 @@
 - 浏览器批准、空成果拒绝、下载、版本更新后的历史标识、上游实际保存后丢响应及刷新同键核对通过；远端/真实模型证据与QA固定样本分开。
 - 最终构建38 modules，TypeScript通过；详细HTTP/浏览器证据见acceptance-report F26。
 - 提交标识：feat(workbench): F26 review execution artifacts in browser；独立提交后立即推送和远端回读。
+
+- F26 提交 63dedce 后立即推送仍 GitHub 403；远端目标分支回读为空，未远端交付。
+
+## F27：版本化任务依赖与前置验收调度
+
+- 主代理实现，dependency_qa 独立测试和Ponytail审查Pass；复用任务版本、SQLite事务、既有CLI队列和评审授权。
+- 依赖修改生成新需求版本；限制同会话、无环、32直接前置和1000祖先，历史清单持久可读。
+- 前置未通过当前最新验收时排队等待；claim冻结输入，运行/回调/评审递归复查；上游新版本/新执行不自动替换下游旧输入。
+- HTTP GET/PATCH dependencies返回清单与阻塞原因；现有UI还未接入，CLI消费前置文件也未完成。
+- 全量325项及8子测试通过；后补依赖22项独立QA和主代理复跑通过，详见acceptance-report。
+- 提交标识：feat(workbench): F27 gate executions on versioned task dependencies；提交后立即推送并核对远端。

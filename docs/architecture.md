@@ -323,3 +323,13 @@ pending
 3. 把 `AgentMonitorService` 升级为心跳与指标采集服务。
 4. 给控制面补提案操作、事件筛选、SLA 和阻塞原因视图。
 5. 将 JSON 存储逐步迁移到数据库或事件存储。
+
+## F27：版本化前置任务与调度门槛
+
+依赖属于任务需求：同会话内每任务最多32个直接前置，当前版本图必须无环，祖先连同自身最多1000个。修改依赖复制当前需求字段并递增 requirement_version，普通需求编辑保留依赖；历史版本接口同时返回 dependency_task_ids。依赖和执行输入引用持久化到不可更新/删除/替换的 SQLite 行，不增设第二个调度器。
+
+GET/PATCH `/api/workbench/tasks/{id}/dependencies` 读取或替换完整前置清单。PATCH只含 expected_version 与 task_ids；冲突409，不自动套用新版。GET返回 task_id、requirement_version、task_ids、ready、blocked_reason；ready只表明前置审批门槛满足，不代表任务已完成、权限有效或CLI配置可用。
+
+排队执行只在所有前置的当前需求版本、最新执行均经Owner批准时可被claim；未就绪仍为queued，不占执行并发。现有队列继续遍历其余任务。claim同事务固定execution_inputs，snapshot返回直接dependency_inputs；运行中、完成回调和Owner评审通过既有授权路径再次核对这些绑定。递归检查祖先绑定，A新版获批不能让仍使用旧A成果的B自动有效。上游变化会触发控制器停止信号，必须等待实际进程结束才能确定退出；迟到结果不能提交验收。
+
+本增量尚未把前置文件放入下游CLI工作区，也未提供浏览器依赖编辑入口；这两项继续实施。API和SQLite调度测试不代表实际模型已消费协作成果。

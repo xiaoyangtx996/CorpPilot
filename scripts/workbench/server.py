@@ -206,6 +206,11 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.tasks.revise(parts[0], self.read_json()))
                 if len(parts) == 2 and parts[0] and parts[1] == "revisions" and self.command == "GET":
                     return self.respond(200, self.server.tasks.history(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "dependencies":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.tasks.dependencies(parts[0]))
+                    if self.command == "PATCH":
+                        return self.respond(200, self.server.tasks.set_dependencies(parts[0], self.read_json()))
                 if len(parts) == 2 and parts[0] and parts[1] == "executions":
                     if self.command == "GET":
                         return self.respond(200, self.server.controller.cli.executions.list(parts[0]))

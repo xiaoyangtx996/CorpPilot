@@ -7,6 +7,7 @@ import json
 from .store import Store, _text
 from .tasks import Tasks, TaskVersionConflict
 from . import artifacts as artifact_store
+from . import dependencies
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -39,6 +40,7 @@ class Executions:
             db.execute("""CREATE UNIQUE INDEX IF NOT EXISTS one_active_task_execution ON task_executions(task_id)
                 WHERE state IN ('queued','running','stopping')""")
             artifact_store.initialize(db)
+            dependencies.initialize_inputs(db)
 
     @staticmethod
     def _run(db, identity):
@@ -61,6 +63,8 @@ class Executions:
         tools = json.loads(db.execute("SELECT tools FROM agents WHERE id=?", (run["agent_id"],)).fetchone()[0])
         if "execute" not in tools:
             raise PermissionError("负责人尚未获得 execute 工具权限")
+        if run.get("id") and run.get("state") != "queued":
+            dependencies.check_bound(db, run)
         return task
 
     def create(self, task_id, payload):
@@ -140,6 +144,12 @@ class Executions:
             except (ValueError, PermissionError, KeyError):
                 self._set(db, identity, "failed", "负责人或会话权限已变化，此次排队未执行")
                 return False
+            try:
+                inputs = dependencies.ready_inputs(db, run["task_id"], run["requirement_version"])
+            except dependencies.DependencyBlocked:
+                return False
+            db.executemany("INSERT INTO execution_inputs VALUES(?,?,?)",
+                           [(identity, item["dependency_task_id"], item["upstream_execution_id"]) for item in inputs])
             self._set(db, identity, "running", None)
             return True
 
@@ -154,7 +164,8 @@ class Executions:
             instructions = db.execute("SELECT instructions FROM templates WHERE id=?", (agent["template_id"],)).fetchone()[0]
             source = db.execute("SELECT * FROM messages WHERE id=?", (task["source_message_id"],)).fetchone()
             # Only explicit task requirements and their source, never all private conversations.
-            return {"task": task, "agent": agent, "instructions": instructions, "source_message": dict(source)}
+            return {"task": task, "agent": agent, "instructions": instructions, "source_message": dict(source),
+                    "dependency_inputs": dependencies.bound_inputs(db, identity)}
 
     def cancel(self, identity):
         with self.store.connect() as db:
@@ -208,6 +219,9 @@ class Executions:
                     state = "awaiting_review" if exit_code == 0 and success else "failed"
                 except TaskVersionConflict:
                     state = "superseded"
+                except dependencies.DependencyBlocked:
+                    state = "failed"
+                    summary = "前置成果已变化，当前结果不能提交验收。" + summary[:1900]
                 except (ValueError, PermissionError, KeyError):
                     state = "failed"
                     summary = "执行后负责人或会话权限已撤销，结果不能提交验收。" + summary[:1900]

@@ -5,6 +5,7 @@ import json
 import uuid
 
 from .store import Store, _text
+from . import dependencies
 
 
 class TaskVersionConflict(ValueError):
@@ -43,6 +44,7 @@ class Tasks:
                 db.execute(f"""CREATE TRIGGER IF NOT EXISTS task_revisions_no_{operation.lower()}
                     BEFORE {operation} ON task_revisions BEGIN
                     SELECT RAISE(ABORT, 'Task revisions are immutable'); END""")
+            dependencies.initialize(db)
 
     @staticmethod
     def _task(db, identity):
@@ -110,8 +112,8 @@ class Tasks:
         with self.store.connect() as db:
             db.execute("BEGIN")
             self._task(db, identity)
-            return [dict(row) for row in db.execute(
-                "SELECT * FROM task_revisions WHERE task_id=? ORDER BY requirement_version", (identity,))]
+            return [{**dict(row), "dependency_task_ids": dependencies.ids(db, identity, row["requirement_version"])}
+                    for row in db.execute("SELECT * FROM task_revisions WHERE task_id=? ORDER BY requirement_version", (identity,))]
 
     def revise(self, identity, payload):
         if not isinstance(payload, dict) or set(payload) != {"expected_version", "title", "scope", "acceptance", "agent_id"}:
@@ -131,6 +133,53 @@ class Tasks:
                 return task
             db.execute("""INSERT INTO task_revisions(task_id,requirement_version,title,scope,acceptance,agent_id)
                 VALUES(?,?,?,?,?,?)""", (identity, expected + 1, *fields))
+            dependencies.copy(db, identity, expected, expected + 1)
             db.execute("""UPDATE tasks SET requirement_version=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
                 WHERE id=? AND requirement_version=?""", (expected + 1, identity, expected))
             return self._task(db, identity)
+
+    def dependencies(self, identity):
+        with self.store.connect() as db:
+            db.execute("BEGIN")
+            task = self._task(db, identity)
+            return self._dependencies(db, task)
+
+    @staticmethod
+    def _dependencies(db, task):
+        reason = ""
+        try:
+            dependencies.ready_inputs(db, task["id"], task["requirement_version"])
+        except dependencies.DependencyBlocked as exc:
+            reason = str(exc)
+        return {"task_id": task["id"], "requirement_version": task["requirement_version"],
+                "task_ids": dependencies.ids(db, task["id"], task["requirement_version"]),
+                "ready": not reason, "blocked_reason": reason}
+
+    def set_dependencies(self, identity, payload):
+        if not isinstance(payload, dict) or set(payload) != {"expected_version", "task_ids"}:
+            raise ValueError("依赖修改必须只含 expected_version、task_ids")
+        expected, targets = payload["expected_version"], payload["task_ids"]
+        if type(expected) is not int or expected < 1:
+            raise ValueError("expected_version 必须为正整数")
+        if (not isinstance(targets, list) or len(targets) > 32
+                or any(not isinstance(item, str) or not item or len(item) > 120 for item in targets)
+                or len(set(targets)) != len(targets)):
+            raise ValueError("前置任务须为最多32个不重复的任务 ID")
+        targets = sorted(targets)
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            task = self._task(db, identity)
+            if task["requirement_version"] != expected:
+                raise TaskVersionConflict("任务版本冲突，请重新读取最新版本")
+            self._authorize(db, task["conversation_id"], task["agent_id"])
+            dependencies.validate_graph(db, identity, task["conversation_id"], targets)
+            if targets != dependencies.ids(db, identity, expected):
+                db.execute("""INSERT INTO task_revisions(task_id,requirement_version,title,scope,acceptance,agent_id)
+                    VALUES(?,?,?,?,?,?)""", (identity, expected + 1,
+                    *(task[key] for key in ("title", "scope", "acceptance", "agent_id"))))
+                db.executemany("INSERT INTO task_dependencies VALUES(?,?,?)",
+                               [(identity, expected + 1, target) for target in targets])
+                db.execute("""UPDATE tasks SET requirement_version=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                    WHERE id=?""", (expected + 1, identity))
+                task = self._task(db, identity)
+            return self._dependencies(db, task)
