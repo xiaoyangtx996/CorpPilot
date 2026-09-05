@@ -183,7 +183,12 @@ def get(store, artifact_id):
         row = db.execute("SELECT * FROM execution_artifacts WHERE id=?", (artifact_id,)).fetchone()
         if row is None:
             raise KeyError("成果不存在")
-        result = dict(row)
+        return verify_snapshot(row)
+
+
+def verify_snapshot(row):
+    """Validate the same stored bytes for downloads and Owner approval."""
+    result = dict(row)
     content = result.pop("content")
     if (not isinstance(content, bytes) or len(content) != result["size"]
             or len(content) > MAX_FILE_BYTES or hashlib.sha256(content).hexdigest() != result["sha256"]):

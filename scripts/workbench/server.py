@@ -15,6 +15,7 @@ from .controller import ReplyController
 from .tasks import Tasks, TaskVersionConflict
 from .cli_settings import CLISettings
 from . import artifacts
+from .reviews import Reviews
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -25,6 +26,7 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.settings = Settings(store)
         self.tasks = Tasks(store)
         self.cli_settings = CLISettings(store)
+        self.reviews = Reviews(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
         try:
@@ -216,6 +218,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, self.server.controller.cli.executions.get(parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == "artifacts" and self.command == "GET":
                     return self.respond(200, artifacts.list_for(store, parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "review":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.reviews.get(parts[0]))
+                    if self.command == "POST":
+                        return self.respond(201, self.server.reviews.save(parts[0], self.read_json()))
                 if len(parts) == 2 and parts[0] and parts[1] == "cancel" and self.command == "POST":
                     if self.read_json():
                         raise ValueError("取消请求体必须为空对象")

@@ -309,3 +309,16 @@
 - 主代理全量285 passed、8 subtests（46.81s）；最后补充路径用例后定向27 passed（1.89s）。包含原文件修改不影响下载、事务失败回滚、迟到回调不替换快照、跨Origin拒绝、未知ID404。
 - 无真实模型调用；采集Windows-only，下载/持久层可独立读取。成果浏览器入口与Owner评审为下一增量，整体目标未完成。
 - 提交标识：`feat(workbench): F24 snapshot and download execution artifacts`；提交后立即推送并回读。
+
+- F24 提交 `0f0dbd7` 后立即推送仍GitHub403；远端目标分支未创建。
+
+## F25：Owner 对确切成果的不可变评审
+
+- 服务/API实现：主代理；独立QA、PM/Ponytail审查：owner_review_qa，22项测试通过，Pass。前端代理因任务数量限制未能启动，本增量单独交付服务能力。
+- 每执行仅一个不可覆盖决定，绑定需求版本与完整成果ID清单，明确approved/rejected及说明；同键原内容重放可回读历史，换键或换决定拒绝。
+- 新决定必须针对待评审、当前需求和最新执行，并再次检查负责人/会话/execute权限。批准要求实际非空成果且通过同下载的大小/hash/路径检查；拒绝可记录空成果或内容损坏的结果。
+- BEGIN IMMEDIATE与唯一键确保并发只有一个决定；SQL UPDATE/DELETE/REPLACE禁止。保存评审不修改执行物理退出结果或需求历史，也不启动CLI/模型。
+- HTTP GET/POST /executions/{id}/review，未评审返回null，提交201；不提供PATCH/DELETE覆盖。
+- 后续需求或执行更新后，旧批准只属于原版本/执行，不能作为新任务版本验收；浏览器成果/评审入口仍待后续增量。
+- 提交标识：`feat(workbench): F25 record immutable Owner artifact reviews`；提交后立即推送并回读。
+- 主代理全量回归309 passed、8 subtests（52.17s）；独立评审结论Pass。
