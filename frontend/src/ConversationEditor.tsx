@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type Agent, type Conversation, type Message } from './api';
+import { api, type Agent, type Conversation, type Message, type TaskDraft } from './api';
 import { ReplyRuns } from './ReplyRuns';
+import { TaskBoard } from './TaskBoard';
 
 const failure = (error: unknown) => error instanceof Error ? error.message : '请求失败，请重试';
-export type Draft = { content: string; request_id: string; sentContent: string; replyRequests?: Record<string, string> };
+export type Draft = { content: string; request_id: string; sentContent: string; replyRequests?: Record<string, string>; taskDraft?: TaskDraft };
 
 export function ConversationEditor({ conversation, agents, onClose, onSaved }: {
   conversation: Conversation | null; agents: Agent[]; onClose: () => void; onSaved: (value: Conversation) => void;
@@ -63,6 +64,7 @@ export function ConversationMessages({ conversation, agents, draft, onMessage, o
   const [sent, setSent] = useState(false);
   const [more, setMore] = useState(false);
   const [replySource, setReplySource] = useState<Message | null>(null);
+  const [taskSource, setTaskSource] = useState<{ message: Message } | null>(null);
   draft.replyRequests ??= {};
   const cursor = useRef(0);
   const active = useRef(true);
@@ -113,9 +115,10 @@ export function ConversationMessages({ conversation, agents, draft, onMessage, o
   return <>
     <div className="message-history" aria-label="消息历史" aria-busy={loading}>
       {messages.length === 0 && <p className="muted">{loading ? '正在读取消息…' : '暂无消息，发送第一条消息开始讨论。'}</p>}
-      {messages.map(message => <article className={`message ${message.sender_kind}`} key={message.id}><header><strong>{message.sender_kind === 'owner' ? '你 · Owner' : agents.find(agent => agent.id === message.sender_id)?.name ?? 'Agent'}</strong><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time></header><p>{message.content}</p>{message.sender_kind === 'owner' && <button type="button" className="text-button" disabled={conversation.archived} onClick={() => setReplySource(message)}>请 Agent 回复</button>}</article>)}
+      {messages.map(message => <article className={`message ${message.sender_kind}`} key={message.id} id={`message-${message.id}`}><header><strong>{message.sender_kind === 'owner' ? '你 · Owner' : agents.find(agent => agent.id === message.sender_id)?.name ?? 'Agent'}</strong><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time></header><p>{message.content}</p>{message.sender_kind === 'owner' && <><button type="button" className="text-button" disabled={conversation.archived} onClick={() => setReplySource(message)}>请 Agent 回复</button><button type="button" className="text-button" disabled={conversation.archived} onClick={() => setTaskSource({ message })}>创建任务</button></>}</article>)}
       {loadError && <p className="error" role="alert">消息读取失败：{loadError}</p>}
       <button className="history-more" disabled={loading} onClick={() => void load()}>{loading ? '读取中…' : loadError ? '重试读取消息' : more ? '继续加载历史（按时间正序）' : '刷新消息'}</button>
+      <TaskBoard conversation={conversation} agents={agents} messages={messages} source={taskSource} draft={draft} />
       <ReplyRuns conversation={conversation} agents={agents} source={replySource} requests={draft.replyRequests} onCompleted={() => void load(true)} onSettings={onSettings} />
     </div>
     <form className="composer" onSubmit={event => { event.preventDefault(); void send(); }}>

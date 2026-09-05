@@ -205,3 +205,15 @@
 - 独立定向 Tasks/API/Run 15 passed；主代理完整回归 168 passed、8 subtests passed（30.35s）。覆盖真实HTTP、重启、重复创建、并发编辑、权限撤销及版本历史。
 - 任务卡浏览器界面、任务Run/attempt绑定、真实执行与产物评审仍待实现；本功能不代表 R03/R07 完整通过。
 - 提交标识：`feat(workbench): F16 persist versioned task contracts and API`；提交后立即推送并记录结果。
+- F16 提交 `51059a0`，立即推送返回 GitHub 403：当前账号 suiyue1990 无目标仓库写权限，未交付远端。
+
+## F17：聊天任务卡、编辑及历史界面
+
+- 前端：task_ui；独立 PM/React/Ponytail 与契约QA：task_ui_review，Pass；主代理真实浏览器验收通过。
+- Owner消息创建需求任务，卡片显示范围/验收/负责人/来源/版本；编辑409保留草稿并显式读取最新，历史只读；归档禁用编辑。
+- POST前将原payload/request_id写入sessionStorage，未知结果锁字段，切会话/同标签页刷新后可继续核对；存储不可用不发送并提供恢复入口。
+- 主代理真实HTTP丢响应注入：实际提交后断连、刷新、同键重试仍只有一张任务，恢复正常服务后仍持久；另以外部PATCH验证v2冲突→读v3→保存v4。
+- Desktop和390×844截图/DOM、表单必填禁用、Escape、归档只读通过；无新增模型Run。完整证据与未测边界见 acceptance-report.md。
+- 主代理最终TypeScript/Vite构建35模块通过；独立Tasks/API7 passed。前一后端全量基线168 passed、8 subtests，本轮未改后端。
+- 执行/评审/产物、双Docker与CLI、记忆及最终Tauri文档仍待完成，未将任务卡保存当成任务执行成功。
+- 提交标识：`feat(workbench): F17 manage task requirements in conversations`；提交后立即推送并另记结果。
