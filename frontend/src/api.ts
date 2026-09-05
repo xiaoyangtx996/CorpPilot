@@ -33,3 +33,7 @@ export type ExecutionArtifact = { id: string; execution_id: string; path: string
 export type ReviewRequest = { request_id: string; expected_version: number; decision: 'approved' | 'rejected'; note: string; artifact_ids: string[] };
 export type OwnerReview = Omit<ReviewRequest, 'expected_version'> & { execution_id: string; requirement_version: number; reviewed_at: string };
 export type TaskExecution = { id: string; task_id: string; agent_id: string; requirement_version: number; attempt: number; request_id: string; reconciliation_note: string; previous_execution_id: string | null; state: 'queued' | 'running' | 'stopping' | 'awaiting_review' | 'failed' | 'cancelled' | 'unknown' | 'superseded'; exit_code: number | null; summary: string | null; created_at: string; updated_at: string };
+export type MemoryDocument = { scope: 'agent' | 'project'; scope_id: string; version: number; content: string };
+export type MemoryRevision = MemoryDocument & { candidate_id: string | null; target_version: number | null; note: string; created_at: string };
+export type MemoryDecision = { candidate_id: string; request_id: string; decision: 'approved' | 'rejected'; note: string; result_version: number; decided_at: string };
+export type MemoryCandidate = { id: string; scope: 'agent' | 'project'; scope_id: string; expected_version: number; source_execution_id: string; source_task_id: string; source_requirement_version: number; content: string; created_at: string; decision: MemoryDecision | null };

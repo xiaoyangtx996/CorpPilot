@@ -361,3 +361,11 @@ claim 同事务冻结本身份及本群记忆版本，包括 v0；CLI 启动授�
 Owner API：GET /api/workbench/memories/{scope}/{id}；GET history、GET/POST candidates、POST rollback 子路径；GET /api/workbench/memory-candidates/{id}；POST 其 decision 子路径。提案字段 request_id/expected_version/source_execution_id/content；决定 request_id/decision/note；回滚 request_id/expected_version/target_version/note。沿用同源限制、严格字段和 HTTP 409 版本冲突。
 
 这是应用层上下文选择，不是对同一 Windows 用户恶意进程的 OS 隔离；Owner 管理 API 可查看全部范围，未来 Docker Worker 不得取得该管理接口。当前候选为有来源的显式文本，尚未提供记忆浏览器入口、自动复盘或 Skill 发布，不能称完整自我进化。
+
+## F31：记忆浏览器入口与恢复
+
+右侧个人记忆按稳定身份打开；非私聊会话工具条提供项目共享记忆。候选来源限定当前会话的当前最新批准执行，列表显示任务名、需求版本和执行标识。全文替换需 Owner 说明与确认；回滚显示目标内容并新建版本。读取其他身份不更改 CLI 的冻结上下文。
+
+原生面板按 scope/identity 隔离状态和 sessionStorage。写入前保存原 POST 路径和 payload；未知响应只能同键重试，GET 相同内容不作为提交确认。明确 HTTP 拒绝可在最新状态读取成功后主动重新编辑；普通读取保留全文草稿。读取失败不标记空数据；旧快照标记待核对。后端始终重查授权、来源完整性和版本。
+
+个人回滚由身份 enabled 控制，不因当前群归档而禁止；项目归档禁止新提案、批准和回滚，尚未决定候选仍可拒绝。当前候选由 Owner 明确填写，还未实现模型自动复盘或 Skill 发布。

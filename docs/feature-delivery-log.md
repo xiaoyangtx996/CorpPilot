@@ -373,3 +373,13 @@
 - 个人稳定身份和群共享范围分离；候选有批准成果来源，批准生效，回滚产生新版本；精确请求重放、版本并发冲突、不可变历史和冻结快照通过验证。
 - 复用原有成果校验与事务，无新增依赖。模型候选生产、记忆浏览器入口和 OS/Docker 真隔离仍未完成。
 - 提交标识：feat(workbench): F30 persist approved scoped memory and freeze execution context；本功能单独提交后立即推送并回读。
+
+- F30 提交 b3029be 后立即推送返回 GitHub 403：当前 suiyue1990 无目标仓库写权限；ls-remote 目标分支为空。
+
+## F31：浏览器个人与项目记忆管理
+
+- memory_browser_ui 实现 MemoryPanel、类型与入口；主代理完成契约/Ponytail审查、独立浏览器测试及问题回修验收。沿用原生 dialog、表单和现有 API，无新依赖。
+- 当前会话批准成果通过任务名称选择；候选全文、来源、批准/拒绝、版本历史、回滚均可操作。个人与非私聊项目范围分离，停用/归档保护和失效候选拒绝保留。
+- POST 发送前持久保存原路径/请求键/内容；断线刷新同键核对，版本冲突明确对照后重新编辑，草稿不被读取覆盖。未知读取不宣称空数据。
+- TypeScript/Vite 40 modules 构建通过；真实 IAB 普通审批、回滚、断线重试、409、归档拒绝通过，证据详见 acceptance-report F31。
+- 提交标识：feat(workbench): F31 manage approved agent and project memories in browser；单功能提交后立即推送并回读。

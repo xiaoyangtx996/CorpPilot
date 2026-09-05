@@ -4,8 +4,10 @@ import { AgentEditor } from './AgentEditor';
 import { ConversationEditor, ConversationMessages, type Draft } from './ConversationEditor';
 import { ModelSettings } from './ModelSettings';
 import { CliSettings } from './CliSettings';
+import { MemoryPanel } from './MemoryPanel';
 
 export default function App() {
+  const [memory, setMemory] = useState<{ scope: 'agent' | 'project'; identity: string; title: string; conversationId: string } | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selected, setSelected] = useState('');
@@ -145,17 +147,18 @@ export default function App() {
       <header className="topbar"><button className="mobile" aria-expanded={navigation} onClick={() => setNavigation(true)}>会话与 Agent</button><h1>{conversation?.title ?? agent?.name ?? 'Agent 工作台'}</h1><button className="inspector-toggle" aria-expanded={inspector} onClick={() => setInspector(true)}>Agent 视角</button></header>
       {error && <div className="error-banner" role="alert">{error}<button onClick={() => void load()}>重新连接</button></div>}
       {conversationError && <div className="error-banner" role="alert">{conversationError}<button onClick={() => void loadConversations()}>刷新会话列表</button></div>}
-      {conversation ? <><div className="conversation-toolbar"><span className="muted">{conversation.type === 'dm' ? '私聊' : conversation.type === 'board' ? '董事会' : '项目群'} · {conversation.member_ids.length} 位 Agent{conversation.archived ? ' · 已归档' : ''}</span><button onClick={() => setConversationEditor(conversation)}>管理会话</button><button disabled={conversationBusy} onClick={() => void archive()}>{conversation.archived ? '恢复会话' : '归档会话'}</button></div><ConversationMessages key={conversation.id} conversation={conversation} agents={agents} draft={drafts.current[conversation.id]} onMessage={receivedMessage} onSettings={() => setModelSettings(true)} /></> : <div className="empty-workspace"><div className="large-avatar">{agent?.name.charAt(0) ?? 'C'}</div><h2>{loading ? '正在读取工作台…' : '选择会话开始讨论'}</h2><p>选择左侧 Agent 开启私聊，或创建董事会与项目群。消息会持久保存；选定成员并确认后，才会调用已配置模型回复。</p>{agent && <button onClick={() => setEditor(agent)}>编辑身份</button>}</div>}
+      {conversation ? <><div className="conversation-toolbar"><span className="muted">{conversation.type === 'dm' ? '私聊' : conversation.type === 'board' ? '董事会' : '项目群'} · {conversation.member_ids.length} 位 Agent{conversation.archived ? ' · 已归档' : ''}</span><button onClick={() => setConversationEditor(conversation)}>管理会话</button>{conversation.type !== 'dm' && <button onClick={() => setMemory({ scope: 'project', identity: conversation.id, title: conversation.title, conversationId: conversation.id })}>项目共享记忆</button>}<button disabled={conversationBusy} onClick={() => void archive()}>{conversation.archived ? '恢复会话' : '归档会话'}</button></div><ConversationMessages key={conversation.id} conversation={conversation} agents={agents} draft={drafts.current[conversation.id]} onMessage={receivedMessage} onSettings={() => setModelSettings(true)} /></> : <div className="empty-workspace"><div className="large-avatar">{agent?.name.charAt(0) ?? 'C'}</div><h2>{loading ? '正在读取工作台…' : '选择会话开始讨论'}</h2><p>选择左侧 Agent 开启私聊，或创建董事会与项目群。消息会持久保存；选定成员并确认后，才会调用已配置模型回复。</p>{agent && <button onClick={() => setEditor(agent)}>编辑身份</button>}</div>}
     </main>
     <aside ref={inspectorRef} className={`inspector ${inspector ? 'open' : ''}`} aria-label="Agent 视角" role={inspector ? 'dialog' : undefined} aria-modal={inspector || undefined} inert={navigation}><header><h2>Agent 视角</h2><button className="inspector-toggle" onClick={() => setInspector(false)}>关闭</button></header>
       {conversation && <section><label>查看会话成员<select aria-label="查看会话成员" value={conversation.member_ids.includes(selected) ? selected : ''} onChange={event => setSelected(event.target.value)}><option value="" disabled>选择 Agent</option>{agents.filter(person => conversation.member_ids.includes(person.id)).map(person => <option value={person.id} key={person.id}>{person.name}{person.enabled ? '' : ' · 已停用'}</option>)}</select></label></section>}
       {agent ? <><section><div className="identity-heading"><span className="avatar">{agent.name.charAt(0)}</span><div><h2>{agent.name}</h2><small>{agent.enabled ? '可用' : '已停用'}</small></div></div><p className="muted">身份可用不代表执行实例正在运行。</p></section>
         <section><h3>身份配置</h3><dl><dt>角色</dt><dd>{template?.name}</dd><dt>模型路由</dt><dd>{agent.model}</dd><dt>技能</dt><dd>{agent.skills.join('、') || '未配置'}</dd><dt>工具范围</dt><dd>{agent.tools.join(' / ') || '无'}</dd></dl><button onClick={() => setEditor(agent)}>编辑配置</button> <button disabled={busy} onClick={() => void toggle()}>{agent.enabled ? '停用 Agent' : '重新启用'}</button></section>
-        <section><h3>任务需求</h3><p className="muted">在会话消息下方的“本会话任务”查看任务、负责人和需求版本。</p><h3>成果</h3><p className="muted">在任务的“执行记录与控制”中展开“成果与 Owner 评审”，查看下载与验收决定。</p></section>
+        <section><h3>持久记忆</h3><button onClick={() => { setInspector(false); setMemory({ scope: 'agent', identity: agent.id, title: agent.name, conversationId: conversationId }); }}>个人记忆</button></section><section><h3>任务需求</h3><p className="muted">在会话消息下方的“本会话任务”查看任务、负责人和需求版本。</p><h3>成果</h3><p className="muted">在任务的“执行记录与控制”中展开“成果与 Owner 评审”，查看下载与验收决定。</p></section>
         <section><details><summary>角色定义</summary><p className="source">{template?.source}</p><pre>{template?.instructions}</pre></details></section></> : <p className="muted">请选择 Agent</p>}
     </aside>
     {editor !== undefined && <AgentEditor agent={editor} templates={templates} onClose={() => setEditor(undefined)} onSaved={saved} />}
     {modelSettings && <ModelSettings onClose={() => setModelSettings(false)} />}
+    {memory && <MemoryPanel key={`${memory.scope}.${memory.identity}`} {...memory} onClose={() => setMemory(null)} />}
     {cliSettings && <CliSettings onClose={() => setCliSettings(false)} />}
     {conversationEditor !== undefined && <ConversationEditor conversation={conversationEditor} agents={agents} onClose={() => setConversationEditor(undefined)} onSaved={value => { changedConversation(value); if (!conversationEditor) chooseConversation(value); }} />}
   </div>;
