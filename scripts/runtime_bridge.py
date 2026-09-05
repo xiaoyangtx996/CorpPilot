@@ -162,7 +162,9 @@ class RuntimeOrchestrator:
                     from runtime.execution_backends import ClaudeCodeBackend
 
                     ClaudeCodeBackend().run(
-                        agent_id, initial_task, task_id=task_id, on_report_done=_on_done
+                        agent_id, initial_task, task_id=task_id, on_report_done=_on_done,
+                        on_report_failed=lambda aid, summary, artifacts:
+                            self.on_agent_report_failed(task_id, aid, summary, artifacts),
                     )
                 else:
                     manager = self._get_manager()
@@ -194,16 +196,25 @@ class RuntimeOrchestrator:
                 return
             self._spawned[task_id] = f"{task_id}:parallel"
 
-        pending = {"n": len(branches)}
+        pending = {"n": len(branches), "failed": False}
         lock = threading.Lock()
         merged_arts: List[str] = []
 
-        def _branch_done(aid: str, summary: Optional[str], artifacts: List[str]) -> None:
+        def _branch_done(aid: str, summary: Optional[str], artifacts: List[str], failed=False) -> None:
             with lock:
-                merged_arts.extend(artifacts or [])
+                if failed:
+                    pending["failed"] = True
+                    self.on_agent_report_failed(task_id, aid, summary or "", artifacts)
+                else:
+                    merged_arts.extend(artifacts or [])
                 pending["n"] -= 1
                 done = pending["n"] <= 0
+                any_failed = pending["failed"]
             if not done:
+                return
+            if any_failed:
+                with self._lock:
+                    self._spawned.pop(task_id, None)
                 return
             merge_rules = step.get("merge_gate") or step.get("postcondition") or []
             if merge_rules:
@@ -231,7 +242,11 @@ class RuntimeOrchestrator:
                 be_name = branch.get("executor") or fe.step_executor(task)
                 if be_name == "claude_code":
                     from runtime.execution_backends import ClaudeCodeBackend
-                    ClaudeCodeBackend().run(aid, branch_prompt, task_id=task_id, on_report_done=_branch_done)
+                    ClaudeCodeBackend().run(
+                        aid, branch_prompt, task_id=task_id, on_report_done=_branch_done,
+                        on_report_failed=lambda aid, summary, artifacts:
+                            _branch_done(aid, summary, artifacts, failed=True),
+                    )
                 else:
                     manager.spawn(
                         agent_id=aid,
@@ -242,6 +257,17 @@ class RuntimeOrchestrator:
                     )
 
             threading.Thread(target=_run, daemon=True, name=f"parallel-{task_id}-{aid}").start()
+
+    def on_agent_report_failed(self, task_id: str, agent_id: str,
+                               summary: str, artifacts: List[str]) -> None:
+        ts = self.workflow.task_service
+        ts.patch_runtime(task_id, {
+            "execution_error": summary[:2000], "failed_agent": agent_id,
+            "failed_at": utc_now_iso(), "failure_artifacts": artifacts,
+        })
+        task = ts.get_task(task_id)
+        if task and task["status"] == TaskStatus.EXECUTING.value:
+            self.workflow.transition(task_id, TaskStatus.BLOCKED, agent_id)
 
     def _build_agent_prompt(self, task: Dict[str, Any]) -> str:
         lines = [

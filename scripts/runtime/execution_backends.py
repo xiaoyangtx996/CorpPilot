@@ -82,10 +82,13 @@ class ClaudeCodeBackend:
         except Exception as exc:
             return ExecutionResult(False, str(exc), arts, self.name)
 
-    def run(self, agent_id, prompt, task_id=None, skill_ids=None, manager=None, on_report_done=None):
+    def run(self, agent_id, prompt, task_id=None, skill_ids=None, manager=None,
+            on_report_done=None, on_report_failed=None):
         r = self.run_sync(prompt, task_id)
-        if on_report_done:
-            on_report_done(agent_id, r.summary, r.artifacts)
+        callback = on_report_done if r.success else on_report_failed
+        if callback:
+            callback(agent_id, r.summary, r.artifacts)
+        return r
 
 
 def get_backend(name: str):
