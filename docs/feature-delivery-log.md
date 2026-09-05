@@ -32,3 +32,14 @@
 - 集成在途身份测试后的主代理全量回归：56 passed、1 skipped、8 subtests passed。
 - 范围限制：隔离适用于 pytest 入口；没有修改业务模块的正式数据目录。
 - 提交标识：`test: F02 isolate legacy suite runtime files`；远端仍待 F01 所述写权限恢复。
+- 提交：`d15b2ff`；立即推送再次返回同一 403，未标记远端交付。
+- 首次测试生成的未跟踪文件已保留于 `H:\item\CorpPilot-test-evidence-20260906`；后续全套测试无新增运行产物。
+
+## F03：持久身份与角色模板存储
+
+- 实现：主代理；独立技术复审：pm_acceptance，修正后 Pass。
+- SQLite 独立运行目录、角色 SOUL/岗位文件盘点、稳定默认 ID、幂等初始化、持久自建/编辑/停用身份。
+- 输入字段及工具配置校验；并发 PATCH 仅修改指定字段，未知数据库版本在结构/种子写入前拒绝。
+- 主代理全量回归：58 passed、1 skipped、8 subtests passed；独立复核身份定向测试：4 passed。
+- 权限配置此时仅为持久数据，不声称已构成 Worker 权限边界；API、界面、配置目录来源核对、消息与记忆仍需实现。
+- 提交标识：`feat(workbench): F03 persist agent identities and role templates`；推送受现有 GitHub 403 阻塞。
