@@ -21,4 +21,14 @@
 - Ponytail/code review：Pass；只修共同回调根因与调用方，没有新增依赖或调度框架。
 - 验证边界：此项使用故障注入，未声称真实 CLI/容器验收；限流、停止、Run 版本及消息幂等属于后续功能。
 - 提交标识：`fix(runtime): F01 prevent CLI failures from completing workflows`。
-- 推送与远端回读：提交后补录；未回读前不标记已交付。
+- 提交：`77d7e9e`。推送失败：GitHub 返回 403，认证账号 `suiyue1990` 无 `xiaoyangtx996/CorpPilot` 写权限。
+- 状态：本地测试及审查通过，远端交付阻塞；已请求用户补充仓库写权限，未创建 PR 或更改远端。
+
+## F02：旧测试的运行文件隔离
+
+- 实现：runtime_reliability；审查及复验：主代理，Pass。
+- pytest 将原有测试及明确列举的产物模块重定向至临时目录，复制角色/流程/技能种子。
+- 原有测试三次运行（含倒序）均 54 passed、1 skipped；前后 39 个文件路径和 SHA256 一致。
+- 集成在途身份测试后的主代理全量回归：56 passed、1 skipped、8 subtests passed。
+- 范围限制：隔离适用于 pytest 入口；没有修改业务模块的正式数据目录。
+- 提交标识：`test: F02 isolate legacy suite runtime files`；远端仍待 F01 所述写权限恢复。
