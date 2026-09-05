@@ -1,3 +1,4 @@
+import { TaskExecutions } from './TaskExecutions';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, type Agent, type Conversation, type Message, type Task, type TaskDraft, type TaskFields, type TaskRevision } from './api';
 
@@ -25,6 +26,7 @@ export function TaskBoard({ conversation, agents, messages, source, draft }: {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [editor, setEditor] = useState(false);
+  const [executionTask, setExecutionTask] = useState<Task | null>(null);
   const [value, setValue] = useState<TaskDraft | undefined>(draft.taskDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -131,7 +133,8 @@ export function TaskBoard({ conversation, agents, messages, source, draft }: {
     {notice && <p role="status">{notice}</p>}{loadError && <p className="error" role="alert">任务读取失败：{loadError}</p>}{storageError && <p className="error" role="alert">{storageError}<button onClick={restorePending}>重新读取待确认记录</button></p>}
     {value && <button onClick={() => { setEditor(true); setError(''); }}>{value.pending ? '核对待确认任务' : '继续任务草稿'}</button>}
     {!loading && !loadError && !tasks.length && <p className="muted">本会话暂无任务。</p>}
-    {tasks.map(task => <article className="task-card" key={task.id}><header><h3>{task.title}</h3><span>需求 v{task.requirement_version}</span></header><p className="muted">负责人：{owner(task.agent_id)}</p><dl><dt>范围</dt><dd>{task.scope}</dd><dt>验收标准</dt><dd>{task.acceptance}</dd></dl><details><summary>来源：Owner 消息</summary><p>{messages.find(message => message.id === task.source_message_id)?.content ?? '该源消息尚未加载，可继续加载消息历史查看。'}</p><small>源消息 ID：{task.source_message_id}</small></details><footer><button disabled={conversation.archived} onClick={() => edit(task)}>编辑任务</button><button onClick={() => void showHistory(task)}>历史版本</button></footer></article>)}
+    {tasks.map(task => <article className="task-card" key={task.id}><header><h3>{task.title}</h3><span>需求 v{task.requirement_version}</span></header><p className="muted">负责人：{owner(task.agent_id)}</p><dl><dt>范围</dt><dd>{task.scope}</dd><dt>验收标准</dt><dd>{task.acceptance}</dd></dl><details><summary>来源：Owner 消息</summary><p>{messages.find(message => message.id === task.source_message_id)?.content ?? '该源消息尚未加载，可继续加载消息历史查看。'}</p><small>源消息 ID：{task.source_message_id}</small></details><footer><button disabled={conversation.archived} onClick={() => edit(task)}>编辑任务</button><button onClick={() => void showHistory(task)}>历史版本</button><button onClick={() => setExecutionTask(task)}>执行记录与控制</button></footer></article>)}
+    {executionTask && <TaskExecutions key={executionTask.id} task={executionTask} conversation={conversation} agents={agents} onClose={() => setExecutionTask(null)} />}
     {editor && value && <TaskDialog title={value.id ? '编辑任务需求' : '从消息创建任务'} busy={busy} onClose={() => setEditor(false)}><form onSubmit={save}>
       <p className="muted">{value.id ? `基于需求 v${value.expected_version}` : '新任务 · 需求 v1'} · 保存仅持久化，不启动执行。</p>
       <details><summary>来源：Owner 消息</summary><p className="task-source">{value.source_content || '源消息尚未加载。'}</p><small>源消息 ID：{value.source_message_id}</small></details>

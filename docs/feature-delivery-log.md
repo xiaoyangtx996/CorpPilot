@@ -282,3 +282,17 @@
 - 浏览器确认/历史/停止界面由独立前端增量实现；真实CLI模型任务和产物评审仍未验收。
 - 主代理全量258 passed、8 subtests（45.56s）；之后新增并发/unknown用例，独立最终HTTP6 passed（6.11s）。
 - 提交标识：`feat(workbench): F22 expose task execution lifecycle API`；提交后立即推送并回读。
+
+- F22 提交 `1e6fd11` 后立即推送仍GitHub403；远端目标分支未创建。
+
+## F23：浏览器任务执行、停止及断线核对
+
+- 前端：task_execution_ui；独立PM/QA/Ponytail审查：execution_http_qa，修正后Pass；主代理真实浏览器验收。
+- 每任务原生执行窗口、历史/版本/attempt/退出码/摘要、明确确认和前次核查、权限/配置/unknown拦截、停止与活动轮询。
+- sessionStorage先保存精确请求；断线/刷新后沿原键核对。首次明确4xx允许显式撤销未接受请求，未知重放不允许撤销；确认绑定任务版本与最新前次执行ID。
+- 修复StrictMode首次加载卡住、首次409无法恢复、前次执行变化沿用旧确认；复用现有布局与check样式。
+- 正常Vite StrictMode7893首次打开正常，read-only负责人拦截执行。独立QA注入服务7894完成运行→停止→cancelled及再次执行→awaiting_review；真实HTTP旧版409，刷新保留拒绝状态并可撤销，未产生第三次错误执行。
+- 独立代理7895在上游实际接受后丢弃响应并拒绝历史读取；刷新同标签页后原键核对返回原第三次execution，直接上游GET确认总计3条且原键仅1条。未调用任何真实模型。
+- 390×844截图及DOM：scrollWidth390、dialog352；Escape关闭。已关闭QA代理/注入/Vite进程，正常7892服务继续运行。
+- 最终TypeScript/Vite37模块构建通过。F22后端全量258+8子测试以及后补HTTP6项通过，本轮只改前端。
+- 提交标识：`feat(workbench): F23 control task executions from browser`；立即推送并回读。真实CLI模型、成果评审、unknown恢复及完整目标仍未完成。
