@@ -93,3 +93,18 @@
 - 真实 loopback HTTP 测试覆盖建群、成员加入退出、幂等发送、归档/恢复、重启历史恢复、恶意发送者字段与无效分页；主代理全量 82 passed、8 subtests passed。
 - 仅本机 Owner API；未开放 Worker 入口，未声称已接入模型自动回复。浏览器集成为下一项独立功能。
 - 提交标识：`feat(workbench): F07 expose persistent conversation API`；提交后立即推送，远端结果另记。
+- 提交：`20ddd3d`；立即推送仍为同一 GitHub 403，未标记远端交付。
+- 运行环境复核：启动已有 Docker Desktop 后，其日志报告缺失注册表 `SOFTWARE\\Docker Inc.\\Docker Desktop`，backend 未启动，desktop-linux 管道不可用。双 Worker 真实验收仍待环境修复；未修改注册表、重装或重启系统。
+
+## F08：持久私聊与群聊浏览器交互
+
+- 实现：conversation_frontend；独立代码/Ponytail审查：conversation_review，修正后 Pass；主代理构建与 IAB 验证。
+- 私聊/董事会/项目群列表、新建群、成员管理、会话名称、归档恢复、成员视角选择、Owner 消息发送、草稿与同键重试、50条正向分页。
+- 修复迟到消息倒退预览及迟到列表覆盖新建会话；最新请求遇到本地修改后重读完整列表，更旧请求丢弃。
+- IAB 实测：秘书私聊保存消息，归档禁止输入/恢复；两人董事会创建，移除/重新加入 CEO，不能移除最后成员，停用身份不能邀请，Escape 关闭管理窗焦点回入口。
+- 暂停本次测试服务后发送，真实失败且草稿保留；同目录重启服务后重试成功，刷新后会话和已保存消息均恢复。此项不是“落库成功但响应丢失”的网络注入测试，该场景仍需后续 E2E 补充。
+- 用真实 HTTP 在独立 browser-state 测试库准备205条消息；IAB显示数量依次50/100/150/200/205，最终DOM核对205条唯一、001–205顺序完整。
+- 390×844及1536×1024截图检查通过：窄屏输入与按钮可达、桌面三栏完整。真实手机软键盘、受控延迟网络E2E及完整模型链路仍未验证。
+- 主代理 `npm run build`（bundled Node24）通过，32模块；后端此前82 passed、8 subtests passed，本功能没有更改后端。
+- 模型尚未接入，界面明确只保存Owner消息；没有生成假回复。当前新增消息手动刷新，后续真实执行事件接入时补自动同步。
+- 提交标识：`feat(workbench): F08 add persistent direct and group conversations`；提交后立即推送，结果另记。
