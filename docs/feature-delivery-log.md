@@ -243,3 +243,16 @@
 - 独立CLI/进程树20 passed；主代理全量205 passed、8 subtests passed（35.15s）。真实Python子孙进程覆盖退出、取消、超时、输出溢出与controller os._exit崩溃；本机Codex版本探针经相同Job后端返回exit0、codex-cli 0.153.3，未调用模型。
 - 尚未接任务控制器、配置UI、checkout、产物验收；本机目录分离不是Docker/OS权限隔离，真实模型及双Docker验收仍待完成。
 - 提交标识：`feat(workbench): F19 isolate Codex CLI directories and process trees`；提交后立即推送并另记结果。
+
+- F19 提交 `ee0ef14`，立即推送仍 GitHub 403，未交付远端。
+
+## F20：CLI 配置与显式版本检查
+
+- 后端：cli_settings_backend；前端：cli_settings_ui；两代理交叉审查及主代理集成验收 Pass。
+- 同 SQLite 独立配置，严格原子 PATCH；只保存环境变量名。读取/保存不启动程序，启用前检查完整性、平台和文件；内部 resolve 才读取凭据。
+- 显式 probe 固定 --version，临时独立 HOME、无凭据、单进程并发锁、10秒与64KiB上限；不返回原始进程输出。
+- 中文设置表单仅发送修改字段；未保存不能检查版本，保存不隐式启用。修复默认.cmd且禁用时保存无关字段被前端拦截。
+- 后端/API定向26 passed；主代理全量231 passed、8 subtests（36.50s），TypeScript/Vite36模块构建通过。
+- 真实浏览器版本0.153.3、禁用配置保存重开、缺失程序错误、恢复路径、Escape和390×844布局通过。未调用模型，未启动任务。
+- CLI任务控制器、真实模型、双Docker、产物和记忆仍待完成。
+- 提交标识：`feat(workbench): F20 configure CLI and probe installed version`；提交后立即推送并核对结果。

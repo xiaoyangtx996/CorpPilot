@@ -13,6 +13,7 @@ from .store import REPO_ROOT, Store
 from .settings import Settings
 from .controller import ReplyController
 from .tasks import Tasks, TaskVersionConflict
+from .cli_settings import CLISettings
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -22,6 +23,7 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.store = store
         self.settings = Settings(store)
         self.tasks = Tasks(store)
+        self.cli_settings = CLISettings(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
         try:
@@ -126,6 +128,15 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, self.server.settings.get())
                 if self.command == "PATCH":
                     return self.respond(200, self.server.settings.save(self.read_json()))
+            if path == "/api/workbench/cli-settings":
+                if self.command == "GET":
+                    return self.respond(200, self.server.cli_settings.get())
+                if self.command == "PATCH":
+                    return self.respond(200, self.server.cli_settings.save(self.read_json()))
+            if path == "/api/workbench/cli-settings/probe" and self.command == "POST":
+                if self.read_json():
+                    raise ValueError("CLI 检查请求体必须为空对象")
+                return self.respond(200, self.server.cli_settings.probe())
             if self.command == "GET" and path == "/api/workbench/templates":
                 return self.respond(200, store.templates())
             if path == "/api/workbench/agents":
