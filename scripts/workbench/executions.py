@@ -6,6 +6,7 @@ import json
 
 from .store import Store, _text
 from .tasks import Tasks, TaskVersionConflict
+from . import artifacts as artifact_store
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -37,6 +38,7 @@ class Executions:
             )""")
             db.execute("""CREATE UNIQUE INDEX IF NOT EXISTS one_active_task_execution ON task_executions(task_id)
                 WHERE state IN ('queued','running','stopping')""")
+            artifact_store.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -176,7 +178,7 @@ class Executions:
                 updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
                 WHERE state IN ('running','stopping')""").rowcount
 
-    def report(self, identity, attempt, requirement_version, exit_code, summary, *, success=False, not_started=False):
+    def report(self, identity, attempt, requirement_version, exit_code, summary, *, success=False, not_started=False, artifacts=None):
         """Internal runner callback: a numeric exit requires observed process-tree termination.
 
         None means termination/result is unverified. Never expose this as an Owner HTTP mutation.
@@ -210,4 +212,6 @@ class Executions:
                     state = "failed"
                     summary = "执行后负责人或会话权限已撤销，结果不能提交验收。" + summary[:1900]
             self._set(db, identity, state, summary, exit_code)
+            if state == "awaiting_review" and artifacts is not None:
+                artifact_store.persist(db, identity, artifacts)
             return self._run(db, identity)

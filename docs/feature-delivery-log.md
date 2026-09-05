@@ -296,3 +296,16 @@
 - 390×844截图及DOM：scrollWidth390、dialog352；Escape关闭。已关闭QA代理/注入/Vite进程，正常7892服务继续运行。
 - 最终TypeScript/Vite37模块构建通过。F22后端全量258+8子测试以及后补HTTP6项通过，本轮只改前端。
 - 提交标识：`feat(workbench): F23 control task executions from browser`；立即推送并回读。真实CLI模型、成果评审、unknown恢复及完整目标仍未完成。
+
+- F23 提交 `666d879` 后立即推送仍GitHub403，远端目标分支未创建。
+
+## F24：不可变成果快照与下载
+
+- 文件采集/存储：artifact_capture；控制器/事务/API集成：主代理；两侧交叉审查Pass。额外审查代理受任务数量限制，主代理亲自检查实现与故障断言。
+- 成功CLI从固定execution-workspaces/{id}/work/artifacts读取文件；不信任runner返回路径。每文件4MiB、总16MiB、100文件、1000项/12层上限。
+- Windows读取句柄固定祖先与文件，拒绝链接/重解析/硬链接/特殊文件/不安全路径；已实测目录重命名和文件写删在持有句柄时失败。当前密钥UTF8/UTF16和文件名命中拒绝，不宣称通用敏感信息扫描。
+- SQLite不可变字节快照、大小与SHA256；只在合法awaiting_review结果同事务提交。采集失败保留真实exit0但failed，旧需求/撤权/停止结果不发布成果。
+- GET execution artifacts返回元数据；download按ID读取快照并验证hash/size，attachment+octet-stream+nosniff，不将HTML作为站内页面执行。
+- 主代理全量285 passed、8 subtests（46.81s）；最后补充路径用例后定向27 passed（1.89s）。包含原文件修改不影响下载、事务失败回滚、迟到回调不替换快照、跨Origin拒绝、未知ID404。
+- 无真实模型调用；采集Windows-only，下载/持久层可独立读取。成果浏览器入口与Owner评审为下一增量，整体目标未完成。
+- 提交标识：`feat(workbench): F24 snapshot and download execution artifacts`；提交后立即推送并回读。

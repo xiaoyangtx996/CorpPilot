@@ -6,6 +6,7 @@ import threading
 from .cli import run_codex
 from .cli_settings import CLISettings
 from .executions import Executions
+from .artifacts import capture
 
 
 class CLIController:
@@ -29,7 +30,9 @@ class CLIController:
             snapshot = self.executions.snapshot(run["id"])
             selected = snapshot["agent"]["model"]
             model = config["model"] if selected == "default" else selected
-            prompt = "执行以下已授权任务。只使用本次工作目录，结果交给 Owner 评审。\n" + json.dumps({
+            prompt = ("执行以下已授权任务。只使用本次工作目录，结果交给 Owner 评审。"
+                      "将可交付文件写入工作目录的 artifacts 子目录；分析类任务也请写入报告文件。"
+                      "成果不要包含凭据、链接文件或临时配置。\n") + json.dumps({
                 "role": snapshot["instructions"], "task": snapshot["task"],
                 "source": snapshot["source_message"]["content"],
             }, ensure_ascii=False)
@@ -45,8 +48,15 @@ class CLIController:
                                api_key=config["api_key"], timeout_seconds=config["timeout_seconds"], cancel=cancel)
             if result["reason"] == "cancelled" and result.get("workspace") is None:
                 return self._unstarted("启动前已请求停止")
+            items = None
+            if result["success"] is True and result["exit_code"] == 0:
+                try:
+                    items = capture(self.store.data_dir, run["id"], config["api_key"])
+                except Exception:
+                    return {"exit_code": result["exit_code"], "summary": "CLI 已退出，但成果采集失败；请核查文件边界与大小，结果未提交评审",
+                            "success": False, "not_started": False}
             return {"exit_code": result["exit_code"], "summary": result["summary"],
-                    "success": result["success"] is True, "not_started": False}
+                    "success": result["success"] is True, "not_started": False, "artifacts": items}
         except Exception:
             # Never infer that an arbitrary runner exception happened before spawning.
             return {"exit_code": None, "summary": "CLI 执行异常，实例与结果待核实；未重试",

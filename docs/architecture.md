@@ -76,6 +76,19 @@ request_id、expected_version、reconciliation_note、previous_execution_id；�
 HTTP不接受执行结果报告或直接状态修改，取消无需模型配置，运行中仅记stopping并由调度器通知实例退出。
 所有接口沿用本机Host/Origin及JSON边界；实际任务执行界面与成果评审为后续增量。
 
+### 成果快照（F24）
+
+CLI提示要求将可交付文件写入当前工作目录的 `artifacts/`。可信进程退出且协议成功后，
+从固定执行UUID路径采集，不使用runner返回的任意路径。Windows句柄固定祖先与读取文件，
+拒绝链接、重解析点、硬链接和特殊文件；限制100文件、单文件4MiB、总16MiB、1000条目及12层。
+当前API key按UTF8/UTF16及文件名精确检查；这不是通用DLP或同用户OS权限隔离。
+
+文件字节、相对路径、大小、SHA256在同SQLite保存；immutable触发器禁止更新/删除/替换。
+只有当前有效执行进入awaiting_review时与终态同事务写入；成果采集失败即使CLI exit0也不能进入评审。
+`GET /executions/{id}/artifacts`提供元数据，`GET /artifacts/{id}/download`读取验证后的快照字节，
+返回attachment/octet-stream/nosniff，不从工作目录实时下载或内联执行HTML。执行目录回收不影响快照。
+空目录不伪造成果；当前成果批准与浏览器查看仍待后续增量实现。
+
 ## 1. 目标
 
 CorpPilot 用“组织架构”来表达多 Agent 系统中的职责边界。

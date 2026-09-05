@@ -7,13 +7,14 @@ import logging
 import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlsplit, quote
 
 from .store import REPO_ROOT, Store
 from .settings import Settings
 from .controller import ReplyController
 from .tasks import Tasks, TaskVersionConflict
 from .cli_settings import CLISettings
+from . import artifacts
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -213,10 +214,26 @@ class Handler(BaseHTTPRequestHandler):
                 parts = path[len(prefix):].split("/")
                 if len(parts) == 1 and parts[0] and self.command == "GET":
                     return self.respond(200, self.server.controller.cli.executions.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "artifacts" and self.command == "GET":
+                    return self.respond(200, artifacts.list_for(store, parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == "cancel" and self.command == "POST":
                     if self.read_json():
                         raise ValueError("取消请求体必须为空对象")
                     return self.respond(200, self.server.controller.cli.executions.cancel(parts[0]))
+            prefix = "/api/workbench/artifacts/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 2 and parts[0] and parts[1] == "download" and self.command == "GET":
+                    artifact = artifacts.get(store, parts[0])
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/octet-stream")
+                    self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(artifact["path"].rsplit("/", 1)[-1], safe=""))
+                    self.send_header("Content-Length", str(len(artifact["data"])))
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(artifact["data"])
+                    return
             prefix = "/api/workbench/runs/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")
