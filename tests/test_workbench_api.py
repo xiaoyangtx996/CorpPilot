@@ -104,3 +104,29 @@ def test_ambiguous_headers_rejected(tmp_path):
                 assert json.loads(response.read())["error"]
             finally:
                 connection.close()
+
+
+def test_browser_assets_are_confined_to_build_directory(tmp_path):
+    web = tmp_path / "web"
+    (web / "assets").mkdir(parents=True)
+    (web / "index.html").write_text("<title>Workbench</title>")
+    (web / "assets" / "app.js").write_text("export default 1")
+    (tmp_path / "secret.txt").write_text("private")
+    server = WorkbenchServer(Store(tmp_path / "data"), 0, web)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        for path, expected in (("/", 200), ("/assets/app.js", 200),
+                               ("/assets/../../secret.txt", 404), ("/secret.txt", 404)):
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port)
+            try:
+                connection.request("GET", path)
+                response = connection.getresponse()
+                assert response.status == expected
+                assert b"private" not in response.read()
+            finally:
+                connection.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)

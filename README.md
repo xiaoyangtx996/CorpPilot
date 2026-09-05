@@ -1,5 +1,12 @@
 # CorpPilot · 企业智脑
 
+## 浏览器 Agent 工作台（开发中）
+
+新工作台以持久身份和会话为入口，按需组队与隔离执行正在逐功能实现。
+当前身份管理可在浏览器使用；运行方法见 [工作台开发与启动](frontend/README.md)，
+完整范围见 [需求矩阵](docs/product-requirements.md)，真实进度见 [功能交付台账](docs/feature-delivery-log.md)。
+下方旧组织流程说明仍对应原看板，不代表新工作台已完成全部验收。
+
 > 基于国内大厂组织架构的多智能体协作系统。皆在为了快速落地Idea，你作为CorpPilot具有话语权的人，提出对应idea，和董事会进行讨论需求，明确好你的边界想要的内容，多Agent协同实现出结果，快速验证。一人公司OPC，小型公司很好的选择！
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)

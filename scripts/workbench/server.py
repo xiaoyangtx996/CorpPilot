@@ -4,17 +4,19 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from .store import Store
+from .store import REPO_ROOT, Store
 
 MAX_BODY_BYTES = 64 * 1024
 
 
 class WorkbenchServer(ThreadingHTTPServer):
-    def __init__(self, store: Store, port: int = 7892):
+    def __init__(self, store: Store, port: int = 7892, frontend_dir: Path | None = None):
         self.store = store
+        self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
 
 
@@ -81,6 +83,20 @@ class Handler(BaseHTTPRequestHandler):
             self.check_origin()
             store = self.server.store
             path = self.path
+            if self.command == "GET" and (path == "/" or path.startswith("/assets/")):
+                relative = "index.html" if path == "/" else path.lstrip("/")
+                target = (self.server.frontend_dir / relative).resolve()
+                if target.is_relative_to(self.server.frontend_dir) and target.is_file():
+                    body = target.read_bytes()
+                    self.send_response(200)
+                    self.send_header("Content-Type", mimetypes.guess_type(target)[0] or "application/octet-stream")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
+                return self.respond(404, {"error": "浏览器界面尚未构建，请先在 frontend 运行 npm run build"})
             if self.command == "GET" and path == "/health":
                 return self.respond(200, {"status": "ok"})
             if self.command == "GET" and path == "/api/workbench/templates":

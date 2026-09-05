@@ -56,3 +56,6 @@ data/locks/*.lock
 *.tmp
 *.temp
 .cache/
+
+# Browser workbench dependencies
+node_modules/
