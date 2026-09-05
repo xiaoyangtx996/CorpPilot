@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from .store import REPO_ROOT, Store
 from .settings import Settings
+from .controller import ReplyController
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -21,6 +22,16 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.settings = Settings(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
+        try:
+            self.controller = ReplyController(store, self.settings)
+        except Exception:
+            super().server_close()
+            raise
+
+    def server_close(self):
+        if controller := getattr(self, "controller", None):
+            controller.close()
+        super().server_close()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -106,6 +117,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(404, {"error": "浏览器界面尚未构建，请先在 frontend 运行 npm run build"})
             if self.command == "GET" and path == "/health":
                 return self.respond(200, {"status": "ok"})
+            if self.command == "GET" and path == "/api/workbench/runtime":
+                return self.respond(200, self.server.controller.status())
             if path == "/api/workbench/model-settings":
                 if self.command == "GET":
                     return self.respond(200, self.server.settings.get())
@@ -149,11 +162,26 @@ class Handler(BaseHTTPRequestHandler):
                     if self.command == "POST":
                         # This is the local Owner API. Agent identity is never taken from HTTP input.
                         return self.respond(201, store.send_message(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "runs":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.controller.runs.list(conversation_id))
+                    if self.command == "POST":
+                        self.server.settings.resolve()
+                        return self.respond(202, self.server.controller.runs.create(conversation_id, self.read_json()))
                 if len(parts) == 3 and parts[1] == "members" and parts[2] and self.command == "PATCH":
                     payload = self.read_json()
                     if set(payload) != {"joined"}:
                         raise ValueError("成员请求必须只含 joined")
                     return self.respond(200, store.set_member(conversation_id, parts[2], payload["joined"]))
+            prefix = "/api/workbench/runs/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 1 and parts[0] and self.command == "GET":
+                    return self.respond(200, self.server.controller.runs.get(parts[0]))
+                if len(parts) == 2 and parts[1] == "cancel" and self.command == "POST":
+                    if self.read_json():
+                        raise ValueError("取消请求体必须为空对象")
+                    return self.respond(200, self.server.controller.runs.cancel(parts[0]))
             self.respond(404, {"error": "接口不存在"})
         except (ValueError, TimeoutError) as exc:
             self.respond(400, {"error": str(exc) if isinstance(exc, ValueError) else "读取请求超时"})

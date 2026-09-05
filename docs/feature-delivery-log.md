@@ -161,3 +161,15 @@
 - 错误不回显上游body和密钥；未知用量保留null。实际调用入口run_reply，直接reply仅用于协议单测。
 - loopback HTTP与真实请求子进程验证完成，包括401/429/500/重定向拒绝、身份上下文角色映射及1秒总时限；这是本地协议与故障验收，不是付费模型质量或真实账号调用验收。
 - 提交标识：`feat(workbench): F13 bound and sanitize model requests`；提交后立即推送，结果另记。
+- 提交`c71f2c2`后立即推送仍GitHub403，未交付远端。
+
+## F14：唯一控制器、回复队列与运行 API
+
+- 实现：主代理；独立代码/Ponytail审查：reply_review，修正后Pass。主代理全量160 passed、8 subtests passed。
+- 单数据目录OS文件锁覆盖recover与整个控制器生命周期；最多16执行线程，按实际配置max_concurrency派发，超额留SQLite排队，RPM在尝试前预占。
+- 正式派发只走有总时限的run_reply请求进程；开始前取得授权快照，完成后再次验权并原子发布。关闭等待实际本地请求退出后才释放控制器锁。
+- 修复异常Future丢失：claim/submit或状态写入失败保留待收敛Run，仅重试写入unknown，不重发模型请求；调度异常通过runtime接口可见。
+- `GET/POST /conversations/{id}/runs`（工作台API前缀）、`GET /runs/{id}`、`POST /runs/{id}/cancel {}`、`GET /runtime`；缺少启用配置/凭据时不创建新执行。
+- 4项集成回归通过：真实HTTP+子进程成功、重复请求唯一、并发排队/取消、双控制器拒绝、500无假消息、状态写入故障恢复不重发、失败释放槽位和RPM阻止第三次尝试。
+- 重启后的RPM窗口仍从零开始，费用硬预算/Run新attempt/运行中主动停止/CLI与Docker任务执行尚未实现；配置并发上限现已对回复请求生效。
+- 提交标识：`feat(workbench): F14 dispatch bounded persistent reply runs`；提交后立即推送，结果另记。
