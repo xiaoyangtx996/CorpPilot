@@ -142,3 +142,11 @@ Ponytail/QA独立审查Pass，无新调度器或依赖库。CLI替身只验证�
 - 项目草稿基于 v1 时外部 API 回滚到 v2，旧草稿提交 409，全文保留；明确对照重新编辑后提交基于 v2 候选。归档后提案、采用版本、回滚 disabled，仍可拒绝未决定候选且不递增记忆版本。批准后已决定选择会清除，不再误提示可拒绝。
 - 外部 f31_verify.py HTTP 回读：个人 1 候选/2 修订；项目 2 候选（批准、拒绝）/2 修订；任务执行始终只有初始固定样本 1 条，active_requests=0。无模型/CLI调用，不冒充真实智能复盘或 Docker 验收。
 - 测试代理、Vite、测试 API 均已确认终止；空闲的正常 7892 服务重启加载 F30 后端与 F31 构建，保留正常数据库。自动复盘候选、Skill 发布与其余完整目标仍待完成。
+
+## F32 Tauri 迁移文档验收
+
+文档对照 api.ts、ExecutionReview.tsx、server/controller/cli_controller/provider/store/cli/process_tree 和各 pending UI 实现。技术方案明确暴露差距：下载绕过api、冻结sys.executable、迁移先于控制器锁、health无法认证、sessionStorage不保证桌面重启恢复。Tauri externalBin/capability/CSP/Windows安装资料以官方页面为准，链接保留在迁移文档。
+
+本增量仅文档和链接，不修改运行代码，不重复执行F30全量回归或F31浏览器测试来充当桌面验收；桌面构建、安装、关闭/重启及升级回退均尚未执行。Docker绝对路径CLI再次只读检查，docker_engine管道仍不存在。文档路径与diff检查通过；独立审查结论记录后才提交。
+
+F32 独立 tauri_boundary_review 审查 Pass；补清统一入口锁顺序以及停止发出后不能取消停止。所有新文档本地链接校验通过，仅规划交付。

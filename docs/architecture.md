@@ -369,3 +369,7 @@ Owner API：GET /api/workbench/memories/{scope}/{id}；GET history、GET/POST ca
 原生面板按 scope/identity 隔离状态和 sessionStorage。写入前保存原 POST 路径和 payload；未知响应只能同键重试，GET 相同内容不作为提交确认。明确 HTTP 拒绝可在最新状态读取成功后主动重新编辑；普通读取保留全文草稿。读取失败不标记空数据；旧快照标记待核对。后端始终重查授权、来源完整性和版本。
 
 个人回滚由身份 enabled 控制，不因当前群归档而禁止；项目归档禁止新提案、批准和回滚，尚未决定候选仍可拒绝。当前候选由 Owner 明确填写，还未实现模型自动复盘或 Skill 发布。
+
+## F32：后续桌面宿主边界
+
+[Tauri 2 迁移方案](tauri-migration.md) 给出静态前端复用、受限Rust通信和Python sidecar生命周期。业务状态与权限仍由现有Python服务持有；桌面握手/会话鉴权、持久待确认请求及冻结worker入口是后续实际改造点，尚未实现。

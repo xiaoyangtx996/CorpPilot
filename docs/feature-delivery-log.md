@@ -383,3 +383,12 @@
 - POST 发送前持久保存原路径/请求键/内容；断线刷新同键核对，版本冲突明确对照后重新编辑，草稿不被读取覆盖。未知读取不宣称空数据。
 - TypeScript/Vite 40 modules 构建通过；真实 IAB 普通审批、回滚、断线重试、409、归档拒绝通过，证据详见 acceptance-report F31。
 - 提交标识：feat(workbench): F31 manage approved agent and project memories in browser；单功能提交后立即推送并回读。
+
+- F31 提交 d9b70e0 后立即推送仍返回 GitHub 403；目标远端分支回读为空。
+
+## F32：Tauri 2 迁移契约
+
+- 主代理依据实际源码与官方资料撰写 docs/tauri-migration.md；tauri_boundary_review 独立核对通信、下载、初始化锁、provider冻结、数据和待确认请求差距。
+- 明确静态前端复用、小型Rust宿主、Python业务保留、鉴权握手、有序退出、模板资源、凭据、下载、WAL备份和升级回退；D1–D6分工与验收门可逐项实施。
+- 本增量是明确要求的迁移规划文档，未创建Rust空壳、冻结exe或安装器，不宣称完成桌面能力。浏览器剩余功能与真实双Docker/模型验收保持未完成。
+- 提交标识：docs(workbench): F32 define Tauri migration and acceptance boundaries；独立文档增量审查后单独提交并立即推送。
