@@ -130,3 +130,14 @@
 - 配置定向50 passed；主代理配置及真实HTTP回归66 passed，包含重启恢复、密钥不回传、移除环境变量后状态变化。
 - 当前只交付配置能力；界面入口、真正模型调用和这些执行参数的工作台调度执行仍待接入，不能把配置已保存当作连接验证。
 - 提交标识：`feat(workbench): F10 persist explicit model settings and expose API`；提交后立即推送，结果另记。
+- 主代理全量136 passed、8 subtests passed。提交`78d59b4`后立即推送仍403，远端未交付。
+
+## F11：软件内模型设置入口
+
+- 实现：conversation_frontend；独立代码/Ponytail/React审查：admission_review，Pass；主代理构建及IAB验收。
+- 左栏模型设置入口与原生对话框；8项配置、只提交改动字段、加载失败禁止编辑/保存、失败重试、忙态保护与焦点恢复。
+- IAB在独立browser-state保存禁用测试配置`qa-model-disabled`及未设置的测试环境变量名；回读显示字段完整但凭据缺失，没有模型调用。
+- 关闭重开后8项值恢复；停止测试服务再打开设置显示Failed to fetch且不能保存，服务同目录重启后重试完整恢复。
+- 390px截图检查表单内部滚动、保存按钮可达；Escape焦点返回“模型设置”。主代理TypeScript/Vite构建通过，33模块。
+- 现阶段凭据来自服务启动环境，尚未提供软件内密钥录入/系统凭据保管；连接验证和真实回复仍未完成，界面已明确说明。
+- 提交标识：`feat(workbench): F11 add in-app model settings`；提交后立即推送，结果另记。
