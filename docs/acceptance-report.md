@@ -160,3 +160,17 @@ F32 独立 tauri_boundary_review 审查 Pass；补清统一入口锁顺序以及
 首次全量396通过、1失败：跨Origin负向请求出现Windows连接中断；现象与服务提前拒绝、未读正文的关闭竞态一致，未将具体TCP成因视为已直接证实。定向复跑3项通过；测试改为无body请求并明确断言跨来源拒绝及记录仍为空，避免未读body关闭竞态，不改变生产权限检查。最终全量结果追加如下。
 
 F33 最终全量：397 passed、8 subtests passed（64.36s）。负向用例修正独立审查Pass。此增量无前端代码修改，未用浏览器测试替代后端恢复证据；UI核查入口和真实孤儿进程/容器验证仍未完成。
+
+## F34 浏览器未知执行核查验收
+
+reconciliation_ui 实现，corppilot_backend_review 独立源码/Ponytail审查Pass；主代理亲自浏览器验收。最终构建41 modules，index-C_CSGg17.js；复用现有dialog和API，无依赖变更。本增量不改后端，沿用F33 397项及8子测试证据。
+
+独立数据 H:\item\CorpPilot-test-evidence-20260906\f34-reconciliation-state；f34_fixture.py、f34_conflict_fixture.py、f34_drop_proxy.py、f34_verify.py 为外部QA证据。IAB7896最终构建页面，7897断线代理；Browser plugin未提供，使用CUA Playwright。标题/非空页面、无框架错误覆盖、桌面1315×1272截图和交互通过；未采集独立控制台日志或移动视口，不将截图当作完整产品验收。
+
+普通核查需两项确认和依据；记录仍unknown、exit_code=null。首次POST上游201后断开，核查GET持续503，刷新恢复请求db75d3b0-651c-424f-9c14-2ce1b484999b并同键核对成功，没有新尝试。失败读取不显示空态；任务窗口也保持阻断。已核查记录在正常任务窗口进入CLI配置门，不再被unknown历史永久阻断。
+
+任务升级v2、会话归档、身份停用后，浏览器成功对原v1执行保存声明。随后新增第四条固定样本验证并发：另一个Owner声明先保存，浏览器POST被拒绝；成功读取另一声明并明确确认后结束本地等待，没有覆盖或宣称原请求获接受。发现并修正成功后旧错误残留及后续GET失败丢失已确认展示的问题。
+
+API服务确认终止后重新启动，f34_verify.py重启前后均通过：四条执行全部unknown、退出码未确认、attempt/version均原值，四条不可变声明，没有新执行，CLI disabled且active_requests=0。固定样本没有实际进程，不代表已完成真实CLI/双Docker/自动恢复验证。
+
+F34 测试API与故障代理均通过实际会话句柄确认退出。正常7892服务先核对聊天/CLI活动均为0，再有序重启加载F33后端与F34静态页面；原数据保留，CLI核查待办为空、控制器active_requests=0。

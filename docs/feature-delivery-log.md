@@ -401,3 +401,13 @@
 - 保留unknown历史和未观测退出码，追加人工核查声明；只有所有未知项核查后才恢复已授权队列；新尝试仍需前次引用与当前权限。核查不复活旧回调、不批准成果。
 - 本增量仅后端能力；浏览器核查入口、自动进程识别与检查点恢复未完成。
 - 提交标识：feat(workbench): F33 reconcile unknown executions without rewriting outcomes；测试审查通过后立即独立提交并推送。
+
+- F33 提交 fcf911a 后立即推送返回 GitHub 403，目标远端分支回读为空。
+
+## F34：浏览器未知执行核查
+
+- reconciliation_ui 实现四个前端文件；主代理负责独立数据、断线代理、真实浏览器和重启回读；corppilot_backend_review 完成独立 Tech Lead/Ponytail 审查 Pass。
+- 全局入口展示任务与身份、原 attempt/version、核查依据与两项显式确认；归档停用仍可处理历史。核查声明与 unknown 结果分别显示，任务窗口仅对未核查项阻断。
+- 原请求持久保存后才发送，断线同键恢复；不同不可变声明成功读回后可明确结束本地等待，不覆盖、不误称原请求成功。
+- TypeScript/Vite 41 modules 构建通过。浏览器普通保存、双确认、断线刷新/GET503、历史v1对应当前v2、归档停用、并发声明冲突、任务入口与重启回读通过；四条固定unknown与四条声明，无实际模型/CLI调用。
+- 提交标识：feat(workbench): F34 reconcile unknown executions from browser；独立提交后立即推送并回读。

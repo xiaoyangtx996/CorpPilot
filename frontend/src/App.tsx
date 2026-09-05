@@ -4,6 +4,7 @@ import { AgentEditor } from './AgentEditor';
 import { ConversationEditor, ConversationMessages, type Draft } from './ConversationEditor';
 import { ModelSettings } from './ModelSettings';
 import { CliSettings } from './CliSettings';
+import { ExecutionReconciliation } from './ExecutionReconciliation';
 import { MemoryPanel } from './MemoryPanel';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
   const [inspector, setInspector] = useState(false);
   const [modelSettings, setModelSettings] = useState(false);
   const [cliSettings, setCliSettings] = useState(false);
+  const [reconciliation, setReconciliation] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationId, setConversationId] = useState('');
   const [conversationEditor, setConversationEditor] = useState<Conversation | null | undefined>(undefined);
@@ -141,7 +143,7 @@ export default function App() {
           <span className="avatar">{person.name.charAt(0)}</span><span><strong>{person.name}</strong><small>{person.enabled ? '可用' : '已停用'}</small></span>
         </button>)}{!loading && agents.length > 0 && !agents.some(person => person.name.toLowerCase().includes(query.toLowerCase())) && <p className="muted">没有匹配的 Agent</p>}</div>
       </section>
-      <div className="navigation-settings"><button onClick={() => setModelSettings(true)}>模型设置</button><button onClick={() => setCliSettings(true)}>CLI 设置</button></div>
+      <div className="navigation-settings"><button onClick={() => { setNavigation(false); setReconciliation(true); }}>执行核查</button><button onClick={() => setModelSettings(true)}>模型设置</button><button onClick={() => setCliSettings(true)}>CLI 设置</button></div>
     </aside>
     <main className="workspace" inert={navigation || inspector}>
       <header className="topbar"><button className="mobile" aria-expanded={navigation} onClick={() => setNavigation(true)}>会话与 Agent</button><h1>{conversation?.title ?? agent?.name ?? 'Agent 工作台'}</h1><button className="inspector-toggle" aria-expanded={inspector} onClick={() => setInspector(true)}>Agent 视角</button></header>
@@ -159,6 +161,7 @@ export default function App() {
     {editor !== undefined && <AgentEditor agent={editor} templates={templates} onClose={() => setEditor(undefined)} onSaved={saved} />}
     {modelSettings && <ModelSettings onClose={() => setModelSettings(false)} />}
     {memory && <MemoryPanel key={`${memory.scope}.${memory.identity}`} {...memory} onClose={() => setMemory(null)} />}
+    {reconciliation && <ExecutionReconciliation onClose={() => setReconciliation(false)} />}
     {cliSettings && <CliSettings onClose={() => setCliSettings(false)} />}
     {conversationEditor !== undefined && <ConversationEditor conversation={conversationEditor} agents={agents} onClose={() => setConversationEditor(undefined)} onSaved={value => { changedConversation(value); if (!conversationEditor) chooseConversation(value); }} />}
   </div>;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { ExecutionReconciliation } from './ExecutionReconciliation';
 import { ExecutionReview } from './ExecutionReview';
-import { api, ApiError, type Agent, type Conversation, type Task, type TaskExecution, type ExecutionRequest, type CliSettingsValue, type ReplyRuntime, type TaskDependencyStatus } from './api';
+import { api, ApiError, type Agent, type Conversation, type Task, type TaskExecution, type ExecutionRequest, type CliSettingsValue, type ReplyRuntime, type TaskDependencyStatus, type ExecutionReconciliationRecord } from './api';
 
 const labels = { queued: '排队中', running: '运行中', stopping: '正在停止', awaiting_review: '执行已结束', failed: '失败', cancelled: '已取消', unknown: '结果未知', superseded: '需求已过期' };
 const active = (run: TaskExecution) => ['queued', 'running', 'stopping'].includes(run.state);
@@ -16,6 +17,8 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
   const dialog = useRef<HTMLDialogElement>(null);
   const alive = useRef(false), reading = useRef<number | null>(null), writing = useRef(false), serial = useRef(0);
   const key = `corppilot.execution-pending.v1.${task.id}`;
+  const [reconciliationId, setReconciliationId] = useState('');
+  const [declarations, setDeclarations] = useState<Record<string, ExecutionReconciliationRecord | null>>({});
   const [runs, setRuns] = useState<TaskExecution[]>([]);
   const [config, setConfig] = useState<CliSettingsValue | null>(null);
   const [runtime, setRuntime] = useState<ReplyRuntime | null>(null);
@@ -50,9 +53,15 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
     if (reading.current !== null || writing.current) return;
     const request = ++serial.current; reading.current = request; setLoading(true);
     const results = await Promise.allSettled([api<TaskExecution[]>(`/tasks/${task.id}/executions`), api<CliSettingsValue>('/cli-settings'), api<ReplyRuntime>('/cli-runtime'), api<TaskDependencyStatus>(`/tasks/${task.id}/dependencies`)]);
+    const history = results[0];
+    const unknowns = history.status === 'fulfilled' ? history.value.filter(row => row.state === 'unknown') : [];
+    const checks = await Promise.allSettled(unknowns.map(row => api<ExecutionReconciliationRecord | null>(`/executions/${row.id}/reconciliation`)));
     if (alive.current && request === serial.current) {
       const [records, settings, status, prerequisites] = results;
       const errors: string[] = [];
+      const next: Record<string, ExecutionReconciliationRecord | null> = {};
+      checks.forEach((check, index) => { if (check.status === 'fulfilled') next[unknowns[index].id] = check.value; else errors.push(`未知执行核查：${failure(check.reason)}`); });
+      setDeclarations(next);
       if (records.status === 'fulfilled') { setRuns(records.value); setLoaded(true); reconcile(records.value); } else errors.push(`执行历史：${failure(records.reason)}`);
       if (settings.status === 'fulfilled') setConfig(settings.value); else { setConfig(null); errors.push(`CLI 配置：${failure(settings.reason)}`); }
       if (status.status === 'fulfilled') setRuntime(status.value); else { setRuntime(null); errors.push(`调度状态：${failure(status.reason)}`); }
@@ -76,7 +85,7 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
     : conversation.archived ? '会话已归档，不能新建执行。'
     : !agent?.enabled || !conversation.member_ids.includes(task.agent_id) ? '负责人未启用或已不在会话中。'
     : !agent.tools.includes('execute') ? '负责人缺少 execute 工具权限，请编辑身份工具范围。'
-    : runs.some(row => row.state === 'unknown') ? '存在结果未知的执行，须先核实实例及副作用，不能重试。'
+    : runs.some(row => row.state === 'unknown' && !declarations[row.id]) ? '存在结果未知的执行，须先核实实例及副作用，不能重试。'
     : runs.some(active) ? '已有活动执行，请等待或请求停止。'
     : !config?.enabled || !config.configured || !config.credential_available || !config.executable_available || !config.platform_supported ? 'CLI 尚未就绪，请在左侧 CLI 设置中配置、检查并启用。'
     : !runtime?.running || runtime.error ? `CLI 调度暂不可用：${runtime?.error || '控制服务未运行'}` : '';
@@ -124,6 +133,7 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
         <button className="primary" disabled={confirmed !== confirmationKey || !!latest && !note.trim()}>{latest ? '确认再次执行任务' : '确认执行任务'}</button>
       </fieldset>{blocked && <p className="muted">{blocked}</p>}</form>}
     {loaded && !runs.length && <p className="muted">暂无执行记录，尚未启动任务。</p>}
-    {runs.map(run => <article className="task-card" key={run.id}><header><h3>第 {run.attempt} 次执行 · 需求 v{run.requirement_version}</h3><span>{labels[run.state]}</span></header><small>执行 ID：{run.id}</small><p>退出码：{run.exit_code ?? '尚未确认'} · {new Date(run.created_at).toLocaleString()}</p>{run.summary && <p className="task-source">{run.summary}</p>}{run.reconciliation_note && <p className="task-source">执行前核查：{run.reconciliation_note}</p>}{run.state === 'unknown' && <p className="error">实例和副作用未核实，不能启动替代执行。</p>}{run.state === 'stopping' && <p role="status">停止请求已记录，等待实际执行实例退出确认。</p>}{['queued', 'running'].includes(run.state) && <button disabled={busy} onClick={() => void cancel(run)}>{run.state === 'queued' ? '取消排队执行' : '请求停止执行'}</button>}<ExecutionReview run={run} /></article>)}
+    {runs.map(run => <article className="task-card" key={run.id}><header><h3>第 {run.attempt} 次执行 · 需求 v{run.requirement_version}</h3><span>{labels[run.state]}</span></header><small>执行 ID：{run.id}</small><p>退出码：{run.exit_code ?? '尚未确认'} · {new Date(run.created_at).toLocaleString()}</p>{run.summary && <p className="task-source">{run.summary}</p>}{run.reconciliation_note && <p className="task-source">执行前核查：{run.reconciliation_note}</p>}{run.state === 'unknown' && <section>{declarations[run.id] ? <><p>Owner 已声明进程停止并已核查外部影响；原执行仍为结果未知。</p><p className="task-source">{declarations[run.id]!.note}</p></> : <p className="error">{Object.hasOwn(declarations, run.id) ? '实例和副作用尚未核查，不能启动替代执行。' : '核查记录未成功读取，暂不能确认是否已核查。'}</p>}<button disabled={busy} onClick={() => setReconciliationId(run.id)}>查看与核查未知执行</button></section>}{run.state === 'stopping' && <p role="status">停止请求已记录，等待实际执行实例退出确认。</p>}{['queued', 'running'].includes(run.state) && <button disabled={busy} onClick={() => void cancel(run)}>{run.state === 'queued' ? '取消排队执行' : '请求停止执行'}</button>}<ExecutionReview run={run} /></article>)}
+    {reconciliationId && <ExecutionReconciliation executionId={reconciliationId} onClose={() => { setReconciliationId(''); void load(); }} />}
   </dialog>;
 }

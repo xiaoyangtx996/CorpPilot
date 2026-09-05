@@ -37,3 +37,5 @@ export type MemoryDocument = { scope: 'agent' | 'project'; scope_id: string; ver
 export type MemoryRevision = MemoryDocument & { candidate_id: string | null; target_version: number | null; note: string; created_at: string };
 export type MemoryDecision = { candidate_id: string; request_id: string; decision: 'approved' | 'rejected'; note: string; result_version: number; decided_at: string };
 export type MemoryCandidate = { id: string; scope: 'agent' | 'project'; scope_id: string; expected_version: number; source_execution_id: string; source_task_id: string; source_requirement_version: number; content: string; created_at: string; decision: MemoryDecision | null };
+export type ExecutionReconciliationRequest = { request_id: string; attempt: number; requirement_version: number; process_stopped: true; external_effects_checked: true; note: string };
+export type ExecutionReconciliationRecord = ExecutionReconciliationRequest & { execution_id: string; reconciled_at: string };
