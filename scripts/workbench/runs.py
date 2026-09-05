@@ -67,6 +67,8 @@ class Runs:
             if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
                               (source, conversation_id)).fetchone():
                 raise ValueError("源消息必须是本会话中的 Owner 消息")
+            if db.execute("SELECT count(*) FROM runs WHERE state IN ('queued','running')").fetchone()[0] >= 100:
+                raise ValueError("回复队列已满，请等待现有请求完成或取消排队")
             identity = str(uuid.uuid4())
             db.execute("INSERT INTO runs(id,conversation_id,agent_id,source_message_id,request_id) VALUES(?,?,?,?,?)",
                        (identity, conversation_id, agent_id, source, request))
@@ -80,8 +82,11 @@ class Runs:
         with self.store.connect() as db:
             db.execute("BEGIN")
             self.store._conversation(db, conversation_id)
-            return [self._run(db, row[0]) for row in db.execute(
-                "SELECT id FROM runs WHERE conversation_id=? ORDER BY created_at DESC,id DESC LIMIT 100", (conversation_id,))]
+            # Keep every active request discoverable; the global admission cap bounds this list.
+            return [self._run(db, row[0]) for row in db.execute("""SELECT id FROM runs WHERE conversation_id=?
+                AND (state IN ('queued','running') OR id IN (SELECT id FROM runs WHERE conversation_id=?
+                    AND state NOT IN ('queued','running') ORDER BY updated_at DESC,id DESC LIMIT 100))
+                ORDER BY created_at DESC,id DESC""", (conversation_id, conversation_id))]
 
     def pending(self, limit=100):
         if type(limit) is not int or not 1 <= limit <= 100:

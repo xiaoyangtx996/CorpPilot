@@ -20,6 +20,26 @@ def setup(tmp_path):
     return store, runs, conversation["id"], payload
 
 
+def test_active_runs_survive_history_window_and_queue_is_bounded(tmp_path):
+    _, runs, cid, payload = setup(tmp_path)
+    active = runs.create(cid, payload)
+    for i in range(105):
+        previous = runs.create(cid, {**payload, "request_id": f"history-{i}"})
+        runs.cancel(previous["id"])
+    listed = runs.list(cid)
+    assert len(listed) == 101 and active["id"] in {run["id"] for run in listed}
+    runs.fail(active["id"], "new terminal state")
+    assert next(run for run in runs.list(cid) if run["id"] == active["id"])["state"] == "failed"
+    active = runs.create(cid, {**payload, "request_id": "new-active"})
+    for i in range(99):
+        runs.create(cid, {**payload, "request_id": f"queued-{i}"})
+    with pytest.raises(ValueError, match="队列已满"):
+        runs.create(cid, {**payload, "request_id": "overflow"})
+    assert runs.create(cid, {**payload, "request_id": "new-active"})["id"] == active["id"]
+    runs.cancel(active["id"])
+    assert runs.create(cid, {**payload, "request_id": "after-slot-release"})["state"] == "queued"
+
+
 def test_concurrent_create_claim_finish_are_exactly_once(tmp_path):
     store, runs, cid, payload = setup(tmp_path)
     with ThreadPoolExecutor(max_workers=4) as pool:
