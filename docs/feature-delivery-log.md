@@ -108,3 +108,14 @@
 - 主代理 `npm run build`（bundled Node24）通过，32模块；后端此前82 passed、8 subtests passed，本功能没有更改后端。
 - 模型尚未接入，界面明确只保存Owner消息；没有生成假回复。当前新增消息手动刷新，后续真实执行事件接入时补自动同步。
 - 提交标识：`feat(workbench): F08 add persistent direct and group conversations`；提交后立即推送，结果另记。
+- 提交：`dfa1781`；立即推送仍403，ls-remote未找到目标远端分支，未交付远端。
+
+## F09：每次模型尝试前的原子 RPM 准入
+
+- 实现/复验：主代理；独立代码/Ponytail审查：admission_review，Pass。
+- 修复旧 Agent Loop 的反向限流和一次等待后直接越限；每次模型尝试（含内部重试）都在调用前预占，同一控制器共享 TrafficMonitor 的所有身份使用同一窗口。
+- 使用现有锁和 monotonic 时间；窗口检查与追加原子完成，完成量统计保持原义，失败尝试不退还已用名额。SDK关闭内部隐藏重试，保留现有显式路由重试策略。
+- 30个并发请求仅允许3个、60秒边界释放、完成记录不重复预占、重试逐次准入、限流持续等待和空闲无额外等待均有定向回归：3 passed。
+- 主代理全量85 passed、8 subtests passed。SDK禁重试按构造参数审查；没有用模型真实请求冒充测试。
+- 本项为进程内单控制器RPM，不声称跨进程或重启持久限流；并发执行上限、费用硬预算和取消仍待后续运行调度实现。
+- 提交标识：`fix(runtime): F09 reserve RPM before each provider attempt`；提交后立即推送，结果另记。

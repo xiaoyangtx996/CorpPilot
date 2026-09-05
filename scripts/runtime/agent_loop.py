@@ -155,9 +155,10 @@ def agent_loop(
         route = router.resolve(agent_id=agent_id, department_id=dept_id, role_id=role_id, capability="chat")
 
         # 3. 调用 LLM（RPM 限流 + 内部重试）
-        if not monitor.check_rate_limit(agent_id, router.get_rate_limit_rpm()):
-            _emit(f"[{agent_id}] RPM 限流触发，等待 5s…")
-            time.sleep(5)
+        def reserve_attempt():
+            while not monitor.reserve_call(router.get_rate_limit_rpm()):
+                _emit(f"[{agent_id}] RPM 限流触发，等待 5s…")
+                time.sleep(5)
         t0 = time.time()
         try:
             response = client.call(
@@ -165,6 +166,7 @@ def agent_loop(
                 system=system_prompt,
                 tools=TOOL_SCHEMAS,
                 model_cfg=route,
+                before_attempt=reserve_attempt,
             )
         except Exception as exc:
             _emit(f"[{agent_id}] LLM 达到最大重试且备用跌落失败: {exc}")

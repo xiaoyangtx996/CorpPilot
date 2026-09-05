@@ -117,6 +117,7 @@ class LLMClient:
         system: str = "",
         tools: Optional[List[Dict[str, Any]]] = None,
         model_cfg: Optional[Any] = None,
+        before_attempt: Optional[Callable[[], None]] = None,
     ) -> LLMResponse:
         """调用 LLM，按照给定的路由尝试策略自动重试与降级，返回统一响应对象。"""
         if hasattr(model_cfg, "get_attempts"):
@@ -129,6 +130,8 @@ class LLMClient:
 
         last_error: Optional[Exception] = None
         for attempt_idx, cfg in enumerate(attempts):
+            if before_attempt:
+                before_attempt()
             try:
                 if cfg.provider == "anthropic":
                     resp = self._call_anthropic(messages, system, tools, cfg)
@@ -175,7 +178,7 @@ class LLMClient:
                 "请先安装 openai SDK：pip install openai"
             )
 
-        client = OpenAI(api_key=cfg.api_key, base_url=cfg.base_url)
+        client = OpenAI(api_key=cfg.api_key, base_url=cfg.base_url, max_retries=0)
 
         # 将 system 注入 messages 头部
         full_messages = []
@@ -237,7 +240,7 @@ class LLMClient:
                 "请先安装 anthropic SDK：pip install anthropic"
             )
 
-        client = anthropic.Anthropic(api_key=cfg.api_key)
+        client = anthropic.Anthropic(api_key=cfg.api_key, max_retries=0)
 
         # Anthropic 的 tools 格式略有不同，做简单转换
         anthropic_tools = []

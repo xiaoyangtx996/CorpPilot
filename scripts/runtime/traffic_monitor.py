@@ -32,6 +32,7 @@ class TrafficMonitor:
         self._lock = threading.Lock()
         # 滑动窗口：记录最近 1 分钟内的调用时间戳（deque 最多保留 1000 条）
         self._minute_calls: Deque[Tuple[float, str]] = deque(maxlen=1000)
+        self._admissions: Deque[float] = deque()
 
     # ---------------------------------------------------------------------- #
     # 公开接口
@@ -83,6 +84,19 @@ class TrafficMonitor:
                 if e[0] >= window_start and (agent_id is None or e[1] == agent_id)
             ]
         return len(recent) >= limit_rpm
+
+    def reserve_call(self, limit_rpm: int = 60) -> bool:
+        """Atomically admit one provider attempt across this controller's agents."""
+        if type(limit_rpm) is not int or limit_rpm < 1:
+            raise ValueError("RPM 必须为正整数")
+        with self._lock:
+            now = time.monotonic()
+            while self._admissions and self._admissions[0] <= now - 60:
+                self._admissions.popleft()
+            if len(self._admissions) >= limit_rpm:
+                return False
+            self._admissions.append(now)
+            return True
 
     def get_stats(self, window: str = "1h", group_by: Optional[str] = None) -> Dict[str, Any]:
         """
