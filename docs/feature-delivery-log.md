@@ -217,3 +217,16 @@
 - 主代理最终TypeScript/Vite构建35模块通过；独立Tasks/API7 passed。前一后端全量基线168 passed、8 subtests，本轮未改后端。
 - 执行/评审/产物、双Docker与CLI、记忆及最终Tauri文档仍待完成，未将任务卡保存当成任务执行成功。
 - 提交标识：`feat(workbench): F17 manage task requirements in conversations`；提交后立即推送并另记结果。
+
+- F17 提交 `07205fd`，立即推送仍为 GitHub 403，账号 suiyue1990 无目标仓库写权限。
+
+## F18：任务执行身份、版本与停止状态记录
+
+- 实现/集成：主代理；独立测试：execution_tests；PM/技术/Ponytail审查：execution_contract_review，Pass。
+- 同SQLite新增内部Executions；task/version/attempt/UUID固定，外键指向不可变需求版本，幂等请求和单任务active唯一约束；全局活动上限100。
+- 再次执行必须指向最新执行ID并留下核查说明，防止换key绕过和迟到重试引用错误前次结果。该说明仅为调用方声明，真实runner仍需核查进程与副作用。
+- 旧版本排队不执行，旧版本确定退出仅归入superseded；错误attempt/version及重复终态回调不改变结果；零退出仅待评审，不修改任务需求或批准任务。
+- 排队可取消，运行取消仅stopping并占位，确切进程树退出才能确认cancelled；未知/重启不自动重试，恢复调用要求控制器独占锁。
+- 定向测试最终17 passed；主代理全量185 passed、8 subtests passed（32.53s），含同角色多任务、并发创建/领取、权限撤销、版本变更、停止/unknown、队列上限与恢复。
+- 内部记录契约可用，但没有接HTTP创建、真实CLI、容器或产物验收；本轮不把注入的退出码当作真实进程证据。
+- 提交标识：`feat(workbench): F18 persist version-bound task execution lifecycle`；提交后立即推送并另记结果。
