@@ -7,6 +7,7 @@ import logging
 import mimetypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from .store import REPO_ROOT, Store
 
@@ -82,7 +83,11 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self.check_origin()
             store = self.server.store
-            path = self.path
+            url = urlsplit(self.path)
+            path = url.path
+            query = parse_qs(url.query, keep_blank_values=True)
+            if query and not (self.command == "GET" and path.endswith("/messages")):
+                raise ValueError("不支持的查询参数")
             if self.command == "GET" and (path == "/" or path.startswith("/assets/")):
                 relative = "index.html" if path == "/" else path.lstrip("/")
                 target = (self.server.frontend_dir / relative).resolve()
@@ -113,11 +118,42 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, store.agent(agent_id))
                 if self.command == "PATCH":
                     return self.respond(200, store.save_agent(self.read_json(), agent_id))
+            prefix = "/api/workbench/conversations"
+            if path == prefix:
+                if self.command == "GET":
+                    return self.respond(200, store.conversations())
+                if self.command == "POST":
+                    return self.respond(201, store.save_conversation(self.read_json()))
+            if path.startswith(prefix + "/"):
+                parts = path[len(prefix) + 1:].split("/")
+                conversation_id = parts[0]
+                if len(parts) == 1 and conversation_id:
+                    if self.command == "GET":
+                        return self.respond(200, store.conversation(conversation_id))
+                    if self.command == "PATCH":
+                        return self.respond(200, store.save_conversation(self.read_json(), conversation_id))
+                if len(parts) == 2 and parts[1] == "messages":
+                    if self.command == "GET":
+                        if set(query) - {"after", "limit"} or any(len(v) != 1 for v in query.values()):
+                            raise ValueError("不支持的消息分页参数")
+                        after = int(query.get("after", ["0"])[0])
+                        limit = int(query.get("limit", ["100"])[0])
+                        return self.respond(200, store.messages(conversation_id, after=after, limit=limit))
+                    if self.command == "POST":
+                        # This is the local Owner API. Agent identity is never taken from HTTP input.
+                        return self.respond(201, store.send_message(conversation_id, self.read_json()))
+                if len(parts) == 3 and parts[1] == "members" and parts[2] and self.command == "PATCH":
+                    payload = self.read_json()
+                    if set(payload) != {"joined"}:
+                        raise ValueError("成员请求必须只含 joined")
+                    return self.respond(200, store.set_member(conversation_id, parts[2], payload["joined"]))
             self.respond(404, {"error": "接口不存在"})
         except (ValueError, TimeoutError) as exc:
             self.respond(400, {"error": str(exc) if isinstance(exc, ValueError) else "读取请求超时"})
         except KeyError:
-            self.respond(404, {"error": "Agent 不存在"})
+            self.respond(404, {"error": "对象不存在"})
+        except PermissionError as exc:
+            self.respond(403, {"error": str(exc)})
         except Exception:
             logging.exception("Workbench API request failed")
             self.respond(500, {"error": "服务暂时不可用"})

@@ -130,3 +130,48 @@ def test_browser_assets_are_confined_to_build_directory(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+def test_conversation_http_lifecycle_and_restart(tmp_path):
+    base = "/api/workbench/conversations"
+    with running(tmp_path) as port:
+        _, agents = request(port, "GET", "/api/workbench/agents")
+        first, second = [agent["id"] for agent in agents[:2]]
+        status, room = request(port, "POST", base, {
+            "type": "project", "title": "发布讨论", "member_ids": [first],
+        })
+        assert status == 201
+        path = base + "/" + room["id"]
+        assert request(port, "GET", path) == (200, room)
+        assert request(port, "GET", base)[1] == [room]
+        assert request(port, "PATCH", path + "/members/" + second, {"joined": True})[1]["member_ids"] == sorted([first, second])
+        payload = {"content": "确认范围", "request_id": "client-request-1"}
+        status, message = request(port, "POST", path + "/messages", payload)
+        assert status == 201 and message["sender_kind"] == "owner" and message["sender_id"] is None
+        assert request(port, "POST", path + "/messages", payload) == (201, message)
+        assert request(port, "GET", path + "/messages?after=0&limit=1") == (200, [message])
+        assert request(port, "GET", path + f'/messages?after={message["sequence"]}')[1] == []
+        assert request(port, "PATCH", path, {"archived": True})[1]["archived"]
+        assert request(port, "POST", path + "/messages", {"content": "不得发送", "request_id": "2"})[0] == 400
+    with running(tmp_path) as port:
+        assert request(port, "GET", path)[1]["archived"]
+        assert request(port, "GET", path + "/messages")[1] == [message]
+        assert request(port, "PATCH", path, {"archived": False})[0] == 200
+        assert request(port, "PATCH", path + "/members/" + second, {"joined": False})[1]["member_ids"] == [first]
+
+
+def test_conversation_http_rejects_impersonation_and_bad_paging(tmp_path):
+    base = "/api/workbench/conversations"
+    with running(tmp_path) as port:
+        _, agents = request(port, "GET", "/api/workbench/agents")
+        actor = agents[0]["id"]
+        _, room = request(port, "POST", base, {"type": "dm", "title": "私聊", "member_ids": [actor]})
+        path = base + "/" + room["id"]
+        for query in ("actor_id=" + actor, "after=-1", "limit=201", "limit=", "after=a", "after=0&after=1"):
+            assert request(port, "GET", path + "/messages?" + query)[0] == 400
+        for field in ("actor_id", "sender_id", "sender_kind"):
+            assert request(port, "POST", path + "/messages", {"content": "伪造", "request_id": "1", field: actor})[0] == 400
+        assert request(port, "GET", base + "?actor_id=" + actor)[0] == 400
+        assert request(port, "PATCH", path + "/members/" + actor, {"joined": False})[0] == 400
+        assert request(port, "GET", base + "/missing/messages")[0] == 404
+        assert request(port, "GET", path + "/messages")[1] == []

@@ -83,3 +83,13 @@
 - 审查发现并修复备份覆盖和会话详情读权限竞态，新增受控交错回归；12 项 Store/会话检查通过。主代理含在途 API 的全量回归 82 passed、8 subtests passed；最终备份连接关闭修正后会话 8 passed。
 - 当前只证明存储能力，聊天界面、模型、任务和 Worker 权限边界仍未完成。
 - 提交标识：`feat(workbench): F06 persist conversations and permission-scoped messages`；提交后立即推送，远端结果另记。
+- 提交：`1a42ecf`；立即推送仍返回 GitHub 403（suiyue1990 无仓库写权限），远端未交付。
+
+## F07：本机会话 HTTP API
+
+- 实现及复验：主代理；独立代码/Ponytail审查：conversation_review，Pass。
+- `GET/POST /api/workbench/conversations`；`GET/PATCH /{id}`；`GET/POST /{id}/messages`；`PATCH /{id}/members/{agent_id}`（以上后三者均接会话前缀）。
+- messages GET 支持 after/limit 分页；POST 仅接受 content/request_id。成员 PATCH 仅接受 joined 布尔值，调用者不能从 body 或 query 伪装 Agent。
+- 真实 loopback HTTP 测试覆盖建群、成员加入退出、幂等发送、归档/恢复、重启历史恢复、恶意发送者字段与无效分页；主代理全量 82 passed、8 subtests passed。
+- 仅本机 Owner API；未开放 Worker 入口，未声称已接入模型自动回复。浏览器集成为下一项独立功能。
+- 提交标识：`feat(workbench): F07 expose persistent conversation API`；提交后立即推送，远端结果另记。
