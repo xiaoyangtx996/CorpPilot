@@ -69,6 +69,13 @@ PYTHONPATH、NODE_OPTIONS 或 Git 配置；工具 shell 的环境另排除 API k
 等待进程树退出及结果写入后才释放控制器锁。unknown解除和副作用核查仍待真实恢复流程实现。
 F21内部调度已接入CLI适配器，但HTTP/UI执行入口、成果提取和评审、费用约束、真实模型与Docker联调仍未完成。
 
+F22 开放 Owner HTTP：`GET /cli-runtime`、`GET/POST /tasks/{id}/executions`、
+`GET /executions/{id}`、`POST /executions/{id}/cancel`（空对象）。新建体严格为
+request_id、expected_version、reconciliation_note、previous_execution_id；返回202表示执行记录已接受，
+不代表完成。新请求须配置就绪；同键原请求已存在时仍可在配置禁用后回读，不能更换内容。
+HTTP不接受执行结果报告或直接状态修改，取消无需模型配置，运行中仅记stopping并由调度器通知实例退出。
+所有接口沿用本机Host/Origin及JSON边界；实际任务执行界面与成果评审为后续增量。
+
 ## 1. 目标
 
 CorpPilot 用“组织架构”来表达多 Agent 系统中的职责边界。

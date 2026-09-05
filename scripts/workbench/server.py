@@ -123,6 +123,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, {"status": "ok"})
             if self.command == "GET" and path == "/api/workbench/runtime":
                 return self.respond(200, self.server.controller.status())
+            if self.command == "GET" and path == "/api/workbench/cli-runtime":
+                return self.respond(200, self.server.controller.cli.status())
             if path == "/api/workbench/model-settings":
                 if self.command == "GET":
                     return self.respond(200, self.server.settings.get())
@@ -201,6 +203,20 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.tasks.revise(parts[0], self.read_json()))
                 if len(parts) == 2 and parts[0] and parts[1] == "revisions" and self.command == "GET":
                     return self.respond(200, self.server.tasks.history(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "executions":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.controller.cli.executions.list(parts[0]))
+                    if self.command == "POST":
+                        return self.respond(202, self.server.controller.cli.enqueue(parts[0], self.read_json()))
+            prefix = "/api/workbench/executions/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 1 and parts[0] and self.command == "GET":
+                    return self.respond(200, self.server.controller.cli.executions.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "cancel" and self.command == "POST":
+                    if self.read_json():
+                        raise ValueError("取消请求体必须为空对象")
+                    return self.respond(200, self.server.controller.cli.executions.cancel(parts[0]))
             prefix = "/api/workbench/runs/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")

@@ -119,6 +119,20 @@ class CLIController:
     def status(self):
         return {"error": self.error, "active_requests": len(self.active), "running": not self.closed}
 
+    def enqueue(self, task_id, payload):
+        # Exact replay remains readable after configuration changes. create validates
+        # the full original request before returning the existing execution.
+        if isinstance(payload, dict) and isinstance(payload.get("request_id"), str):
+            with self.store.connect() as db:
+                existing = db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND request_id=?",
+                                      (task_id, payload["request_id"].strip())).fetchone()
+            if existing:
+                return self.executions.create(task_id, payload)
+        if self.closed:
+            raise ValueError("CLI 控制器正在关闭，不能创建执行")
+        self.settings.resolve()
+        return self.executions.create(task_id, payload)
+
     def close(self):
         self.closed = True
         for identity, (_, cancel, _) in list(self.active.items()):

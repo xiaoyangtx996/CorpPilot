@@ -270,3 +270,15 @@
 - 本增量先交付内部后端能力；HTTP/UI执行入口、成果评审、unknown核查恢复、CLI费用约束及真实模型/双Docker仍待完成。
 - 主代理全量回归254 passed、8 subtests（41.47s）；最后未启动/旧版本判定调整后定向40 passed（4.25s）。
 - 提交标识：`feat(workbench): F21 dispatch and stop versioned CLI tasks`；按功能立即推送并回读。
+
+- F21 提交 `d805178` 后立即推送仍 GitHub 403；远端目标分支未创建。
+
+## F22：任务执行与停止 HTTP 接口
+
+- 后端集成：主代理；独立HTTP测试与契约/Ponytail审查：execution_http_qa，Pass。额外审查代理触发任务数量限制，由现有QA交叉复核并由主代理检查暂存差异。
+- 新增任务执行列表/创建、单执行读取/取消及CLI运行状态；不开放伪造结果报告或状态PATCH。
+- 新请求要求CLI配置凭据就绪，再由事务检查权限、版本、前次执行和unknown；已存在的同任务/请求ID先严格核对原payload，即使配置后来禁用仍可幂等回读。
+- 正常服务7892实测：cli-runtime200且零活动；已有task执行列表为空；disabled创建返回400，随后列表仍为空。未调用模型。
+- 浏览器确认/历史/停止界面由独立前端增量实现；真实CLI模型任务和产物评审仍未验收。
+- 主代理全量258 passed、8 subtests（45.56s）；之后新增并发/unknown用例，独立最终HTTP6 passed（6.11s）。
+- 提交标识：`feat(workbench): F22 expose task execution lifecycle API`；提交后立即推送并回读。
