@@ -1,5 +1,24 @@
 ﻿# CorpPilot 架构说明
 
+## 浏览器工作台增量（2026-09-06）
+
+下文原有 TaskService/WorkflowEngine 描述属于旧组织流程。新浏览器工作台通过
+`scripts/workbench/server.py` 的本机 Owner API 访问同一用户数据目录中的 SQLite；
+新任务不写入旧 JSON TaskService，避免自动触发旧审批流程和双写。
+
+任务卡由 `Tasks` 管理：长期身份与会话通过稳定 ID 引用，任务记录本会话 Owner 源消息、
+负责人、目标标题、范围和验收文本。创建请求以会话和 request_id 唯一；重试比较原始版本，
+即使任务后来被编辑也不会重复创建。每次实际修改保存不可覆盖的需求版本，
+`expected_version` 冲突返回 HTTP 409；无变化不升级版本。归档可读，不可新建或修改。
+
+接口前缀 `/api/workbench`：`GET/POST /conversations/{id}/tasks`、
+`GET/PATCH /tasks/{id}`、`GET /tasks/{id}/revisions`。仅 Owner 管理接口使用这些方法，
+不接受调用者自报身份；负责人必须是启用的会话成员。创建和编辑不调用模型或启动执行。
+
+当前 `Runs` 是指定成员的聊天回复，尚未绑定任务。任务执行接入时必须明确绑定 task_id、
+requirement_version、attempt，并在结果提交事务内检查当前版本和有效执行；
+聊天回复完成不能作为任务验收通过。该执行链路、任务 UI 和产物验收仍待实现。
+
 ## 1. 目标
 
 CorpPilot 用“组织架构”来表达多 Agent 系统中的职责边界。

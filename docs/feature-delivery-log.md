@@ -193,3 +193,15 @@
 - 主代理TypeScript/Vite构建34模块通过；完整后端161 passed、8 subtests passed。
 - 正向回复管道由本地HTTP协议fixture+真实子进程集成测过；浏览器真实供应商回复和费用验收仍缺可用授权配置，未以fixture或连接失败替代该项。运行中主动停止、任务闭环、CLI/Docker隔离和记忆仍未完成。
 - 提交标识：`feat(workbench): F15 request and observe individual agent replies`；提交后立即推送，结果另记。
+
+- F15 提交 `a84a286`，立即推送仍 GitHub 403，未交付远端。
+
+## F16：持久任务契约与需求版本 API
+
+- 后端：task_store；API/集成/文档：主代理；PM与技术/Ponytail独立审查：task_contract_review，Pass。
+- 从本会话 Owner 消息创建任务，明确负责人、目标标题、范围与验收；负责人必须为启用成员，归档禁止更改。
+- 同请求原始参数幂等，编辑后重试仍返回当前任务；不可变版本历史、事务乐观并发检查，冲突 HTTP 409，无变化不升级。
+- API 支持会话任务创建/列表、单任务读取/修改及历史；创建/修改不会自动调用模型或启动旧组织流程。
+- 独立定向 Tasks/API/Run 15 passed；主代理完整回归 168 passed、8 subtests passed（30.35s）。覆盖真实HTTP、重启、重复创建、并发编辑、权限撤销及版本历史。
+- 任务卡浏览器界面、任务Run/attempt绑定、真实执行与产物评审仍待实现；本功能不代表 R03/R07 完整通过。
+- 提交标识：`feat(workbench): F16 persist versioned task contracts and API`；提交后立即推送并记录结果。

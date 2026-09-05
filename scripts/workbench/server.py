@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 from .store import REPO_ROOT, Store
 from .settings import Settings
 from .controller import ReplyController
+from .tasks import Tasks, TaskVersionConflict
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -20,6 +21,7 @@ class WorkbenchServer(ThreadingHTTPServer):
     def __init__(self, store: Store, port: int = 7892, frontend_dir: Path | None = None):
         self.store = store
         self.settings = Settings(store)
+        self.tasks = Tasks(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
         try:
@@ -168,11 +170,26 @@ class Handler(BaseHTTPRequestHandler):
                     if self.command == "POST":
                         self.server.settings.resolve()
                         return self.respond(202, self.server.controller.runs.create(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "tasks":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.tasks.list(conversation_id))
+                    if self.command == "POST":
+                        return self.respond(201, self.server.tasks.create(conversation_id, self.read_json()))
                 if len(parts) == 3 and parts[1] == "members" and parts[2] and self.command == "PATCH":
                     payload = self.read_json()
                     if set(payload) != {"joined"}:
                         raise ValueError("成员请求必须只含 joined")
                     return self.respond(200, store.set_member(conversation_id, parts[2], payload["joined"]))
+            prefix = "/api/workbench/tasks/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 1 and parts[0]:
+                    if self.command == "GET":
+                        return self.respond(200, self.server.tasks.get(parts[0]))
+                    if self.command == "PATCH":
+                        return self.respond(200, self.server.tasks.revise(parts[0], self.read_json()))
+                if len(parts) == 2 and parts[0] and parts[1] == "revisions" and self.command == "GET":
+                    return self.respond(200, self.server.tasks.history(parts[0]))
             prefix = "/api/workbench/runs/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")
@@ -183,6 +200,8 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError("取消请求体必须为空对象")
                     return self.respond(200, self.server.controller.runs.cancel(parts[0]))
             self.respond(404, {"error": "接口不存在"})
+        except TaskVersionConflict as exc:
+            self.respond(409, {"error": str(exc)})
         except (ValueError, TimeoutError) as exc:
             self.respond(400, {"error": str(exc) if isinstance(exc, ValueError) else "读取请求超时"})
         except KeyError:
