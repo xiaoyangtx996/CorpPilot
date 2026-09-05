@@ -181,3 +181,15 @@
 - 创建请求在同一事务检查全局最多100个活动Run，原request幂等回读不受容量限制；取消释放名额。
 - 主代理新增105条终态历史、旧活动可见/转终态、队列满拒绝与取消释放回归，8项Runs测试通过；独立reply_review复验8 passed，审查Pass。
 - 此修正单独提交并立即推送，不等待后续UI功能。
+- 修正提交`ea5b8e6`，立即推送仍GitHub403。
+
+## F15：指定成员回复与真实 Run 状态界面
+
+- 实现：conversation_frontend；独立代码/Ponytail审查：reply_review，修正后Pass；主代理构建、真实浏览器验收。
+- 每条已保存Owner消息可明确选择一名启用成员并确认调用；源消息/成员使用确定request_id，已知Run走GET，未确认创建按同键重试，不自动全员回复或重试失败。
+- 显示6种Run状态、净化错误、实际模型和token（缺失显示未知）；仅排队可取消，运行中不假称可停止。活动期1秒轮询，缺失已知活动ID单独回读，完成触发真实消息分页刷新。
+- IAB：禁用配置时拒绝且无Run；独立测试服务用dummy凭据与未监听本机端口执行一次请求，总时限到达后显示unknown和原Run ID，重复查询仍一条Run/一条Owner消息，无伪造回复。
+- 刷新会话后同一unknown恢复；390×844截图与DOM确认无横向溢出，输入可达。测试结束恢复模型配置禁用，并重启服务去除临时dummy环境变量。
+- 主代理TypeScript/Vite构建34模块通过；完整后端161 passed、8 subtests passed。
+- 正向回复管道由本地HTTP协议fixture+真实子进程集成测过；浏览器真实供应商回复和费用验收仍缺可用授权配置，未以fixture或连接失败替代该项。运行中主动停止、任务闭环、CLI/Docker隔离和记忆仍未完成。
+- 提交标识：`feat(workbench): F15 request and observe individual agent replies`；提交后立即推送，结果另记。

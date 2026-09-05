@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type Agent, type Conversation, type Message } from './api';
+import { ReplyRuns } from './ReplyRuns';
 
 const failure = (error: unknown) => error instanceof Error ? error.message : '请求失败，请重试';
-export type Draft = { content: string; request_id: string; sentContent: string };
+export type Draft = { content: string; request_id: string; sentContent: string; replyRequests?: Record<string, string> };
 
 export function ConversationEditor({ conversation, agents, onClose, onSaved }: {
   conversation: Conversation | null; agents: Agent[]; onClose: () => void; onSaved: (value: Conversation) => void;
@@ -50,8 +51,8 @@ export function ConversationEditor({ conversation, agents, onClose, onSaved }: {
   </dialog>;
 }
 
-export function ConversationMessages({ conversation, agents, draft, onMessage }: {
-  conversation: Conversation; agents: Agent[]; draft: Draft; onMessage: (message: Message) => void;
+export function ConversationMessages({ conversation, agents, draft, onMessage, onSettings }: {
+  conversation: Conversation; agents: Agent[]; draft: Draft; onMessage: (message: Message) => void; onSettings: () => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [content, setContent] = useState(draft.content);
@@ -61,9 +62,12 @@ export function ConversationMessages({ conversation, agents, draft, onMessage }:
   const [sendError, setSendError] = useState('');
   const [sent, setSent] = useState(false);
   const [more, setMore] = useState(false);
+  const [replySource, setReplySource] = useState<Message | null>(null);
+  draft.replyRequests ??= {};
   const cursor = useRef(0);
   const active = useRef(true);
   const reading = useRef(false);
+  const refreshPending = useRef(false);
   const posting = useRef(false);
   const composing = useRef(false);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -71,15 +75,25 @@ export function ConversationMessages({ conversation, agents, draft, onMessage }:
   function merge(incoming: Message[]) {
     setMessages(current => [...new Map([...current, ...incoming].map(message => [message.id, message])).values()].sort((a, b) => a.sequence - b.sequence));
   }
-  async function load() {
-    if (reading.current) return;
+  async function load(all = false) {
+    if (reading.current) { if (all) refreshPending.current = true; return; }
     reading.current = true; setLoading(true); setLoadError('');
     try {
-      const rows = await api<Message[]>(`/conversations/${conversation.id}/messages?after=${cursor.current}&limit=50`);
-      if (!active.current) return;
-      merge(rows); cursor.current = rows.at(-1)?.sequence ?? cursor.current; setMore(rows.length === 50);
+      let rows: Message[];
+      do {
+        rows = await api<Message[]>(`/conversations/${conversation.id}/messages?after=${cursor.current}&limit=50`);
+        if (!active.current) return;
+        merge(rows); cursor.current = rows.at(-1)?.sequence ?? cursor.current; setMore(rows.length === 50);
+        if (rows.length) onMessage(rows[rows.length - 1]);
+      } while (all && rows.length === 50);
     } catch (error) { if (active.current) setLoadError(failure(error)); }
-    finally { reading.current = false; if (active.current) setLoading(false); }
+    finally {
+      reading.current = false;
+      if (active.current) {
+        setLoading(false);
+        if (refreshPending.current) { refreshPending.current = false; void load(true); }
+      }
+    }
   }
   useEffect(() => { active.current = true; void load(); return () => { active.current = false; }; }, []);
   async function send() {
@@ -99,12 +113,13 @@ export function ConversationMessages({ conversation, agents, draft, onMessage }:
   return <>
     <div className="message-history" aria-label="消息历史" aria-busy={loading}>
       {messages.length === 0 && <p className="muted">{loading ? '正在读取消息…' : '暂无消息，发送第一条消息开始讨论。'}</p>}
-      {messages.map(message => <article className={`message ${message.sender_kind}`} key={message.id}><header><strong>{message.sender_kind === 'owner' ? '你 · Owner' : agents.find(agent => agent.id === message.sender_id)?.name ?? 'Agent'}</strong><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time></header><p>{message.content}</p></article>)}
+      {messages.map(message => <article className={`message ${message.sender_kind}`} key={message.id}><header><strong>{message.sender_kind === 'owner' ? '你 · Owner' : agents.find(agent => agent.id === message.sender_id)?.name ?? 'Agent'}</strong><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time></header><p>{message.content}</p>{message.sender_kind === 'owner' && <button type="button" className="text-button" disabled={conversation.archived} onClick={() => setReplySource(message)}>请 Agent 回复</button>}</article>)}
       {loadError && <p className="error" role="alert">消息读取失败：{loadError}</p>}
       <button className="history-more" disabled={loading} onClick={() => void load()}>{loading ? '读取中…' : loadError ? '重试读取消息' : more ? '继续加载历史（按时间正序）' : '刷新消息'}</button>
+      <ReplyRuns conversation={conversation} agents={agents} source={replySource} requests={draft.replyRequests} onCompleted={() => void load(true)} onSettings={onSettings} />
     </div>
     <form className="composer" onSubmit={event => { event.preventDefault(); void send(); }}>
-      <p className="muted">模型回复尚未接入。发送仅保存 Owner 消息，不会启动 Agent 执行。</p>
+      <p className="muted">发送仅保存 Owner 消息；点击消息下“请 Agent 回复”并确认，才会调用已配置模型。</p>
       {conversation.archived && <p className="archive-notice">此会话已归档，恢复后可继续发送。</p>}
       <label className="sr-only" htmlFor="message-content">消息内容</label>
       <textarea ref={input} id="message-content" placeholder="向会话发送消息…" maxLength={16000} rows={3} value={content} disabled={sending || conversation.archived} onChange={event => { draft.content = event.target.value; setContent(event.target.value); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !composing.current && !event.nativeEvent.isComposing && event.keyCode !== 229) { event.preventDefault(); void send(); } }} />
