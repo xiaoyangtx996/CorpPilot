@@ -97,3 +97,5 @@ export type CollaborationPlan = { request_id: string; source_message_id: string;
 export type CollaborationReceipt = { id: string; source_conversation_id: string; source_message_id: string; request_id: string; project_conversation_id: string; shared_message_id: string; coordinator_id: string; member_ids: string[]; task_ids: Record<string, string>; created_at: string; approved_plan: CollaborationPlan };
 export type PlanningRequest = { agent_id: string; source_message_id: string; request_id: string; candidate_ids: string[] };
 export type PlanningRun = ReplyRun & { candidate_snapshot: Pick<Agent, 'id' | 'name' | 'template_id' | 'skills'>[]; proposal: Pick<CollaborationPlan, 'title' | 'shared_brief' | 'tasks'> | null; request_payload: PlanningRequest };
+export type RetrospectiveRequest = { request_id: string; expected_version: number; source_execution_id: string; artifact_ids: string[] };
+export type RetrospectiveRun = ReplyRun & { scope: 'agent' | 'project'; scope_id: string; request_payload: RetrospectiveRequest; candidate_id: string | null; selected_artifacts: ExecutionArtifact[]; evidence_artifact_ids: string[] };

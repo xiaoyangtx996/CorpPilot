@@ -484,4 +484,15 @@
 - Owner指定来源执行、目标记忆版本及批准成果选择；输入冻结实际有界UTF-8正文、任务需求和目标批准全文，未选正文、其他范围个人记忆及聊天前史不进入模型。复盘输出完整替换候选与所选证据ID，不自动批准或发布Skill。
 - 新增18项复盘边界测试，既有相关回归共67项通过；主代理全量532项及8子用例通过（85.60s），之后仅增加1项隐私测试、生产代码未改，最终HTTP测试4项通过（5.96s）。实际本地HTTP模型替身与请求子进程验证创建、单次调用、候选、人工批准、回滚、重启、取消与失败；不是付费供应商质量验证。
 - 独立定向21项通过（6.33s）；额外临时数据核验跨范围隐私、未选证据及撤销execute权限均通过，审查Pass。创建/完成事务失败不残留候选，running重启unknown不重发，批准前不改变有效记忆。
-- 提交标识：feat(workbench): F41 generate scoped retrospective memory candidates；测试审查后立即独立提交并推送，实际结果记录于外部f41-delivery-result.json。F42浏览器入口、Skill发布、真实模型质量和完整目标仍待验收。
+- 提交标识：feat(workbench): F41 generate scoped retrospective memory candidates；实际提交 `ffb7c3a` 后立即推送返回GitHub403，远端实施分支回读为空，外部证据 `f41-delivery-result.json`。F42浏览器入口、Skill发布、真实模型质量和完整目标仍待验收。
+
+## F42：浏览器复盘、审批与原请求恢复
+
+- 前端为MemoryPanel、RetrospectivePanel和api.ts；task_execution_ui独立读审Pass，主代理负责浏览器QA与集成，verify_history_scope负责Doc/PM文档核对。当前typecheck及45模块构建通过，产物index-CVd9BLsW.js；沿用F41后端完整532项/8子用例及随后HTTP4项证据，未重复后端全量。
+- 个人/项目记忆内选择已批准来源与成果，单独确认一次模型调用；候选生成后仍须原全文审批。scope/identity内持久保存原请求，202后只GET，返回精确匹配完整payload及Run；首发4xx才可重新选择，原请求重试清除旧rejected，unknown不提供替代调用。MemoryPanel原候选/决定/回滚同时修正旧拒绝标记。
+- 已测项目v0仅选择selected.txt生成候选、批准版本仍v0、手工草稿保留，再明确Owner审批后才v1。第二请求首400后同键202丢响应/GET503，旧拒绝修改入口关闭；刷新保留原key，恢复GET核对同Run及候选。两个有效请求各一次本地模型调用，未选正文及个人记忆泄漏检查均false。
+- 第3个Run在模型禁用时queued，经UI取消为cancelled且无candidate/模型调用；第4个Run非法JSON为failed且无candidate。累计本地模型调用3次（2有效+1非法），取消0调用。
+- MemoryPanel手工候选首400后同键201丢响应，rejected=false且重新编辑按钮消失；刷新仍保留1ab99600原key，候选GET可见不等于原请求已确认。1315×1272桌面截图确认对话框可滚动、表单可操作。
+- 旧fixture93937确认live后Ctrl+C退出1；新92039同数据重启，旧授权401触发AccessGate。重新授权后完整1ab99600 payload及rejected=false保留，手动同键回读成功才清pending，项目批准记忆仍v1；未记录token。
+- 外部f42-verification.json已保存：只读SQLite为4个Run（2完成/1取消/1失败）、4候选（个人种子1/模型2/手工1）、2决定/2修订、1任务/1执行/2成果，原手工memory_requests仅1条，integrity_check为ok。实际本地fixture模型3次，未选正文/个人记忆/聊天历史标记无泄漏。
+- 新测试服务92039经持有句柄的Agent确认live后Ctrl+C退出1，主代理核对7896/7897均无Listen，f42-verification.json已补入最终退出结果。本地浏览器及测试服务收尾完成；console/mobile未专项测试，真实供应商经验质量、CLI、Docker与完整目标未验收，F42提交及推送须待实际操作记录。

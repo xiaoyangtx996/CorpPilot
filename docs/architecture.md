@@ -469,3 +469,13 @@ Owner API 增加 `GET /api/workbench/executions/{id}/worker` 与 `POST /api/work
 创建、模型读取与完成时重新校验授权、成果及记忆基准版本；完成事务同时创建既有 `memory_candidates`、记录证据并结束Run。模型完成不等于记忆批准，不更新批准版本、不发布Skill。Owner继续使用原审批/回滚接口，批准前再次核查；已经开始执行的记忆快照保持原版本。精确同键重放不重复模型或候选，跨请求类型及异内容复用键被拒绝；queued可以取消，running在服务重启后为unknown且不自动重发。
 
 Owner鉴权接口：`POST/GET /api/workbench/memories/{scope}/{id}/retrospectives` 创建或列出记录；POST字段为 `request_id、expected_version、source_execution_id、artifact_ids`，返回202。`GET /api/workbench/retrospectives/{run_id}` 返回状态、原请求、成果元数据、候选ID和引用ID，不公开冻结输入全文。取消使用已有 `POST /api/workbench/runs/{run_id}/cancel`。本增量是后端/API；浏览器复盘入口另作F42验收，真实供应商的经验质量仍待验证。
+
+## F42：浏览器模型复盘与候选审批
+
+`MemoryPanel` 内嵌 `RetrospectivePanel`，选择当前会话中符合条件的已批准执行，并由Owner逐项选择1–100份成果；界面展示路径和字节数，UTF-8正文与总输入64KiB限制由F41服务端严格校验。调用前单独确认所选成果与目标记忆快照会用于一次模型复盘。生成仅创建待批准候选，原手工候选草稿保留；候选全文、适用边界与引用成果可审阅，仍通过既有明确确认和审批说明才替换批准记忆。
+
+复盘pending按scope/identity保存到当前标签页sessionStorage，发送前固定原request_id、来源执行、基准版本和成果选择顺序。收到202后持久保存Run ID并只通过GET读取；尚未获确认时可沿原键核对，返回必须匹配目标范围、完整请求及已知Run ID。首次明确4xx才提供重新选择入口；每次重试先清除旧rejected，之后受理未知不可沿用旧拒绝证据替代请求。读取失败保留原请求及已知结果，不等于没有复盘；存储无效或保存失败禁止新建。
+
+完成记录显示候选ID与模型引用成果，候选审批独立于模型调用确认；queued沿原Run接口取消，running不宣称能停止，unknown继续锁定且不提供替代调用。原MemoryPanel的候选/决定/回滚请求也改为每次发送前清除旧rejected，仅首次明确拒绝可重新编辑；401继续要求重新授权并保留原请求。
+
+主代理已验证项目范围v0选定文本生成候选、原草稿保留、再次Owner审批后才成为v1，以及首400后同键受理202但响应丢失、GET503、刷新保留原键和恢复GET核对原Run。两个有效请求各一次本地受控模型调用；配置禁用时queued可取消且不调用模型，非法JSON失败且不生成候选。原MemoryPanel候选首400后同键201响应丢失时，旧rejected清除、刷新保留pending，候选GET可见不替代原请求确认。测试服务真实重启并轮换口令后，401触发重新授权，原完整payload与rejected=false继续保留，同键回读成功才清除pending，项目批准记忆仍v1。数据库回读4个Run、4候选、2决定/2修订且完整性通过，本地模型共3次、隐私标记未泄漏；测试服务最终经实际句柄中断并确认退出，7896/7897均无监听。未专项测试console/mobile，真实供应商经验质量、CLI和Docker仍未验收；具体结果见 [F42验收记录](acceptance-report.md#f42-浏览器模型复盘验收)。

@@ -287,4 +287,22 @@ Windows保留应用/数据修复及重启窗口的授权已异步待答，未执
 
 独立审查Pass：21项复盘单元及HTTP定向通过（6.33s），另在临时数据中核验项目输入排除个人记忆/未选成果/聊天前史、GET不返回正文，以及错误范围、未选证据、撤销execute权限被拒绝。候选与Run原子写入故障回滚、幂等和重启unknown均有直接测试。
 
-这验证实际控制器/协议/持久化链路，不验证真实供应商经验质量、真实CLI或Docker。F41仅为后端/API增量，浏览器复盘入口与其故障恢复另列F42；Skill发布、自动闭环协作等其余目标仍未完成。实际提交/推送回读证据写入外部f41-delivery-result.json。
+这验证实际控制器/协议/持久化链路，不验证真实供应商经验质量、真实CLI或Docker。F41仅为后端/API增量，浏览器复盘入口与其故障恢复另列F42；Skill发布、自动闭环协作等其余目标仍未完成。F41实际提交 `ffb7c3a` 后立即推送返回GitHub403，远端实施分支回读为空；外部 `f41-delivery-result.json` 记录本次结果，本地提交不代表远端交付。
+
+## F42 浏览器模型复盘验收
+
+本增量修改MemoryPanel、RetrospectivePanel和api.ts，接入已批准成果选择、独立模型调用确认、原请求恢复、复盘历史和既有候选审批。task_execution_ui独立读审Pass；当前typecheck及Vite构建45 modules通过，产物 `index-CVd9BLsW.js`。本轮前端增量沿用F41后端完整532项及8子用例、全量之后新增隐私用例后的HTTP定向4项证据，不将既有测试记作新一轮后端全量。
+
+主代理真实浏览器验证项目scope记忆v0：只选择 `selected.txt`，不选择 `private-unselected`，显式确认模型调用后生成候选；批准记忆仍为v0，手工候选草稿保持。随后Owner核对全文、填写说明并明确审批，才产生批准版本v1。模型生成不自动替换记忆。
+
+第二请求（ID前缀ac21）首次400后沿同一key核对；上游接受202但响应被丢弃，随后GET503。页面不再提供基于旧rejected的修改入口；刷新并重新进入后保留原key，恢复GET后找到原Run（ID前缀6e27324b）及对应候选。两个有效请求各产生一次本地受控模型调用，累计2次；未选成果及个人私密记忆的泄漏检查均为false。本地替身验证协议和隐私选择，不代表真实供应商经验质量。
+
+模型配置禁用时，第3个Run保持queued，经UI取消后为cancelled且没有candidate、没有模型调用。第4个Run收到非法模型JSON后为failed且没有candidate。本地模型调用累计3次（2次有效、1次非法输出），取消路径为0次调用。
+
+原MemoryPanel手工候选首发400后沿同键重试，上游201已保存但响应丢失；pending的rejected为false，重新编辑按钮消失。刷新后仍保留原key（前缀1ab99600），未因候选GET已可见就清除pending。1315×1272桌面截图确认对话框可滚动、表单可操作；尚未据此声明独立console或移动视口验收。
+
+主代理确认旧fixture会话93937仍运行后Ctrl+C停止，工具确认终端退出1；新会话92039使用同一测试数据重新启动并轮换运行期访问凭据。旧授权收到401并触发AccessGate，重新授权后MemoryPanel仍保留1ab99600原请求的完整payload和rejected=false；手动同键回读成功后才清除pending，项目批准记忆保持v1。本文不保存任何实际或测试token。
+
+外部 `H:\item\CorpPilot-test-evidence-20260906\f42-verification.json` 已保存。主代理只读SQLite回查为4个Run（2 completed、1 cancelled、1 failed）、4候选（个人种子1、模型2、手工1）、2条决定/2个修订、1任务/1执行/2成果；原手工request_id在memory_requests中仅1条，integrity_check为ok。实际本地fixture模型调用共3次，选中正文进入模型，未选成果、个人记忆及聊天历史标记均未泄漏。该1次执行为测试来源，未据此声明真实CLI或Docker运行；真实供应商经验质量仍待验证。
+
+新测试服务92039由持有句柄的Agent确认仍运行后Ctrl+C停止，工具确认终端退出1（主动中断）；主代理再次核对7896和7897均无Listen，f42-verification.json已补入最终退出结果。F42本地浏览器恢复与测试服务收尾完成；console/mobile未专项测试，真实供应商经验质量、真实CLI及Docker仍未验收。提交与远端推送结果须以随后实际操作为准。

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiError, type Agent, type Conversation, type Task, type TaskExecution, type OwnerReview, type MemoryDocument, type MemoryRevision, type MemoryCandidate } from './api';
+import { RetrospectivePanel } from './RetrospectivePanel';
 
 type Pending = { path: string; body: { request_id: string; expected_version?: number; source_execution_id?: string; content?: string; decision?: 'approved' | 'rejected'; note?: string; target_version?: number }; rejected: boolean };
 type Source = { task: Task; run: TaskExecution; eligible: boolean };
@@ -52,6 +53,8 @@ export function MemoryPanel({ scope, identity, title, conversationId, onClose }:
   useEffect(() => { alive.current = true; dialog.current?.showModal(); restore(); void load(); return () => { alive.current = false; serial.current++; }; }, []);
   async function send(value: Pending) {
     if (writing.current || storageError) return;
+    const first = !pending;
+    value = { ...value, rejected: false };
     try { sessionStorage.setItem(key, JSON.stringify(value)); } catch { setStorageError('无法保存原请求，尚未发送。'); return; }
     writing.current = true; serial.current++; setBusy(true); setPending(value); setChecked(false); setNotice('');
     try {
@@ -60,7 +63,7 @@ export function MemoryPanel({ scope, identity, title, conversationId, onClose }:
       sessionStorage.removeItem(key); setPending(null); setNotice('原请求已确认保存。候选须批准后生效；执行中的记忆快照保持原版本。');
     } catch (error) {
       if (!alive.current) return;
-      const rejected = value.rejected || error instanceof ApiError && error.status >= 400 && error.status < 500;
+      const rejected = first && error instanceof ApiError && error.status >= 400 && error.status < 500;
       const saved = { ...value, rejected }; setPending(saved);
       try { sessionStorage.setItem(key, JSON.stringify(saved)); } catch { setStorageError('拒绝结果未能写入存储，原请求仍保留。'); }
       setNotice(`${rejected ? '请求被拒绝，原草稿保留。' : '结果未确认，仅可同键重试。'}${message(error)}`);
@@ -87,6 +90,7 @@ export function MemoryPanel({ scope, identity, title, conversationId, onClose }:
       <button disabled={blocked || !allowed} onClick={reedit}>采用当前版本（保留全文草稿）</button>
       <button disabled={blocked || !allowed || !content.trim() || version !== document?.version || !sources.some(row => row.eligible && row.run.id === source && row.task.conversation_id === conversationId)} onClick={() => void send({ path: `${base}/candidates`, rejected: false, body: { request_id: crypto.randomUUID(), expected_version: version, source_execution_id: source, content: content.trim() } })}>提交候选</button>
     </section>
+    <RetrospectivePanel scope={scope} identity={identity} version={document?.version ?? 0} sources={sources.filter(row => row.eligible && row.task.conversation_id === conversationId).map(row => ({ id: row.run.id, title: row.task.title }))} disabled={blocked || !allowed || !document} onCandidate={() => void load()} />
     <section><h3>经验候选</h3>{!candidates.length && <p>{checked ? '暂无候选。先完成任务成果评审，再提出经验。' : '尚未成功读取候选，不能判断是否为空。'}</p>}{candidates.map(row => <details key={row.id}><summary>{sourceTitle(row.source_task_id)} · 基于记忆 v{row.expected_version} · {row.decision ? row.decision.decision === 'approved' ? '已批准' : '已拒绝' : '待决定'}</summary><p>来源需求 v{row.source_requirement_version} · 执行 {row.source_execution_id} · {row.created_at}</p><pre>{row.content}</pre>{row.decision && <p>{row.decision.note} · 决定时记忆 v{row.decision.result_version} · {row.decision.decided_at}</p>}</details>)}
       <label>待决定候选<select disabled={blocked} value={candidateId} onChange={event => { setCandidateId(event.target.value); setConfirmed(false); }}><option value="">选择候选</option>{candidates.filter(row => !row.decision).map(row => <option key={row.id} value={row.id}>{sourceTitle(row.source_task_id)} · 记忆 v{row.expected_version} · {row.id}</option>)}</select></label>
       {selectedCandidate && <pre>{selectedCandidate.content}</pre>}
