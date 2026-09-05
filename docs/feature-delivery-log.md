@@ -454,4 +454,18 @@
 - 独立f38_verify.py回读4个Run（2完成/1失败/1取消）、3次实际本地HTTP模型调用、2项目4项v1任务、0CLI及无私聊前史泄漏。模型为本地7900 fixture，不是真实供应商；本轮纯前端，沿用F37后端证据，不重跑全量。
 - QA服务重启前后f38_verify数据一致、数据库完整性通过，浏览器恢复原cancelled Run与历史；QA服务/代理/Vite均经实际句柄确认退出。代理有客户端取消写入的WinError10053，不宣称console/代理无错误；正常7892未重启且最终bundle已HTTP回读。
 - 网络受理未知同键恢复已测；服务端Run=unknown仍无模型人工核查/解除入口，F33仅覆盖CLI。storage损坏/QuotaExceeded只有静态fail-closed审查，未注入浏览器；console/mobile及真实供应商/CLI/Docker仍保留未验证边界。
-- 提交标识：`feat(workbench): F38 review model proposals in browser`。F38提交、推送及远端回读仍待主代理本次实际执行，不预报成功或旧403结果。
+- 提交标识：`feat(workbench): F38 review model proposals in browser`。实际提交 `c592eae` 后立即推送返回GitHub403，目标远端分支回读为空；外部证据 `f38-delivery-result.json`，远端交付仍阻塞。
+
+## F39：Owner API访问鉴权
+
+- 主代理负责后端、集成与QA；verify_prompt_push负责前端；task_execution_ui负责Tech Lead独立审查；verify_history_scope负责Doc/PM文档核对。
+- 本次先交付Owner控制面鉴权；Docker实现改为F40，仍未提交、待接入和真实环境实测，不与F39合并宣称完成。
+- 每启动随机token保护全部/api/workbench读取、写入和下载；静态及基础health不需token。主入口自动打开fragment授权页且不打印秘密，失败生成宿主数据根临时owner-access入口并在退出删除；浏览器清fragment、sessionStorage保存凭据、下载改认证fetch/blob。
+- 401以AccessExpiredError保留业务pending。主代理7897浏览器验证任务201已落库响应丢失、刷新后401、重新授权同键回读，数据库仅1任务。33字节成果UI下载点击无错误、HTTP字节一致，未核验浏览器保存文件；未调用真实模型或CLI。
+- 最终44模块构建index-BLeLdit0.js，定向23项通过；排除全部未提交Docker改动的F39纯暂存树导出后，全量448项及8子用例通过（75.04s），其后仅更正1行非行为注释。此前含Docker的工作树488项及8子用例仅为历史证据；401/fallback独立审查Pass，静态目录保护已落实。
+- QA服务真实停止重启后旧token401、重新授权恢复同1task；旧代理和重启后的95112服务均已确认退出，本轮QA服务已停止。token默认仅驻宿主内存，仅自动打开失败时生成运行期入口HTML并在退出删除，该文件已加入Git忽略，文档不保留凭据。
+- 不隔离同OS用户、不解决任意网络出口；Tauri私有握手仍规划。F39提交/推送待实际执行，真实Docker/供应商/CLI验收保持未完成。
+
+## F40：真实 Docker Worker（未提交）
+
+- Docker执行适配、配置及恢复工作从原F39范围独立编号F40；当前仍待接入和真实双Worker实测。Docker不可用环境下的替身/故障测试只证明契约，不能替代实际容器隔离、停止回读或凭据与网络验收。

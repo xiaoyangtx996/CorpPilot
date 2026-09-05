@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, ApiError, type Agent, type Conversation, type Task, type ExecutionArtifact, type OwnerReview, type ReviewRequest, type TaskExecution } from './api';
+import { api, ApiError, downloadArtifact, type Agent, type Conversation, type Task, type ExecutionArtifact, type OwnerReview, type ReviewRequest, type TaskExecution } from './api';
 
 function decode(raw: string): ReviewRequest {
   const row = JSON.parse(raw);
@@ -22,6 +22,14 @@ function ReviewPanel({ run }: { run: TaskExecution }) {
   const [loaded, setLoaded] = useState(false), [loading, setLoading] = useState(false), [busy, setBusy] = useState(false);
   const [current, setCurrent] = useState<boolean | null>(null), [allowed, setAllowed] = useState(false);
   const [error, setError] = useState(''), [storageError, setStorageError] = useState('');
+  const [downloading, setDownloading] = useState<string | null>(null), [downloadError, setDownloadError] = useState('');
+  async function download(item: ExecutionArtifact) {
+    if (downloading) return;
+    setDownloading(item.id); setDownloadError('');
+    try { await downloadArtifact(item.id, item.path); }
+    catch (error) { if (alive.current) setDownloadError(error instanceof Error ? error.message : '成果下载失败，请重试'); }
+    finally { if (alive.current) setDownloading(null); }
+  }
   const [note, setNote] = useState(''), [decision, setDecision] = useState<'approved' | 'rejected'>('approved'), [confirmed, setConfirmed] = useState(false);
   function restore() {
     try { const raw = sessionStorage.getItem(key); const saved = raw === null ? null : decode(raw); pendingRef.current = saved; setPending(saved); setRejected(raw !== null && JSON.parse(raw).rejected === true); setStorageError(''); }
@@ -80,7 +88,7 @@ function ReviewPanel({ run }: { run: TaskExecution }) {
   return <section className="execution-review">
     <button disabled={loading || busy} onClick={() => { restore(); void load(); }}>{loading ? '读取成果与评审中…' : '刷新成果与评审'}</button>
     {error && <p className="error" role="alert">{error}</p>}{storageError && <p className="error" role="alert">{storageError}</p>}
-    {loaded && <><h4>已保存成果（{artifacts.length}）</h4>{!artifacts.length && <p className="muted">暂无已保存成果，不能批准交付。</p>}<ul>{artifacts.map(item => <li key={item.id}><a href={`/api/workbench/artifacts/${encodeURIComponent(item.id)}/download`} download>{item.path}</a><small>{item.size.toLocaleString()} 字节 · SHA-256：{item.sha256}</small></li>)}</ul></>}
+    {loaded && <><h4>已保存成果（{artifacts.length}）</h4>{!artifacts.length && <p className="muted">暂无已保存成果，不能批准交付。</p>}<ul>{artifacts.map(item => <li key={item.id}><button type="button" disabled={!!downloading} onClick={() => void download(item)}>{downloading === item.id ? '正在下载…' : item.path}</button><small>{item.size.toLocaleString()} 字节 · SHA-256：{item.sha256}</small></li>)}</ul>{downloadError && <p className="error" role="alert">{downloadError}</p>}</>}
       {review ? <section aria-label="Owner 评审决定"><p><strong>Owner 已{review.decision === 'approved' ? '批准' : '拒绝'}</strong> · 需求 v{review.requirement_version} · {new Date(review.reviewed_at).toLocaleString()}</p><p className="task-source">{review.note}</p><p className="muted">决定不可覆盖。{current === null ? '当前任务版本尚未核对，此决定仅绑定记录中的执行与需求版本。' : current ? '此决定仅对应本次执行及评审绑定的成果快照。' : '这是历史决定，不代表当前任务已通过验收。'}</p></section> : loaded && <p>{pending ? '尚未读取到已保存的 Owner 决定；请核对待确认请求。' : 'Owner 尚未评审；执行退出成功不等于验收通过。'}</p>}
     {pending ? <section><p role="status">评审请求待确认 · 需求 v{pending.expected_version} · {pending.decision === 'approved' ? '批准' : '拒绝'}</p><p className="task-source">{pending.note}</p><small>{pending.request_id}</small><p className="muted">沿用原请求 ID 和完整内容核对。若服务端此前未接收，此操作可能首次保存这项决定。</p><button disabled={busy || !!storageError} onClick={() => void submit()}>{busy ? '核对中…' : '核对原评审请求'}</button>{rejected && <><p>首次提交已被明确拒绝，可撤销后重新读取。曾经结果未知的请求不能撤销。</p><button disabled={busy || !!storageError} onClick={discard}>撤销未接受评审</button></>}</section>
       : !review && <form onSubmit={event => { event.preventDefault(); void submit(); }}><fieldset className="task-fields" disabled={busy || !!blocked || !!storageError}><label>评审决定<select value={decision} onChange={event => { setDecision(event.target.value as 'approved' | 'rejected'); setConfirmed(false); }}><option value="approved">批准成果</option><option value="rejected">拒绝成果</option></select></label><label>评审理由<textarea required maxLength={2000} value={note} onChange={event => setNote(event.target.value)} /></label>{decision === 'approved' && <label className="check"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />我已查验全部成果，确认符合本次需求与验收标准</label>}<button className="primary" disabled={!note.trim() || decision === 'approved' && (!confirmed || !artifacts.length)}>{busy ? '保存评审中…' : '确认提交评审'}</button></fieldset>{blocked && <p className="muted">{blocked}</p>}</form>}

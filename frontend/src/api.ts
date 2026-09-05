@@ -18,15 +18,67 @@ export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) { super(message); this.status = status; }
 }
+export class AccessExpiredError extends Error {}
+
+const accessKey = 'corppilot.owner-access.v1';
+let accessToken = '';
+export const accessExpiredEvent = 'corppilot-access-expired';
+export function saveAccessToken(value: string) {
+  if (!/^[A-Za-z0-9_-]{43}$/.test(value)) throw new Error('访问口令格式无效，请使用本次服务启动时提供的口令');
+  try { sessionStorage.setItem(accessKey, value); }
+  catch { throw new Error('无法保存当前标签页的访问口令，请允许会话存储后重试'); }
+  accessToken = value;
+}
+export function restoreAccessToken(): boolean {
+  accessToken = '';
+  const fragment = new URLSearchParams(location.hash.slice(1));
+  const provided = fragment.get('access_token');
+  if (fragment.has('access_token')) {
+    history.replaceState(null, '', location.pathname + location.search);
+    saveAccessToken(provided ?? '');
+    return true;
+  }
+  let saved: string | null;
+  try { saved = sessionStorage.getItem(accessKey); }
+  catch { throw new Error('无法读取当前标签页的访问口令，请允许会话存储后重试'); }
+  if (!saved) { accessToken = ''; return false; }
+  saveAccessToken(saved);
+  return true;
+}
+async function authorizedFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const sentToken = accessToken;
+  const headers = new Headers(init.headers);
+  if (sentToken) headers.set('Authorization', `Bearer ${sentToken}`);
+  const response = await fetch(`/api/workbench${path}`, { ...init, headers, redirect: 'error' });
+  if (response.status === 401) {
+    if (accessToken === sentToken) {
+      accessToken = '';
+      try { sessionStorage.removeItem(accessKey); } catch { /* In-memory access is revoked even if storage fails. */ }
+      window.dispatchEvent(new Event(accessExpiredEvent));
+    }
+    throw new AccessExpiredError('访问口令已失效，请使用本次服务启动时的新口令');
+  }
+  return response;
+}
 
 export async function api<T>(path: string, method = 'GET', body?: unknown, timeout = 15000): Promise<T> {
-  const response = await fetch(`/api/workbench${path}`, {
+  const response = await authorizedFetch(path, {
     method, headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout),
   });
   const result = await response.json();
   if (!response.ok) throw new ApiError(result.error || '请求失败', response.status);
   return result;
+}
+export async function downloadArtifact(id: string, filename: string) {
+  const response = await authorizedFetch(`/artifacts/${encodeURIComponent(id)}/download`, { signal: AbortSignal.timeout(60000) });
+  if (!response.ok) throw new ApiError('成果下载失败，请刷新成果状态后重试', response.status);
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename.split(/[\\/]/).at(-1) || 'artifact';
+  document.body.append(link);
+  try { link.click(); } finally { link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 export type ExecutionRequest = { request_id: string; expected_version: number; reconciliation_note: string; previous_execution_id: string | null };
 export type ExecutionArtifact = { id: string; execution_id: string; path: string; size: number; sha256: string };

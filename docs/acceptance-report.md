@@ -242,3 +242,25 @@ QA服务会话88766经Ctrl+C实际退出（退出码1），新会话77732启动�
 代理关停日志包含浏览器刷新取消请求造成的客户端写入端ConnectionAbortedError（WinError10053，外部脚本line34），不是应用HTTP500；数据库与本地模型核验通过，不宣称代理或浏览器console没有错误。未对storage损坏/QuotaExceeded进行浏览器注入，此部分只有静态fail-closed审查；console独立日志与mobile仍未验收。
 
 本轮已验证网络受理结果未知时的同键恢复。服务端Run状态为unknown时仍保留原请求并禁止替代调用，尚无模型未知结果的人工核查/解除入口；F33核查仅适用于CLI。该恢复缺口保留为后续工作，不能宣称所有模型未知场景闭环。
+
+F38本地提交 `c592eae` 后立即推送仍返回GitHub403，目标远端分支回读为空；外部 `f38-delivery-result.json` 为本次交付证据，本地验收不等于远端交付。
+
+## F39 Owner API访问鉴权验收
+
+本轮交付范围为每启动随机token的Owner API鉴权、浏览器授权恢复及认证下载；Docker实现改编号F40，仍未提交、待接入和真实环境实测。全部 `/api/workbench` GET、写入与下载需Bearer授权，静态页面及基础health无需token。自动打开授权页不打印秘密；失败时宿主数据根提供临时本机入口，退出删除。本文不记录任何实际或测试token。
+
+主代理负责后端、集成与QA；verify_prompt_push负责前端；task_execution_ui负责Tech Lead独立审查；verify_history_scope负责Doc/PM文档核对。401/fallback修正后的独立审查Pass。
+
+本轮外部汇总证据为 `f39-access-verification.json`；以下只记录结果和非敏感标识，不复制任何访问凭据。
+
+主代理在7897浏览器故障代理验证：任务创建已由上游201落库但响应丢失，刷新后原请求重试得到401；重新授权再沿同键恢复，task_id为 `e13e2ceb-aaea-4419-b89b-3083013d5f64`，request_id为 `fc6436a2-2b2e-488a-8e32-0289db1e7e22`，数据库始终只有1项任务。401走AccessExpiredError，不作为可抛弃原pending的业务拒绝。地址fragment及时清除，后续请求从sessionStorage取得访问凭据。
+
+独立测试数据为1会话、1消息、1任务，以及手工预置的1执行和1成果；没有真实CLI或模型调用。浏览器点击33字节 `qa-access-report.txt` 下载无错误，HTTP测试核对附件字节一致；未回读浏览器最终保存文件，不能据此声明浏览器落盘字节或hash已核验。
+
+最终Vite构建44 modules、index-BLeLdit0.js。主代理最终定向 **23 passed（14.11s）**，包含自动打开失败入口和拒绝data_dir处于frontend_dir内的测试。为单独验收F39，主代理将纯暂存树导出到仓库外 `H:\item\CorpPilot-test-evidence-20260906\f39-index-check`，排除所有未提交Docker修改，用原仓库 `.venv` Python在导出树执行 `-m pytest tests/ -q`，结果 **448 passed、8 subtests passed（75.04s）**。其后仅修正1行非行为注释。
+
+此前完整工作树的 **488 passed、8 subtests passed（77.88s）** 包含尚未提交Docker修改，只作为历史工作树证据；F39独立全量结论采用上述纯暂存树448项及8子用例，不混算为Docker交付通过。
+
+主代理确认QA服务83091停止（退出码1），95112在同一7896端口重新启动并生成新的运行期访问凭据。原浏览器刷新后旧授权得到401，重新授权后恢复同一任务，数据库仍只有1task；旧故障代理67742已确认停止，95112也最终经Ctrl+C确认退出（退出码1），本轮QA服务均已停止。过程中未把测试凭据写入文档。宿主token默认仅驻内存，只有打开浏览器失败才生成含运行期授权信息的本机HTML；owner-access文件已加入Git忽略，退出清理。
+
+本轮不证明同一OS用户隔离或任意网络出口受控，真实Docker/供应商/CLI均未验证。Tauri Rust私有握手、受限请求桥和原生保存仍是后续规划；浏览器Bearer鉴权不等于桌面宿主身份已完成。F39提交和推送结果待实际操作补记。

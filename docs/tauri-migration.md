@@ -2,6 +2,8 @@
 
 状态：F32 规划交付，2026-09-06；基于浏览器分支 d9b70e0 实际代码核对。本文是本轮明确要求的后续桌面方案，不是已实现的安装包、宿主权限或升级功能。浏览器完整目标仍在推进，桌面实施以浏览器核心验收通过为前置门。
 
+F39增量补记：浏览器版已实现每次服务启动的Owner Bearer鉴权、重新授权保留pending及认证fetch/blob下载。下文Rust私有握手、受限请求桥、令牌不进入WebView及原生保存仍是桌面规划，不能用浏览器实现替代其验收。真实Docker Worker另列F40，仍未提交、待接入和实测。
+
 ## 选定边界
 
 保留 Vite/React 页面与 Python 业务服务。Tauri 2 负责窗口、单实例、服务生命周期、受限请求转发、凭据和用户选定文件的保存；不把任务治理、记忆审批、SQLite 或调度器重写成 Rust。浏览器继续独立构建和运行。
@@ -14,9 +16,9 @@ Tauri 官方支持将外部程序作为 externalBin，并按目标平台 triple 
 
 | 已有权威实现 | 可复用 | 桌面实施前需要改变 |
 |---|---|---|
-| frontend/src/api.ts | JSON API、ApiError、请求超时 | 浏览器 fetch / 桌面 invoke 在此处分支；保留原 HTTP 状态和请求 ID；不能让 Rust 收任意目标 URL |
-| frontend/src/ExecutionReview.tsx | 成果列表、批准流程 | 下载 anchor 直接使用相对 URL，必须接入独立保存入口；不能只替换 api() |
-| scripts/workbench/server.py | 业务路由、64 KiB 请求体、Host/Origin 校验、loopback监听 | 桌面鉴权、结构化 readiness、协议/数据版本、受控关闭；现有 /health 只有 status=ok，不能认证实例 |
+| frontend/src/api.ts | JSON API、请求超时、浏览器Bearer头及AccessExpiredError保留pending | 浏览器 fetch / 桌面 invoke 在此处分支；保留原 HTTP 状态和请求 ID，桌面令牌由Rust持有；不能让 Rust 收任意目标 URL |
+| frontend/src/ExecutionReview.tsx | 成果列表、批准流程、F39认证fetch/blob下载 | 桌面接入受限原生保存入口，校验字节与hash；浏览器点击成功不代替桌面文件落盘验收 |
+| scripts/workbench/server.py | 业务路由、64 KiB 请求体、Host/Origin校验、loopback及F39全部业务API鉴权 | Rust私有握手、结构化 readiness、协议/数据版本、受控关闭；匿名 /health 仍只有 status=ok，不能认证实例 |
 | scripts/workbench/controller.py、cli_controller.py | 数据目录 OS 锁、退出等待、未知结果恢复 | 迁移前生命周期锁；停止接单及停止领取队列后有序排空；宿主等待确实退出 |
 | scripts/workbench/provider.py | 请求子进程和超时边界 | 当前 sys.executable -I -c 在冻结程序中不是 Python 解释器；需专用 --provider-worker 启动分派并保留 stdin JSON 协议 |
 | scripts/workbench/store.py | SQLite、身份稳定 ID、v1→v2备份迁移 | 当前 Store 先于 Controller 锁初始化；把迁移/模板更新放到生命周期互斥之后；模板资源目录显式传入 |
@@ -45,7 +47,7 @@ Tauri 官方支持将外部程序作为 externalBin，并按目标平台 triple 
 
 Rust 请求桥仅接受固定 API 方法与路由模板、JSON 请求体及受限分页参数。只连接握手确认的 127.0.0.1 端口，禁用代理和重定向；固定头部，限制大小、超时及并发。拒绝绝对 URL、路径穿越、任意 header 与泛化 shell 命令。Python 保留全部业务权限和版本验证，Rust 不复制审批逻辑。
 
-桌面模式下，Python 的读写接口、下载和健康握手都要求会话令牌；从环境中分离 Worker 凭据，Worker 不取得 Owner 令牌。已有 Host/Origin 约束用于防网页跨站，不能认证无 Origin 的本地程序。浏览器开发模式与桌面鉴权模式明确分开，不能通过失败后降级无鉴权来连通。
+桌面模式规划中，Python的读写接口、下载和健康握手都要求会话令牌；从环境中分离Worker凭据，Worker不取得Owner令牌。F39浏览器版已对全部业务API及下载增加Bearer检查；Host/Origin继续用于防网页跨站，不能单独认证无Origin的本地程序。浏览器使用每启动fragment授权入口和sessionStorage；桌面须改为Rust私有握手与持有凭据，不沿用向WebView交付fragment的方式，也不能在失败后降级无鉴权。
 
 桌面窗口只启用所需自定义命令；Rust 内部启动 sidecar 不意味着给 JavaScript 开放 shell:allow-spawn。限制 capability 到主窗口，拒绝远程页面获得 IPC 权限。多个 capability 的权限会合并，审查应看有效权限全集。[官方 capability 说明](https://v2.tauri.app/security/capabilities/)
 
@@ -99,5 +101,7 @@ D1–D6 各自实现、对应测试、Ponytail审查后单独 commit 并立即 p
 ## 本轮证据与未完成项
 
 当前可执行入口仍为 frontend 的 npm run build 和仓库 .venv/Scripts/python.exe -m pytest tests/；从 scripts 目录执行 ..\.venv\Scripts\python.exe -m workbench.server --port 7892。未建立的 tauri build、冻结打包、安装测试均不能作为本轮已通过命令。
+
+浏览器服务启动后自动打开本次授权页，宿主token默认只驻内存；仅打开失败时生成宿主数据根临时 `owner-access-*.html` 运行入口，退出时删除。入口文件被Git忽略，数据目录不能处于静态前端目录内。服务重启使旧token失效，重新授权仍保留业务pending并沿原键核对；这些F39能力已接入，测试范围见 [鉴权验收记录](acceptance-report.md#f39-owner-api访问鉴权验收)。它们不隔离同一OS用户，也不限制任意网络出口。
 
 已对照上述源码和 Tauri 官方资料，独立子代理审查迁移差距。本轮只交付迁移契约，没有 Rust、安装器或 OS 凭据实现。Docker CLI不在当前PATH，使用已安装绝对路径 docker.exe info 后仍返回 docker_engine 管道不存在；没有启动、修复或重装系统服务。真实双Worker、模型供应商联调以及浏览器其余完整目标继续保留未完成状态。

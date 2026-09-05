@@ -12,15 +12,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from workbench.server import MAX_BODY_BYTES, WorkbenchServer
 from workbench.store import Store
 
+TOKENS = {}
+
 
 @contextmanager
 def running(data_dir):
     server = WorkbenchServer(Store(data_dir), port=0)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    TOKENS[server.server_port] = server.access_token
     try:
         yield server.server_port
     finally:
+        TOKENS.pop(server.server_port, None)
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
@@ -31,7 +35,8 @@ def request(port, method, path, payload=None, headers=None, raw=None):
     body = json.dumps(payload).encode() if payload is not None else raw
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
     try:
-        connection.request(method, path, body, {"Content-Type": "application/json", **(headers or {})})
+        connection.request(method, path, body, {"Content-Type": "application/json",
+                           "Authorization": "Bearer " + TOKENS.get(port, ""), **(headers or {})})
         response = connection.getresponse()
         assert response.getheader("Content-Type") == "application/json; charset=utf-8"
         assert response.getheader("Access-Control-Allow-Origin") is None
@@ -95,6 +100,7 @@ def test_ambiguous_headers_rejected(tmp_path):
                 connection.putrequest("POST", "/api/workbench/agents")
                 connection.putheader("Content-Type", "application/json")
                 connection.putheader("Content-Length", "2")
+                connection.putheader("Authorization", "Bearer " + TOKENS[port])
                 if name == "Origin":
                     connection.putheader("Origin", value)
                 connection.putheader(name, value)

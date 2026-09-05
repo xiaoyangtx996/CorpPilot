@@ -435,3 +435,17 @@ completed结果作为待审阅建议显示，不能因模型完成就创建项�
 主代理类型检查与最终43模块构建通过（index-Dx-oq0Yc.js），独立审查Pass。真实浏览器覆盖正常提案、202后GET恢复、首发400后原键受理却丢响应/GET503、跨会话恢复、F36待确认冲突、非法JSON和排队取消。独立数据为4个Run、3次实际本地HTTP模型调用、2项目/4任务v1、0次CLI，未泄漏私聊前史。沿用F37后端全量与追加定向历史证据；本地fixture不代表真实供应商、CLI或Docker通过，详见 [F38验收记录](acceptance-report.md#f38-模型提案浏览器验收)。
 
 网络受理结果未知的同键恢复与服务端Run=unknown分别处理：后者继续保留原请求、禁止替代调用，尚无模型未知结果的人工核查/解除入口，不能复用仅用于CLI的F33声明。存储损坏/QuotaExceeded只有静态fail-closed审查，未作浏览器注入；服务重启回读已验证，仍不等于所有模型未知恢复场景闭环。
+
+## F39：Owner API 访问鉴权
+
+本增量先补齐控制面权限边界：服务每次启动生成随机Owner token，所有 `/api/workbench` 读取、写入和成果下载统一校验Bearer凭据，继续保留Host/Origin检查。静态页面、资源与基础health不要求token，也不返回业务访问凭据；没有凭据不能借助伪造Host/Origin访问Owner数据或操作接口。token不作为永久身份保存，服务重启后旧授权失效。
+
+主入口通过 `webbrowser.open` 打开带fragment的本次授权页面，不打印秘密；宿主默认仅在内存持有token，不持久保存secret。仅自动打开失败时，在宿主数据根生成含本次授权信息的 `owner-access-*.html` 运行入口，并在退出时删除；该文件被Git忽略，服务拒绝将数据目录放在静态前端目录内，避免被静态路由读取。浏览器读取fragment后立即从地址栏清除并存入当前标签页sessionStorage，统一API请求携带认证头。成果下载使用认证fetch取得blob，不把token放进下载URL或保留裸API链接。
+
+401使用独立 `AccessExpiredError`，只要求重新授权，不把它当作业务首次明确拒绝而清除或替换pending。原请求可能已被服务器接受，必须保留原request_id与完整payload；重新授权后沿原键恢复。主代理浏览器已验证任务201落库却丢失响应、刷新后401、重新授权再同键回读且仅一任务；下载API字节一致，浏览器点击无错误，但未核对浏览器保存文件。
+
+本轮最终44模块构建为index-BLeLdit0.js；排除未提交Docker修改的F39纯暂存树导出后，全量448项及8子用例通过，最终定向23项通过，独立审查Pass，详见 [F39验收记录](acceptance-report.md#f39-owner-api访问鉴权验收)。此前含Docker的488项工作树回归另作历史记录。此权限边界不隔离同一OS用户，不限制Worker任意网络出口，也不证明真实Docker、供应商或CLI运行。
+
+## F40：真实 Docker Worker（未提交，待接入与实测）
+
+原拟Docker增量改编号F40，与F39鉴权分别交付。工作树中的Docker配置和执行适配仍待集成、容器身份恢复及真实双Worker验证；当前docker_engine管道不存在、WSL2不可用，不能把命令替身或鉴权通过作为Docker可运行证据。F40不得在未确认原容器退出时解除unknown，也不能因固定镜像或只读挂载就推断网络和凭据隔离完成。

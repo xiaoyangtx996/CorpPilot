@@ -59,3 +59,6 @@ data/locks/*.lock
 
 # Browser workbench dependencies
 node_modules/
+
+# Per-process local Owner access capability (browser launch fallback)
+owner-access-*.html

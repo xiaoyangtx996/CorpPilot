@@ -4,7 +4,7 @@ import http.client
 
 import pytest
 
-from test_workbench_api import running, request
+from test_workbench_api import running, request, TOKENS
 from test_workbench_executions import setup, request as execution_request, revise
 from workbench import artifacts, cli_controller
 from test_workbench_cli_controller import fixture, until, result
@@ -30,7 +30,7 @@ def test_artifacts_commit_with_result_and_download_as_attachment(tmp_path):
         path = f'/api/workbench/artifacts/{metadata[0]["id"]}/download'
         connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
         try:
-            connection.request("GET", path)
+            connection.request("GET", path, headers={"Authorization": "Bearer " + TOKENS[port]})
             response = connection.getresponse()
             assert response.status == 200
             assert response.getheader("Content-Type") == "application/octet-stream"

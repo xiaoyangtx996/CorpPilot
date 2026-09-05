@@ -5,6 +5,9 @@ import argparse
 import json
 import logging
 import mimetypes
+import secrets
+import tempfile
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit, quote
@@ -25,6 +28,11 @@ MAX_BODY_BYTES = 64 * 1024
 
 class WorkbenchServer(ThreadingHTTPServer):
     def __init__(self, store: Store, port: int = 7892, frontend_dir: Path | None = None):
+        self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
+        if store.data_dir.resolve().is_relative_to(self.frontend_dir):
+            raise ValueError("运行数据目录不能位于前端静态资源目录内")
+        # Per-process Owner capability; never copied into worker config, public HTML or database.
+        self.access_token = secrets.token_urlsafe(32)
         self.store = store
         self.settings = Settings(store)
         self.tasks = Tasks(store)
@@ -33,7 +41,6 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.memories = Memories(store)
         self.collaboration = Collaboration(store)
         self.planning = Planning(store)
-        self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
         try:
             self.controller = ReplyController(store, self.settings)
@@ -111,6 +118,12 @@ class Handler(BaseHTTPRequestHandler):
             store = self.server.store
             url = urlsplit(self.path)
             path = url.path
+            if path.startswith("/api/workbench"):
+                authorization = self.headers.get_all("Authorization", [])
+                expected = "Bearer " + self.server.access_token
+                if (len(authorization) != 1 or not authorization[0].isascii()
+                        or not secrets.compare_digest(authorization[0], expected)):
+                    return self.respond(401, {"error": "请使用本次服务启动时提供的访问入口或口令"})
             query = parse_qs(url.query, keep_blank_values=True)
             if query and not (self.command == "GET" and path.endswith("/messages")):
                 raise ValueError("不支持的查询参数")
@@ -335,13 +348,36 @@ def main():
     parser.add_argument("--port", type=int, default=7892)
     args = parser.parse_args()
     server = WorkbenchServer(Store(args.data_dir), args.port)
-    print(f"CorpPilot API http://127.0.0.1:{server.server_port}", flush=True)
+    print(f"CorpPilot http://127.0.0.1:{server.server_port}；正在打开本机授权页面", flush=True)
+    fallback = None
     try:
+        fallback = open_owner_page(server)
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         server.server_close()
+        if fallback:
+            fallback.unlink(missing_ok=True)
+
+
+def open_owner_page(server):
+    """Deliver the capability locally without logging it or exposing an HTTP bootstrap route."""
+    url = f"http://127.0.0.1:{server.server_port}/#access_token={server.access_token}"
+    try:
+        if webbrowser.open(url):
+            return None
+    except webbrowser.Error:
+        pass
+    # Only create this private runtime artifact when browser activation failed.
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".html", prefix="owner-access-",
+                                     dir=server.store.data_dir, encoding="utf-8", delete=False) as file:
+        file.write('<!doctype html><meta charset="utf-8"><title>CorpPilot 本机入口</title>'
+                   '<p>此文件包含本次服务的访问权限，请勿分享。</p>'
+                   f'<a href="{url}" rel="noreferrer">进入 CorpPilot 工作台</a>')
+        path = Path(file.name)
+    print(f"浏览器未能自动打开，请用浏览器打开本机入口文件：{path}（请勿分享该文件）", flush=True)
+    return path
 
 
 if __name__ == "__main__":
