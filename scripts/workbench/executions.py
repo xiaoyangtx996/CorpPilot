@@ -8,6 +8,7 @@ from .store import Store, _text
 from .tasks import Tasks, TaskVersionConflict
 from . import artifacts as artifact_store
 from . import dependencies
+from . import memories
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -41,6 +42,7 @@ class Executions:
                 WHERE state IN ('queued','running','stopping')""")
             artifact_store.initialize(db)
             dependencies.initialize_inputs(db)
+            memories.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -150,6 +152,8 @@ class Executions:
                 return False
             db.executemany("INSERT INTO execution_inputs VALUES(?,?,?)",
                            [(identity, item["dependency_task_id"], item["upstream_execution_id"]) for item in inputs])
+            task = self.tasks._task(db, run["task_id"])
+            memories.freeze(db, run, task["conversation_id"])
             self._set(db, identity, "running", None)
             return True
 
@@ -169,6 +173,7 @@ class Executions:
                       "dependency_inputs": bindings}
             if include_artifacts:
                 result["input_artifacts"] = artifact_store.input_snapshots(db, bindings)
+                result["memories"] = memories.snapshot(db, run, task["conversation_id"])
             return result
 
     def cancel(self, identity):

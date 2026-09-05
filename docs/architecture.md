@@ -349,3 +349,15 @@ CLI启动时调用 snapshot(include_artifacts=True)：在同一SQLite读事务�
 任务卡“前置任务”以当前任务/依赖双版本一致读取初始化草稿，选择同会话任务。保存依赖只更新依赖和需求版本，不调用执行器；任务卡与历史同步版本。普通读取只更新对照状态，保留已编辑选择；未知PATCH持久保存原版本请求，409后明确对照才重新编辑。会话归档与负责人状态控制写入，后端仍独立重查。
 
 依赖就绪状态只表示前置验收门槛；执行窗口显示等待原因，并在读取到需求版本变化后禁止沿旧确认新建执行。F28提供文件副本传递，本增量完成对应依赖配置UI，不代表智能自动分工或真实模型/Docker链路全部完成。
+
+## F30：批准记忆与执行版本快照
+
+个人范围 agent 使用稳定身份 ID；共享范围 project 使用董事会或项目会话 ID，私聊没有项目共享记忆。每范围是一份最多 8000 字符的版本文档，v0 为空。候选必须来自当前需求的最新执行及 Owner 已批准、完整校验的成果；提案与批准都复查身份、成员、execute 权限和冻结依赖。批准才产生新版本，拒绝不改正文；回滚复制旧内容形成新版本，历史不改写。
+
+SQLite 保存不可变候选、决定、修订、请求响应及执行绑定。BEGIN IMMEDIATE 内核对 expected_version，竞争审批仅一个成功；相同请求键与内容重放原响应，不因后续改版变化，异内容复用键拒绝。失效候选允许 Owner 拒绝关闭。
+
+claim 同事务冻结本身份及本群记忆版本，包括 v0；CLI 启动授权快照只读取这些批准版本，后续批准/回滚不替换正在运行的上下文。无历史绑定的执行拒绝用当前记忆补齐。轮询不重复加载正文。记忆作为经验资料进入 prompt，不扩大工具或数据权限。
+
+Owner API：GET /api/workbench/memories/{scope}/{id}；GET history、GET/POST candidates、POST rollback 子路径；GET /api/workbench/memory-candidates/{id}；POST 其 decision 子路径。提案字段 request_id/expected_version/source_execution_id/content；决定 request_id/decision/note；回滚 request_id/expected_version/target_version/note。沿用同源限制、严格字段和 HTTP 409 版本冲突。
+
+这是应用层上下文选择，不是对同一 Windows 用户恶意进程的 OS 隔离；Owner 管理 API 可查看全部范围，未来 Docker Worker 不得取得该管理接口。当前候选为有来源的显式文本，尚未提供记忆浏览器入口、自动复盘或 Skill 发布，不能称完整自我进化。

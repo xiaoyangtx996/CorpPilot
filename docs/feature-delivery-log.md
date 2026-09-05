@@ -364,3 +364,12 @@
 - 原版本请求sessionStorage持久保留，未知响应刷新可重试；409须明确对照后重编辑，读取不覆盖草稿、不误认状态相同为请求确认。
 - 浏览器普通/循环拒绝/版本冲突/上游保存后丢响应/恢复/归档只读均通过；构建39 modules及TypeScript通过。详细证据见acceptance-report F29。
 - 提交标识：feat(workbench): F29 configure task dependencies in browser；单独提交后立即推送并回读。
+
+- F29 提交 babc379 后立即推送返回 GitHub 403，目标远端分支未交付。
+
+## F30：个人与项目批准记忆服务
+
+- memory_store 子代理实现 SQLite 版本记忆及 21 项测试；主代理集成 HTTP、claim 冻结和 CLI 上下文，添加 2 项跨层测试。memory_integration_review 独立审查核心及集成 Pass。
+- 个人稳定身份和群共享范围分离；候选有批准成果来源，批准生效，回滚产生新版本；精确请求重放、版本并发冲突、不可变历史和冻结快照通过验证。
+- 复用原有成果校验与事务，无新增依赖。模型候选生产、记忆浏览器入口和 OS/Docker 真隔离仍未完成。
+- 提交标识：feat(workbench): F30 persist approved scoped memory and freeze execution context；本功能单独提交后立即推送并回读。

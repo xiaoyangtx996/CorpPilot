@@ -104,7 +104,7 @@ def test_only_direct_inputs_not_transitive_or_private_history(tmp_path):
     snapshot = executions.snapshot(run['id'], include_artifacts=True)
     assert {a['execution_id'] for a in snapshot['input_artifacts']} == {second_run['id']}
     assert all(a['execution_id'] != first_run['id'] for a in snapshot['input_artifacts'])
-    assert set(snapshot) == {'task', 'agent', 'instructions', 'source_message', 'dependency_inputs', 'input_artifacts'}
+    assert set(snapshot) == {'task', 'agent', 'instructions', 'source_message', 'dependency_inputs', 'input_artifacts', 'memories'}
 
 
 def test_upstream_change_before_input_read_prevents_launch(tmp_path, monkeypatch):

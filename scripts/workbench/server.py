@@ -16,6 +16,7 @@ from .tasks import Tasks, TaskVersionConflict
 from .cli_settings import CLISettings
 from . import artifacts
 from .reviews import Reviews
+from .memories import Memories
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -27,6 +28,7 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.tasks = Tasks(store)
         self.cli_settings = CLISettings(store)
         self.reviews = Reviews(store)
+        self.memories = Memories(store)
         self.frontend_dir = (frontend_dir or REPO_ROOT / "frontend" / "dist").resolve()
         super().__init__(("127.0.0.1", port), Handler)
         try:
@@ -142,6 +144,31 @@ class Handler(BaseHTTPRequestHandler):
                 if self.read_json():
                     raise ValueError("CLI 检查请求体必须为空对象")
                 return self.respond(200, self.server.cli_settings.probe())
+            prefix = "/api/workbench/memories/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) in (2, 3) and all(parts):
+                    scope, identity = parts[:2]
+                    memory = self.server.memories
+                    if len(parts) == 2 and self.command == "GET":
+                        return self.respond(200, memory.get(scope, identity))
+                    if len(parts) == 3:
+                        if parts[2] == "history" and self.command == "GET":
+                            return self.respond(200, memory.history(scope, identity))
+                        if parts[2] == "candidates":
+                            if self.command == "GET":
+                                return self.respond(200, memory.candidates(scope, identity))
+                            if self.command == "POST":
+                                return self.respond(201, memory.propose(scope, identity, self.read_json()))
+                        if parts[2] == "rollback" and self.command == "POST":
+                            return self.respond(201, memory.rollback(scope, identity, self.read_json()))
+            prefix = "/api/workbench/memory-candidates/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 1 and parts[0] and self.command == "GET":
+                    return self.respond(200, self.server.memories.candidate(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "decision" and self.command == "POST":
+                    return self.respond(201, self.server.memories.decide(parts[0], self.read_json()))
             if self.command == "GET" and path == "/api/workbench/templates":
                 return self.respond(200, store.templates())
             if path == "/api/workbench/agents":
