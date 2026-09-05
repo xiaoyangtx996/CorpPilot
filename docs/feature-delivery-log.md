@@ -256,3 +256,17 @@
 - 真实浏览器版本0.153.3、禁用配置保存重开、缺失程序错误、恢复路径、Escape和390×844布局通过。未调用模型，未启动任务。
 - CLI任务控制器、真实模型、双Docker、产物和记忆仍待完成。
 - 提交标识：`feat(workbench): F20 configure CLI and probe installed version`；提交后立即推送并核对结果。
+
+- F20 提交 `3809b74` 后立即推送返回 GitHub 403，账号 suiyue1990 无写权限；ls-remote未找到目标分支。
+
+## F21：任务 CLI 队列与停止控制
+
+- 实现/集成：主代理；独立QA：cli_dispatch_tests；PM/技术/Ponytail：execution_controller_review，修正后Pass。
+- CLIController由现有控制器独占锁保护，复用同SQLite任务记录与CLI设置，按配置有限并发；上下文仅显式任务、角色和Owner来源。
+- create/claim/snapshot/report检查execute权限与需求版本；存在unknown不允许仅靠文字说明启动替代实例，CLI全局队列暂停，聊天不受该暂停影响。
+- 运行中取消、撤权、需求更新与关闭触发Event；等待可信进程退出再落终态。物理exit0且success=false保留0但记failed，只有明确成功才能awaiting_review。
+- 结果Future保留直到落库成功，不因写入失败重跑；逐项处理避免阻断其他实例停止。submit异常无法证明未启动，保守unknown并取消可能入队任务。
+- 独立QA19项；主代理额外4项故障测试，含真实本机Python进程经Windows Job取消并记录实际退出码。均未调用模型，不冒称真实Codex任务已通过。
+- 本增量先交付内部后端能力；HTTP/UI执行入口、成果评审、unknown核查恢复、CLI费用约束及真实模型/双Docker仍待完成。
+- 主代理全量回归254 passed、8 subtests（41.47s）；最后未启动/旧版本判定调整后定向40 passed（4.25s）。
+- 提交标识：`feat(workbench): F21 dispatch and stop versioned CLI tasks`；按功能立即推送并回读。

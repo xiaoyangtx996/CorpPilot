@@ -15,6 +15,7 @@ def setup(tmp_path):
     store = Store(tmp_path)
     agents = store.agents()[:2]
     agent = agents[0]
+    store.save_agent({"tools": ["read", "write", "execute"]}, agent["id"])
     conversation = store.save_conversation({"type": "board", "title": "Execution tests", "member_ids": [a["id"] for a in agents]})
     source = store.send_message(conversation["id"], {"content": "Owner scope", "request_id": "source"})
     tasks = Tasks(store)
@@ -33,7 +34,7 @@ def revise(tasks, task):
 
 
 def report(executions, run, code=0):
-    return executions.report(run["id"], run["attempt"], run["requirement_version"], code, "Process result")
+    return executions.report(run["id"], run["attempt"], run["requirement_version"], code, "Process result", success=code == 0)
 
 
 def test_concurrent_create_claim_and_reopen(tmp_path):
@@ -119,11 +120,8 @@ def test_cancellation_requires_confirmed_exit_and_unknown_requires_reconciliatio
     assert report(executions, run, None)["state"] == "unknown"
     with pytest.raises(ValueError):
         executions.create(task["id"], request(request_id="third"))
-    next_run = executions.create(task["id"], request(request_id="third", note="Owner checked external effects and authorizes retry", previous=run["id"]))
-    assert next_run["attempt"] == 3
-    assert executions.claim(next_run["id"])
-    assert executions.cancel(next_run["id"])["state"] == "stopping"
-    assert report(executions, next_run, -15)["state"] == "cancelled"
+    with pytest.raises(ValueError, match="未核实"):
+        executions.create(task["id"], request(request_id="third", note="Owner checked external effects and authorizes retry", previous=run["id"]))
     assert tasks.get(task["id"]) == task
 
 

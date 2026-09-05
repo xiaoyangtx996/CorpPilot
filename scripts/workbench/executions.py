@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+import json
 
 from .store import Store, _text
 from .tasks import Tasks, TaskVersionConflict
@@ -55,6 +56,9 @@ class Executions:
         if task["requirement_version"] != run["requirement_version"]:
             raise TaskVersionConflict("执行需求版本已过期")
         self.tasks._authorize(db, task["conversation_id"], run["agent_id"])
+        tools = json.loads(db.execute("SELECT tools FROM agents WHERE id=?", (run["agent_id"],)).fetchone()[0])
+        if "execute" not in tools:
+            raise PermissionError("负责人尚未获得 execute 工具权限")
         return task
 
     def create(self, task_id, payload):
@@ -80,6 +84,8 @@ class Executions:
                     raise ValueError("request_id 已用于不同任务执行")
                 return dict(previous)
             task = self.tasks._task(db, task_id)
+            if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state='unknown'", (task_id,)).fetchone():
+                raise ValueError("本任务存在未核实的执行，不能启动替代实例")
             self._authorize(db, {"task_id": task_id, "requirement_version": version, "agent_id": task["agent_id"]})
             if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state IN ('queued','running','stopping')",
                           (task_id,)).fetchone():
@@ -121,6 +127,8 @@ class Executions:
             db.execute("BEGIN IMMEDIATE")
             run = self._run(db, identity)
             if run["state"] != "queued":
+                return False
+            if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state='unknown'", (run["task_id"],)).fetchone():
                 return False
             try:
                 self._authorize(db, run)
@@ -168,31 +176,34 @@ class Executions:
                 updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
                 WHERE state IN ('running','stopping')""").rowcount
 
-    def report(self, identity, attempt, requirement_version, exit_code, summary):
+    def report(self, identity, attempt, requirement_version, exit_code, summary, *, success=False, not_started=False):
         """Internal runner callback: a numeric exit requires observed process-tree termination.
 
         None means termination/result is unverified. Never expose this as an Owner HTTP mutation.
-        Exit zero only admits review; it does not approve a task or its artifacts.
+        Exit zero plus explicit success only admits review; it never approves artifacts.
+        not_started is reserved for a trusted pre-launch path, never an arbitrary exception.
         """
         for number in (attempt, requirement_version):
             if type(number) is not int or number < 1:
                 raise ValueError("回调尝试与需求版本必须为正整数")
         if exit_code is not None and type(exit_code) is not int:
             raise ValueError("退出码必须为整数或null")
+        if type(success) is not bool or type(not_started) is not bool or (not_started and (success or exit_code is not None)):
+            raise ValueError("执行结果标志无效")
         summary = _text(summary, "执行摘要", 2000)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             run = self._run(db, identity)
             if (run["attempt"], run["requirement_version"]) != (attempt, requirement_version) or run["state"] not in ("running", "stopping"):
                 return run
-            if exit_code is None:
+            if exit_code is None and not not_started:
                 state = "unknown"
             elif run["state"] == "stopping":
                 state = "cancelled"
             else:
                 try:
                     self._authorize(db, run)
-                    state = "awaiting_review" if exit_code == 0 else "failed"
+                    state = "awaiting_review" if exit_code == 0 and success else "failed"
                 except TaskVersionConflict:
                     state = "superseded"
                 except (ValueError, PermissionError, KeyError):

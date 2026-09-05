@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from runtime.traffic_monitor import TrafficMonitor
 from .provider import ProviderError, run_reply
 from .runs import Runs
+from .cli_controller import CLIController
 
 
 class ReplyController:
@@ -37,15 +38,21 @@ class ReplyController:
             self.futures = {}
             self.unsettled = set()
             self.error = ""
+            self.cli = CLIController(store)
             self.thread = threading.Thread(target=self._dispatch, daemon=True, name="reply-dispatch")
             self.thread.start()
         except Exception:
+            if cli := getattr(self, "cli", None):
+                cli.close()
+            if pool := getattr(self, "pool", None):
+                pool.shutdown(wait=True)
             self.lock_file.close()
             raise
 
     def _dispatch(self):
         while not self.stop.wait(0.2):
             try:
+                self.cli.tick()
                 self._reconcile()
                 pending = self.runs.pending()
                 self.error = ""
@@ -106,6 +113,7 @@ class ReplyController:
     def close(self):
         self.stop.set()
         self.thread.join()
+        self.cli.close()
         # Active requests have a child-process deadline. Keep the controller lock
         # until completion so another process cannot misclassify a live request.
         self.pool.shutdown(wait=True)
