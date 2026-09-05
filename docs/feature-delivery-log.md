@@ -151,3 +151,13 @@
 - 排队可取消，运行中不伪称已停止；重启running标unknown且不自动重发，recover须由后续唯一控制服务启动锁保护。
 - attempt与requirement_version首版固定1，版本变更/重试任务仍待后续实现；不是完整任务调度验收。
 - 提交标识：`feat(workbench): F12 persist authorized reply runs`；提交后立即推送，结果另记。
+- 提交`49bceba`，立即推送结果为GitHub403，远端未交付。
+
+## F13：有总时限的单次模型请求
+
+- 实现：主代理；独立代码/Ponytail审查及复验：reply_review，Pass。定向13 passed，独立Run/provider合计20 passed。
+- OpenAI兼容chat/completions单次真实HTTP实现，无重定向、代理环境继承、工具调用或自动重试；非200、截断、空回复、错误格式均不算成功。
+- 通过隔离Python请求进程和父进程总时限，覆盖DNS/慢响应；凭据只经私有stdin传入，不放命令行，子进程环境不继承其他API密钥。
+- 错误不回显上游body和密钥；未知用量保留null。实际调用入口run_reply，直接reply仅用于协议单测。
+- loopback HTTP与真实请求子进程验证完成，包括401/429/500/重定向拒绝、身份上下文角色映射及1秒总时限；这是本地协议与故障验收，不是付费模型质量或真实账号调用验收。
+- 提交标识：`feat(workbench): F13 bound and sanitize model requests`；提交后立即推送，结果另记。
