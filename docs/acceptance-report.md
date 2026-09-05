@@ -218,3 +218,27 @@ Owner 请求显式传入协调人、本会话 Owner 目标消息及1–100个启
 上述证据为后端/API及注入模型边界验证，未调用真实供应商、CLI或Docker。F37未改前端，不重复F36构建/浏览器路径来替代新提案界面验收；提案浏览器入口、导入F36后的Owner再次确认仍待实现，不能将模型建议标为approved_plan或宣称自治协作完成。提交与远端交付结果以台账中的后续实际回读为准。
 
 正常7892服务加载F37前，主代理确认旧会话22073仍运行、聊天/CLI活动均0且error为空，再Ctrl+C退出（退出码1）。通过SQLite backup保存外部快照 `H:\item\CorpPilot-test-evidence-20260906\f37-before-108197c5-be85-46f9-bcda-1010550a9e7d.sqlite3`，integrity_check为ok。新会话61822启动后health为200，新提案GET为200且返回空列表，聊天/CLI活动仍0、error为空；未向正常数据创建提案或调用模型。
+
+F37提交 `502b96202d3b6692b4d204c2db2b72f9d9f9f34d` 后立即推送，GitHub以403拒绝suiyue1990，目标远端分支回读为空。外部 `f37-delivery-result.json` 记录本次结果；本地验收与提交不代表远端交付完成。
+
+## F38 模型提案浏览器验收
+
+本增量完成消息/全局提案入口、候选与模型调用确认、原请求持久恢复、202后按Run ID读取，以及completed提案审阅和导入F36再次确认。独立成品审查Pass；主代理最终typecheck及Vite构建通过，43 modules、index-Dx-oq0Yc.js。未修改后端，不重复全量；沿用F37完整440项及8子用例、后加5条后的规划20项定向证据，445仍仅为收集数。
+
+构建复现命令：在 `frontend` 目录分别执行 `npm run typecheck` 和 `npm run build`。隔离数据与恢复核验使用仓库外的 `f38_fixture_server.py`、`f38_drop_proxy.py`、`f38_verify.py`，不向正常用户数据库写入测试项目。
+
+独立数据库f38-planning-state，外部f38_fixture_server.py、f38_drop_proxy.py、f38_verify.py提供测试与回读。本轮Browser plugin未提供，主代理使用CUA Playwright：7893 Vite StrictMode与7897构建故障代理，后者转发7896测试API；7900为本地fixture模型。页面身份/非空/无框架错误覆盖及真实交互通过，桌面截图覆盖1315×1272和1280×720；未独立采集控制台日志或测试移动视口。
+
+正常路径选择秘书协调人及后端/测试候选，显式确认后仅产生1次本地模型HTTP请求，返回含依赖的两任务提案。导入F36时确认默认未选，Owner修改title与shared_brief后再次确认，实际生成3成员项目和2项任务，新群仅有修改后的共享摘要。202后刷新，从全局入口恢复原source/Run，仅GET查询，不再POST调用模型。
+
+故障路径先因选定身份停用首发400；恢复身份后，同键 `c89f95cc-ac0c-49b3-a150-00fbb7556003` 被上游202接受但代理丢弃响应，随后GET持续503。刷新并换会话后，全局恢复保留原来源与请求，不出现早先rejected带来的编辑入口；同键POST核对成功后，completed结果即使后续GET仍503也保留。随后F36建项目的201响应也被丢弃、GET503；新模型提案导入被既有F36 pending阻止，经恢复入口核对原创建请求成功，未覆盖待确认计划。
+
+非法模型JSON显示failed，无提案或新项目。另一路首发400后明确修改成新key，在模型禁用时保持queued，取消后刷新仍回读cancelled。测试发现已选停用身份不能取消选择，修为保留已选停用项可取消、取消后不可重新选择，主代理复验通过；另清除两处过时error/notice后完成最终构建。
+
+f38_verify.py最终回读：4个Run（2 completed、1 failed、1 cancelled）、3次实际本地HTTP模型调用、2项目/4项v1任务、0次CLI执行；私聊前史未泄漏，测试停用的后端身份已恢复启用。7900响应为本地受控fixture，不是真实供应商生成证据，也不代表CLI/Docker或完整目标通过。
+
+QA服务会话88766经Ctrl+C实际退出（退出码1），新会话77732启动后浏览器刷新全局入口仍显示原cancelled Run（ID前缀f152d6a7）及2 completed/1 failed历史。f38_verify.py重启前后均为同4个Run、3次本地模型调用、2项目/4任务、0CLI及无私聊前史泄漏，数据库integrity_check为ok。随后77732、代理12877、Vite80909均经实际句柄Ctrl+C确认退出（退出码1）。正常7892未重启、未创建测试数据，HTTP回读最终index-Dx-oq0Yc.js。
+
+代理关停日志包含浏览器刷新取消请求造成的客户端写入端ConnectionAbortedError（WinError10053，外部脚本line34），不是应用HTTP500；数据库与本地模型核验通过，不宣称代理或浏览器console没有错误。未对storage损坏/QuotaExceeded进行浏览器注入，此部分只有静态fail-closed审查；console独立日志与mobile仍未验收。
+
+本轮已验证网络受理结果未知时的同键恢复。服务端Run状态为unknown时仍保留原请求并禁止替代调用，尚无模型未知结果的人工核查/解除入口；F33核查仅适用于CLI。该恢复缺口保留为后续工作，不能宣称所有模型未知场景闭环。

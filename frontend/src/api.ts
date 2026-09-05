@@ -42,3 +42,5 @@ export type ExecutionReconciliationRecord = ExecutionReconciliationRequest & { e
 export type CollaborationTask = { key: string; title: string; scope: string; acceptance: string; agent_id: string; depends_on: string[] };
 export type CollaborationPlan = { request_id: string; source_message_id: string; title: string; shared_brief: string; coordinator_id: string; tasks: CollaborationTask[] };
 export type CollaborationReceipt = { id: string; source_conversation_id: string; source_message_id: string; request_id: string; project_conversation_id: string; shared_message_id: string; coordinator_id: string; member_ids: string[]; task_ids: Record<string, string>; created_at: string; approved_plan: CollaborationPlan };
+export type PlanningRequest = { agent_id: string; source_message_id: string; request_id: string; candidate_ids: string[] };
+export type PlanningRun = ReplyRun & { candidate_snapshot: Pick<Agent, 'id' | 'name' | 'template_id' | 'skills'>[]; proposal: Pick<CollaborationPlan, 'title' | 'shared_brief' | 'tasks'> | null; request_payload: PlanningRequest };

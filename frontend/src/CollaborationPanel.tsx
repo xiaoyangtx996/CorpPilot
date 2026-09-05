@@ -26,17 +26,17 @@ function cyclic(tasks: CollaborationTask[]): boolean {
   return tasks.some(t => visit(t.key));
 }
 
-export function CollaborationPanel({ conversationId, source, onClose, onOpenProject }: { conversationId: string; source?: Message; onClose: () => void; onOpenProject: (conversation: Conversation) => void }) {
+export function CollaborationPanel({ conversationId, source, initialPlan, onClose, onOpenProject }: { conversationId: string; source?: Message; initialPlan?: CollaborationPlan; onClose: () => void; onOpenProject: (conversation: Conversation) => void }) {
   const dialog = useRef<HTMLDialogElement>(null), alive = useRef(false), serial = useRef(0), writing = useRef(false), pendingRef = useRef<Pending | null>(null);
   const [sourceId, setSourceId] = useState(conversationId), [conversation, setConversation] = useState<Conversation | null>(null), [agents, setAgents] = useState<Agent[]>([]);
-  const [plan, setPlan] = useState<CollaborationPlan>(() => ({ request_id: crypto.randomUUID(), source_message_id: source?.id ?? '', title: '', shared_brief: '', coordinator_id: '', tasks: [newTask()] }));
+  const [plan, setPlan] = useState<CollaborationPlan>(() => initialPlan ? structuredClone({ ...initialPlan, request_id: crypto.randomUUID() }) : ({ request_id: crypto.randomUUID(), source_message_id: source?.id ?? '', title: '', shared_brief: '', coordinator_id: '', tasks: [newTask()] }));
   const [pending, setPending] = useState<Pending | null>(null), [storageError, setStorageError] = useState(''), [receipt, setReceipt] = useState<CollaborationReceipt | null>(null);
   const [history, setHistory] = useState<CollaborationReceipt[]>([]), [loaded, setLoaded] = useState(false), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [confirmed, setConfirmed] = useState(false);
   const [readError, setReadError] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState('');
   function confirm(row: CollaborationReceipt, sent: Pending) {
     if (row.source_conversation_id !== sent.source_id || row.request_id !== sent.plan.request_id || !same(row.approved_plan, sent.plan)) { setError('回执与原协作计划不一致，原请求继续保留，不能创建替代项目。'); return; }
     setReceipt(row);
-    try { sessionStorage.removeItem(storageKey); pendingRef.current = null; setPending(null); setStorageError(''); setError(''); setNotice('已核对原协作请求，项目群及任务只创建一次；尚未调用模型或启动执行。'); }
+    try { sessionStorage.removeItem(storageKey); pendingRef.current = null; setPending(null); setStorageError(''); setError(''); setNotice('已核对原协作请求，项目群及任务只创建一次；本次创建未调用模型或启动执行。'); }
     catch { setStorageError('无法清除待确认请求，请恢复会话存储后按原请求核对。'); }
   }
   async function load(id: string) {
@@ -54,7 +54,7 @@ export function CollaborationPanel({ conversationId, source, onClose, onOpenProj
   }
   useEffect(() => {
     alive.current = true; const previous = document.activeElement; dialog.current?.showModal(); let id = conversationId;
-    try { const raw = sessionStorage.getItem(storageKey); const saved = raw ? decode(raw) : null; pendingRef.current = saved; setPending(saved); if (saved) { id = saved.source_id; setPlan(saved.plan); } }
+    try { const raw = sessionStorage.getItem(storageKey); const saved = raw ? decode(raw) : null; pendingRef.current = saved; setPending(saved); if (saved) { id = saved.source_id; setPlan(saved.plan); if (initialPlan) setNotice('已有待确认协作请求，导入未覆盖原计划。模型提案仍保留在提案历史，请先完成当前恢复后重新导入。'); } }
     catch { setStorageError('无法安全读取原协作请求，请恢复会话存储后重新打开；暂不允许创建新项目。'); }
     setSourceId(id); void load(id);
     return () => { alive.current = false; serial.current++; if (previous instanceof HTMLElement) previous.focus(); };
@@ -90,6 +90,7 @@ export function CollaborationPanel({ conversationId, source, onClose, onOpenProj
   }
   function summary(value: CollaborationPlan) { return <section><h3>{value.title || '待命名项目'}</h3><p className="task-source">共享摘要：{value.shared_brief || '尚未填写'}</p><p>协调人：{agents.find(a => a.id === value.coordinator_id)?.name ?? value.coordinator_id}</p>{value.tasks.map((t, i) => <article key={t.key} className="task-card"><h4>{i + 1}. {t.title || '未命名任务'} · {agents.find(a => a.id === t.agent_id)?.name ?? t.agent_id}</h4><p className="task-source">范围：{t.scope}</p><p className="task-source">验收：{t.acceptance}</p><p>前置：{t.depends_on.map(k => value.tasks.find(v => v.key === k)?.title ?? k).join('、') || '无'}</p></article>)}</section>; }
   return <dialog ref={dialog} className="task-dialog" aria-labelledby="collaboration-title" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}><header><h2 id="collaboration-title">组建协作项目</h2><button disabled={busy} onClick={onClose}>关闭</button></header>
+    {initialPlan && !pending && <p role="status">已导入模型提案为可编辑草稿；请核对摘要、负责人及依赖，重新勾选确认后才会创建项目。模型生成步骤已发生，本次建群不调用模型。</p>}
     <p>从 Owner 消息组织项目群与任务。仅共享你明确填写的摘要；源会话历史不会自动复制。创建后仍需另行授权模型回复与 CLI 执行。</p>
     <p>源会话：{conversation?.title ?? (sourceId || '未选择会话')}{conversation?.archived ? ' · 已归档' : ''}</p><button disabled={busy || loading} onClick={() => void load(sourceId)}>{loading ? '读取协作状态中…' : '刷新协作状态'}</button>
     {readError && <p role="alert" className="error">{readError}。读取失败不代表没有项目；已显示回执保留。</p>}{error && <p role="alert" className="error">{error}</p>}{storageError && <p role="alert" className="error">{storageError}</p>}{notice && <p role="status">{notice}</p>}

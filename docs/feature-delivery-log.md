@@ -441,5 +441,17 @@
 - 提案复用Run ID和聊天并发/RPM/100活动上限，配置未就绪保持queued；取消沿用Run接口，失败/重启unknown不自动重试。严格JSON、白名单和1–16任务DAG校验；成功只写提案与Run状态，不写普通聊天消息或创建项目/任务/CLI执行。
 - 根集成定向8项通过，既有规划/Runs定向23项通过；完整440项及8子用例通过。随后只增加5条测试、生产代码未改，规划模块最终20项通过；未再跑全量，详见验收报告。
 - 本增量纯后端/API；提案浏览器入口、导入F36并再次Owner确认、真实供应商/CLI/Docker仍待完成。模型建议不是approved_plan，不直接触发F35组建事务。
-- F37尚待主代理独立提交后实际尝试推送及远端回读；本条不预报提交ID、推送成功或沿用旧403代替本次结果。
+- F37实际提交 `502b96202d3b6692b4d204c2db2b72f9d9f9f34d` 后立即推送，被GitHub 403拒绝：当前账号suiyue1990无仓库写权限；目标远端分支回读为空。外部证据为 `f37-delivery-result.json`，本地提交完成、远端交付仍阻塞。
 - 提交标识：`feat(workbench): F37 generate scoped collaboration proposals`；测试与审查通过后单独提交并立即推送。
+
+## F38：浏览器模型提案与导入确认
+
+- task_execution_ui负责前端实现与停用候选修正；verify_prompt_push负责PM/Tech Lead/Ponytail独立审查；主代理完成浏览器QA、集成与过期提示清理；verify_history_scope负责Doc/PM文档核对。
+
+- 已接入Owner消息与全局提案入口：显式候选及模型调用确认、同键原请求恢复、202后按持久Run ID读取。首次明确4xx可修改，原请求重试清除旧rejected标记，未知结果不可创建替代请求；完成结果不因后续GET失败丢失。
+- completed提案导入F36只填可编辑草稿和新创建请求，确认默认未勾选；本轮Owner修改标题与摘要后再次确认才建项目。已有F36 pending阻止导入并提供原计划恢复入口。选定身份停用后仍可取消选择，取消后不可重选，修正后浏览器复验通过。
+- 独立成品审查Pass；主代理typecheck及Vite43模块构建通过，最终index-Dx-oq0Yc.js。CUA Playwright覆盖正常模型提案、202恢复、首发400后202丢响应/GET503/跨会话恢复、F36建群201丢响应pending冲突、非法JSON失败和排队取消；1315×1272及1280×720桌面交互通过，未单测console/mobile。
+- 独立f38_verify.py回读4个Run（2完成/1失败/1取消）、3次实际本地HTTP模型调用、2项目4项v1任务、0CLI及无私聊前史泄漏。模型为本地7900 fixture，不是真实供应商；本轮纯前端，沿用F37后端证据，不重跑全量。
+- QA服务重启前后f38_verify数据一致、数据库完整性通过，浏览器恢复原cancelled Run与历史；QA服务/代理/Vite均经实际句柄确认退出。代理有客户端取消写入的WinError10053，不宣称console/代理无错误；正常7892未重启且最终bundle已HTTP回读。
+- 网络受理未知同键恢复已测；服务端Run=unknown仍无模型人工核查/解除入口，F33仅覆盖CLI。storage损坏/QuotaExceeded只有静态fail-closed审查，未注入浏览器；console/mobile及真实供应商/CLI/Docker仍保留未验证边界。
+- 提交标识：`feat(workbench): F38 review model proposals in browser`。F38提交、推送及远端回读仍待主代理本次实际执行，不预报成功或旧403结果。
