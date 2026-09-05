@@ -459,13 +459,21 @@
 ## F39：Owner API访问鉴权
 
 - 主代理负责后端、集成与QA；verify_prompt_push负责前端；task_execution_ui负责Tech Lead独立审查；verify_history_scope负责Doc/PM文档核对。
-- 本次先交付Owner控制面鉴权；Docker实现改为F40，仍未提交、待接入和真实环境实测，不与F39合并宣称完成。
+- F39先交付Owner控制面鉴权；Docker实现另列F40，未包含在本次独立提交与验收内，其后续状态见F40记录。
 - 每启动随机token保护全部/api/workbench读取、写入和下载；静态及基础health不需token。主入口自动打开fragment授权页且不打印秘密，失败生成宿主数据根临时owner-access入口并在退出删除；浏览器清fragment、sessionStorage保存凭据、下载改认证fetch/blob。
 - 401以AccessExpiredError保留业务pending。主代理7897浏览器验证任务201已落库响应丢失、刷新后401、重新授权同键回读，数据库仅1任务。33字节成果UI下载点击无错误、HTTP字节一致，未核验浏览器保存文件；未调用真实模型或CLI。
 - 最终44模块构建index-BLeLdit0.js，定向23项通过；排除全部未提交Docker改动的F39纯暂存树导出后，全量448项及8子用例通过（75.04s），其后仅更正1行非行为注释。此前含Docker的工作树488项及8子用例仅为历史证据；401/fallback独立审查Pass，静态目录保护已落实。
 - QA服务真实停止重启后旧token401、重新授权恢复同1task；旧代理和重启后的95112服务均已确认退出，本轮QA服务已停止。token默认仅驻宿主内存，仅自动打开失败时生成运行期入口HTML并在退出删除，该文件已加入Git忽略，文档不保留凭据。
-- 不隔离同OS用户、不解决任意网络出口；Tauri私有握手仍规划。F39提交/推送待实际执行，真实Docker/供应商/CLI验收保持未完成。
+- 不隔离同OS用户、不解决任意网络出口；Tauri私有握手仍规划。F39实际提交 `36acd48` 后立即推送返回GitHub403，目标远端分支回读为空；外部证据 `f39-delivery-result.json`。真实Docker/供应商/CLI验收保持未完成。
 
-## F40：真实 Docker Worker（未提交）
+## F40：Docker Worker 适配与恢复（真实容器尚未验收）
 
-- Docker执行适配、配置及恢复工作从原F39范围独立编号F40；当前仍待接入和真实双Worker实测。Docker不可用环境下的替身/故障测试只证明契约，不能替代实际容器隔离、停止回读或凭据与网络验收。
+- 主代理负责后端集成、浏览器QA与最终回归；Tech Lead负责独立技术审查及36项定向复验，结论Pass；verify_history_scope负责Doc/PM及Windows/Docker只读预检。
+- 复用CLI队列，固定本机daemon与已安装Linux sha256镜像，probe只读且不拉取。每执行独立非root容器，仅run/work可写和inputs只读挂载，HOME/tmp为tmpfs，限制CPU/内存/PID；create/start/inspect/stop-kill/remove均核对原实例，不能把Docker客户端退出当作容器退出。
+- 原backend与工具路径不可变绑定到SQLite；run根身份记录不挂载给容器。模型key经attach stdin进入Codex，不写Docker参数、Config.Env或登录配置；同容器同UID凭据可见性及bridge网络出口仍有边界。镜像Codex固定0.153.3，内层danger-full-access依赖外层容器隔离，详见 [Docker Worker](docker-worker.md)。
+- 新增受F39鉴权保护的Worker状态/停止入口。未知机器状态不可保存已停止声明；stop后仍需回读，exited不自动声明，提交前再次检查状态。既有不可变收据按原请求重放不依赖daemon，配置改变不能替代原工具绑定。
+- 浏览器已保存禁用Docker配置并得到真实probe失败；受控状态验证unknown阻断、两次停止、exited后提交竞争400保留pending、absent同键保存。stop helper调用2次、真实容器/模型/CLI均0；最终44模块产物index-BQ5sRMyd.js。首轮508通过/3失败的Path入SQLite问题已str归一，定向10项通过；最终主代理全量 **511 passed、8 subtests passed（78.33s）**，会话88456退出0；Tech Lead独立 **36 passed（5.63s）**、Worker定向 **37 passed**。
+- 主代理确认QA服务12041仍运行后，从IAB新标签页22重新进入7896，恢复同1任务/1次unknown、未确认退出码及完整Owner核查说明；Docker配置仍禁用，原测试镜像、模型/环境变量名和CPU1/1024MiB/PID128均保留。随后Ctrl+C停止12041，实际终端退出1；无真实容器、模型或CLI调用。
+- 外部 `f40-verification.json` 已保存；只读SQLite回查为1任务/1执行/1核查收据、0成果/0模型Run，原执行unknown及exit_code=NULL，integrity_check为ok。核查未重写结果或触发替代执行。
+- Windows VMP读取0x80040154，CheckHealth正文报告组件存储无法修复；Docker安装注册缺失、WSL2不可用。保留式Windows修复与重启授权待答，未系统写入，未操作alpine-ai-yss。真实镜像构建、双Worker隔离、真实供应商/CLI与恢复验收保持未完成。
+- F40提交与推送待主代理实际操作，不能因本地实现或替身测试宣称远端交付。

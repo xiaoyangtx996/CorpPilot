@@ -282,6 +282,13 @@ class Handler(BaseHTTPRequestHandler):
                 parts = path[len(prefix):].split("/")
                 if len(parts) == 1 and parts[0] and self.command == "GET":
                     return self.respond(200, self.server.controller.cli.executions.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "worker" and self.command == "GET":
+                    return self.respond(200, self.server.controller.cli.worker_status(parts[0]))
+                if len(parts) == 3 and parts[0] and parts[1:] == ["worker", "stop"] and self.command == "POST":
+                    payload = self.read_json()
+                    if set(payload) != {"confirm"} or payload["confirm"] is not True:
+                        raise ValueError("停止 Docker Worker 必须明确 confirm=true")
+                    return self.respond(200, self.server.controller.cli.worker_status(parts[0], stop=True))
                 if len(parts) == 2 and parts[0] and parts[1] == "reconciliation":
                     if self.command == "GET":
                         return self.respond(200, self.server.controller.cli.reconciliations.get(parts[0]))

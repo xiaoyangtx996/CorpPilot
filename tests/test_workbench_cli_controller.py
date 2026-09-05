@@ -25,6 +25,44 @@ def ready(monkeypatch, controller, concurrency=2):
         "timeout_seconds": 10, "max_concurrency": concurrency})
 
 
+@pytest.mark.parametrize("confirmed", [True, False])
+def test_docker_dispatch_preserves_review_and_unknown_boundaries(tmp_path, monkeypatch, confirmed):
+    _, _, controller, _, runs = fixture(tmp_path, monkeypatch)
+    config = controller.settings.resolve() | {
+        "backend": "docker", "docker_executable": "C:/Docker/docker.exe",
+        "docker_image": "sha256:" + "a" * 64, "docker_cpus": 2,
+        "docker_memory_mb": 2048, "docker_pids_limit": 128}
+    monkeypatch.setattr(controller.settings, "resolve", lambda: config)
+    monkeypatch.setattr(cli_controller, "run_codex", lambda **kw: pytest.fail("local fallback"))
+    calls, captured = [], []
+
+    def runner(**kwargs):
+        calls.append(kwargs)
+        return result() if confirmed else result(None, False, "unknown")
+
+    monkeypatch.setattr(cli_controller, "run_docker", runner)
+    monkeypatch.setattr(cli_controller, "capture", lambda *args: captured.append(args) or [])
+    try:
+        expected = "awaiting_review" if confirmed else "unknown"
+        until(controller, lambda: controller.executions.get(runs[0]["id"])["state"] == expected)
+        for _ in range(3):
+            controller.tick()
+        assert len(calls) == 1
+        call = calls[0]
+        assert call["executable"] == config["docker_executable"]
+        assert (call["image"], call["cpus"], call["memory_mb"], call["pids_limit"]) == (
+            config["docker_image"], 2, 2048, 128)
+        assert call["execution_id"] == runs[0]["id"]
+        assert "input_artifacts" in call and "memories" in call["prompt"]
+        assert config["api_key"] not in call["prompt"]
+        assert len(captured) == int(confirmed)
+        if not confirmed:
+            assert controller.executions.get(runs[0]["id"])["exit_code"] is None
+            assert controller.status()["error"]
+    finally:
+        controller.close()
+
+
 def until(controller, predicate, timeout=4):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

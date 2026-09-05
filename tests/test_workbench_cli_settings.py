@@ -136,3 +136,75 @@ def test_probe_requires_successful_bounded_version_result(tmp_path, monkeypatch,
     result = settings.probe()
     assert not result["available"] and result["version"] is None
     assert "private-detail" not in json.dumps(result)
+
+
+@pytest.mark.parametrize('patch', [
+    {'backend': 'remote'}, {'docker_executable': 'docker.exe'}, {'docker_image': 'alpine:latest'},
+    {'docker_image': '--help'}, {'docker_image': 'sha256:' + 'g' * 64},
+    {'docker_cpus': True}, {'docker_cpus': 17}, {'docker_memory_mb': 127},
+    {'docker_memory_mb': 32769}, {'docker_pids_limit': 15}, {'docker_pids_limit': 1025},
+])
+def test_docker_validation_atomic(tmp_path, patch):
+    settings = CLISettings(Store(tmp_path))
+    before = settings.get()
+    with pytest.raises(ValueError):
+        settings.save(patch)
+    assert settings.get() == before
+
+
+def test_docker_config_uses_own_executable_and_legacy_defaults(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli_settings.shutil, 'which', lambda _: None)
+    store = Store(tmp_path / 'data')
+    settings = CLISettings(store)
+    settings.save({'model': 'legacy', 'timeout_seconds': 77})
+    assert CLISettings(store).get()['backend'] == 'local'
+    executable = tmp_path / 'docker.exe'
+    executable.touch()
+    monkeypatch.setenv('DOCKER_TEST_KEY', 'never-serialize')
+    value = settings.save({'backend': 'docker', 'docker_executable': str(executable),
+                           'docker_image': 'repo/name@sha256:' + 'a' * 64, 'api_key_env': 'DOCKER_TEST_KEY'})
+    assert value['configured'] and value['executable_available'] and value['executable'] == ''
+    assert (value['docker_cpus'], value['docker_memory_mb'], value['docker_pids_limit']) == (1, 1024, 128)
+    assert value['timeout_seconds'] == 77
+    if os.name == 'nt':
+        settings.save({'enabled': True})
+        assert settings.resolve()['api_key'] == 'never-serialize'
+    assert 'never-serialize' not in json.dumps(settings.get())
+    with store.connect() as db:
+        assert 'never-serialize' not in '\n'.join(db.iterdump())
+
+
+@pytest.mark.skipif(os.name != 'nt', reason='Docker process isolation requires Windows')
+@pytest.mark.parametrize('mode', ['ok', 'info_failure', 'missing_image', 'wrong_image', 'bad_version', 'output_limit', 'timeout', 'windows_daemon', 'windows_image', 'malformed'])
+def test_docker_probe_local_bounded_no_pull_or_credentials(tmp_path, monkeypatch, mode):
+    settings = CLISettings(Store(tmp_path / 'data'))
+    executable = tmp_path / 'docker.exe'
+    executable.touch()
+    digest = 'sha256:' + 'a' * 64
+    settings.save({'backend': 'docker', 'docker_executable': str(executable), 'docker_image': digest})
+    for name in ('DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_CONFIG', 'DOCKER_AUTH_CONFIG', 'OPENAI_API_KEY'):
+        monkeypatch.setenv(name, 'ambient-secret')
+    calls = []
+    def run(argv, cwd, env, stdin, timeout_seconds, **kwargs):
+        calls.append(argv)
+        assert argv[:3] == [str(executable), '--host', 'npipe:////./pipe/docker_engine']
+        assert argv[3] == '--config' and list(Path(argv[4]).iterdir()) == []
+        assert not any(key.startswith('DOCKER_') for key in env)
+        assert 'ambient-secret' not in json.dumps(env) and 'CODEX_API_KEY' not in env
+        assert stdin == b'' and 0 < timeout_seconds <= 10 and 0 < kwargs['output_limit_bytes'] <= 65536
+        info = len(calls) == 1
+        assert argv[5:] == (['info', '--format', '{"ServerVersion":{{json .ServerVersion}},"OSType":{{json .OSType}}}'] if info else ['image', 'inspect', '--format', '{"Id":{{json .Id}},"Os":{{json .Os}}}', digest])
+        data = {'ServerVersion': '27.5.1', 'OSType': 'linux'} if info else {'Id': digest, 'Os': 'linux'}
+        if mode == 'bad_version' and info: data['ServerVersion'] = 'secret'
+        if mode == 'wrong_image' and not info: data['Id'] = 'sha256:' + 'b' * 64
+        if mode == 'windows_daemon' and info: data['OSType'] = 'windows'
+        if mode == 'windows_image' and not info: data['Os'] = 'windows'
+        output = b'{' if mode == 'malformed' else json.dumps(data).encode()
+        return {'reason': mode if mode in ('output_limit', 'timeout') else 'exited',
+                'exit_code': 1 if (mode == 'info_failure' and info or mode == 'missing_image' and not info) else 0,
+                'stdout': output, 'stderr': b'ambient-secret'}
+    monkeypatch.setattr(cli_settings, 'run_process', run)
+    result = settings.probe()
+    assert result['available'] == (mode == 'ok')
+    assert 'ambient-secret' not in json.dumps(result)
+    assert len(calls) <= 2

@@ -247,7 +247,7 @@ F38本地提交 `c592eae` 后立即推送仍返回GitHub403，目标远端分支
 
 ## F39 Owner API访问鉴权验收
 
-本轮交付范围为每启动随机token的Owner API鉴权、浏览器授权恢复及认证下载；Docker实现改编号F40，仍未提交、待接入和真实环境实测。全部 `/api/workbench` GET、写入与下载需Bearer授权，静态页面及基础health无需token。自动打开授权页不打印秘密；失败时宿主数据根提供临时本机入口，退出删除。本文不记录任何实际或测试token。
+F39交付范围为每启动随机token的Owner API鉴权、浏览器授权恢复及认证下载；Docker实现另列F40，未包含在本次独立提交与验收内，其后续状态见F40记录。全部 `/api/workbench` GET、写入与下载需Bearer授权，静态页面及基础health无需token。自动打开授权页不打印秘密；失败时宿主数据根提供临时本机入口，退出删除。本文不记录任何实际或测试token。
 
 主代理负责后端、集成与QA；verify_prompt_push负责前端；task_execution_ui负责Tech Lead独立审查；verify_history_scope负责Doc/PM文档核对。401/fallback修正后的独立审查Pass。
 
@@ -263,4 +263,20 @@ F38本地提交 `c592eae` 后立即推送仍返回GitHub403，目标远端分支
 
 主代理确认QA服务83091停止（退出码1），95112在同一7896端口重新启动并生成新的运行期访问凭据。原浏览器刷新后旧授权得到401，重新授权后恢复同一任务，数据库仍只有1task；旧故障代理67742已确认停止，95112也最终经Ctrl+C确认退出（退出码1），本轮QA服务均已停止。过程中未把测试凭据写入文档。宿主token默认仅驻内存，只有打开浏览器失败才生成含运行期授权信息的本机HTML；owner-access文件已加入Git忽略，退出清理。
 
-本轮不证明同一OS用户隔离或任意网络出口受控，真实Docker/供应商/CLI均未验证。Tauri Rust私有握手、受限请求桥和原生保存仍是后续规划；浏览器Bearer鉴权不等于桌面宿主身份已完成。F39提交和推送结果待实际操作补记。
+本轮不证明同一OS用户隔离或任意网络出口受控，真实Docker/供应商/CLI均未验证。Tauri Rust私有握手、受限请求桥和原生保存仍是后续规划；浏览器Bearer鉴权不等于桌面宿主身份已完成。F39实际提交 `36acd48` 后立即推送返回GitHub403，目标远端分支回读为空；外部 `f39-delivery-result.json` 记录本次结果，远端交付仍阻塞。
+
+## F40 Docker Worker 适配与恢复验收
+
+本增量接入固定本地 Docker/Linux 镜像、执行后端不可变绑定、受限容器参数和未知实例的状态/停止 API 与浏览器入口。原 F39 Owner 鉴权继续覆盖全部业务读写及下载。真实 Docker 镜像构建、Codex 容器运行、双 Worker 隔离与真实供应商调用尚未验收，以下注入测试不替代这些项目。
+
+主代理在真实浏览器保存 Docker 配置并保持 disabled，显式运行实际只读 probe，结果为本地 Docker 服务或固定镜像不可用；没有拉取镜像或启动容器。受控 Worker 状态测试使用独立执行 `b011768c-5de6-4ad5-a77a-c1b642caa981`、任务 `aecb2528-cea1-4531-b4ac-9c69cc04bf83`（外部 `f40-manifest.json`）：未知状态阻断已停止声明；running 经 Owner 确认停止后仍 unknown，继续阻断；第二次停止回读 exited，但不自动保存声明。提交前将受控状态改回 running，服务端以400拒绝且浏览器保留原 pending；随后确认 absent，沿同一 request_id `2c1da3db-045c-4813-a2f4-1c2aa2184f34` 保存声明。stop helper 共调用2次，均为 fixture；真实容器、模型与 CLI 调用均为0。此证据证明前后端保护和恢复路径，不证明真实 daemon 的停止可靠性。
+
+主代理最终前端构建44 modules，产物 `index-BQ5sRMyd.js`。首轮后端全量为508 passed、3 failed，失败原因为 Path 对象直接写入 SQLite；归一为 str 后定向10项通过。最终主代理全量 `python -m pytest tests/ -q` 为 **511 passed、8 subtests passed（78.33s）**，执行会话88456已结束、退出码0。Tech Lead独立定向 **36 passed（5.63s）**，审查结论Pass；Worker定向 **37 passed**。这些测试使用受控边界，不是511次真实容器或模型运行。
+
+主代理确认QA服务会话12041仍在运行后，以IAB新标签页22重新进入7896，打开Execution tests的任务执行面板：仍为1任务、1次unknown执行、退出码尚未确认，Owner核查的原说明完整恢复。CLI设置仍为禁用的Docker后端，原固定测试镜像、模型/密钥环境变量名和CPU1、内存1024MiB、PID128均恢复。随后对会话12041发送Ctrl+C，工具确认终端退出码1（主动中断），本次QA服务已停止。此收尾证据为新标签页重新进入与状态恢复；没有真实容器、模型或CLI调用。
+
+外部证据 `H:\item\CorpPilot-test-evidence-20260906\f40-verification.json` 已保存。主代理只读SQLite回查为1任务、1执行、1条核查收据、0成果、0模型Run；原执行仍unknown且exit_code为NULL，数据库integrity_check为ok。保存人工核查没有改写原执行结果或新增任务、成果与模型请求。
+
+Doc/PM只读系统核查：Windows 11 Pro 26200.8737、WSL 2.6.2.0；固件虚拟化与SLAT为True，HypervisorPresent为False、vmcompute不存在。唯一现有分发 `alpine-ai-yss` 为Stopped/WSL1，未启动、转换或配置集成。Docker Desktop 4.88.1.237512和CLI 29.7.2文件存在，但HKLM/HKCU未发现Docker安装注册；8月27日安装日志退出1，9月6日启动日志因缺少Docker注册键失败，daemon管道不存在。VMP只读查询返回0x80040154，DISM日志为CBS package identity/Foundation package创建失败；不能把无法读取状态写成Disabled。`DISM /Online /Cleanup-Image /CheckHealth` 虽退出0，正文明确“无法修复组件存储”，不是健康通过。
+
+Windows保留应用/数据修复及重启窗口的授权已异步待答，未执行系统配置写入、安装、重启或其他项目服务启停。分阶段修复建议及微软/Docker官方依据见 [环境阻塞与修复前提](docker-worker.md#环境阻塞与修复前提)。当前不能宣称F40真实容器验收完成，提交和推送结果须待实际执行补记。

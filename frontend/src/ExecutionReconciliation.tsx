@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type TaskExecution, type ExecutionReconciliationRequest, type ExecutionReconciliationRecord, type Task, type Agent } from './api';
+import { api, type WorkerStatus, type TaskExecution, type ExecutionReconciliationRequest, type ExecutionReconciliationRecord, type Task, type Agent } from './api';
 
 const key = 'corppilot.reconciliation-pending.v1';
 type Pending = { execution_id: string; payload: ExecutionReconciliationRequest };
@@ -22,6 +22,9 @@ export function ExecutionReconciliation({ executionId = '', onClose }: { executi
   const [run, setRun] = useState<TaskExecution | null>(null), [record, setRecord] = useState<ExecutionReconciliationRecord | null>(null), [task, setTask] = useState<Task | null>(null), [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [readError, setReadError] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const [stopped, setStopped] = useState(false), [checked, setChecked] = useState(false), [note, setNote] = useState('');
+  const [worker, setWorker] = useState<WorkerStatus | null>(null), [workerError, setWorkerError] = useState(''), [stopConfirmed, setStopConfirmed] = useState(false);
+  const workerReady = !!worker && worker.execution_id === selected && (worker.backend !== 'docker' || worker.verified && !!worker.state && !worker.state.running);
+  const canReconcile = workerReady || !!(pending && record && matches(record, pending));
   function confirm(row: ExecutionReconciliationRecord, sent: Pending) {
     if (!matches(row, sent)) { setError('服务端核查记录与原请求不一致；原请求继续保留，请核查，不会覆盖已有声明。'); return; }
     try { sessionStorage.removeItem(key); pendingRef.current = null; setPending(null); setStorageError(''); setError(''); setRecord(row); setNotice('已核对并保存 Owner 声明；原执行仍为结果未知，退出码未改写。'); }
@@ -34,8 +37,8 @@ export function ExecutionReconciliation({ executionId = '', onClose }: { executi
     catch { setStorageError('无法清除待确认记录，原请求继续保留。'); }
   }
   async function load(identity: string) {
-    const version = ++sequence.current; setLoading(true); setReadError('');
-    const results = await Promise.allSettled([api<TaskExecution[]>('/execution-reconciliations/pending'), ...(identity ? [api<TaskExecution>(`/executions/${identity}`), api<ExecutionReconciliationRecord | null>(`/executions/${identity}/reconciliation`)] : [])]);
+    const version = ++sequence.current; setLoading(true); setReadError(''); setWorker(null); setWorkerError(''); setStopConfirmed(false);
+    const results = await Promise.allSettled([api<TaskExecution[]>('/execution-reconciliations/pending'), ...(identity ? [api<TaskExecution>(`/executions/${identity}`), api<ExecutionReconciliationRecord | null>(`/executions/${identity}/reconciliation`), api<WorkerStatus>(`/executions/${identity}/worker`, 'GET', undefined, 30000)] : [])]);
     if (!alive.current || version !== sequence.current) return;
     const errors: string[] = [], [list, detail, declaration] = results;
     if (list.status === 'fulfilled') {
@@ -49,6 +52,9 @@ export function ExecutionReconciliation({ executionId = '', onClose }: { executi
       setTaskNames(titles); setAgentNames(names);
     } else errors.push(`待核查列表：${failure(list.reason)}`);
     if (identity) {
+      const workerResult = results[3];
+      if (workerResult.status === 'fulfilled' && (workerResult.value as WorkerStatus).execution_id === identity) setWorker(workerResult.value as WorkerStatus);
+      else setWorkerError('无法确认原 Worker 状态，请刷新检查；未确认停止前不能首次提交声明。');
       if (detail.status === 'fulfilled') {
         const value = detail.value as TaskExecution; setRun(value);
         const metadata = await Promise.allSettled([api<Task>(`/tasks/${value.task_id}`), api<Agent>(`/agents/${value.agent_id}`)]);
@@ -68,9 +74,18 @@ export function ExecutionReconciliation({ executionId = '', onClose }: { executi
     setSelected(identity); void load(identity);
     return () => { alive.current = false; sequence.current++; if (previous instanceof HTMLElement) previous.focus(); };
   }, []);
-  function select(identity: string) { setSelected(identity); setRun(null); setRecord(null); setTask(null); setAgent(null); setStopped(false); setChecked(false); setNote(''); setError(''); setNotice(''); void load(identity); }
+  function select(identity: string) { setSelected(identity); setRun(null); setRecord(null); setTask(null); setAgent(null); setWorker(null); setStopped(false); setChecked(false); setNote(''); setError(''); setNotice(''); void load(identity); }
+  async function stopWorker() {
+    if (writing.current || loading || !stopConfirmed || !worker?.can_stop || worker.backend !== 'docker' || run?.state !== 'unknown') return;
+    const identity = selected; writing.current = true; sequence.current++; setBusy(true); setStopConfirmed(false); setWorker(null); setWorkerError('');
+    try {
+      const value = await api<WorkerStatus>(`/executions/${identity}/worker/stop`, 'POST', { confirm: true }, 60000);
+      if (alive.current && value.execution_id === identity) setWorker(value);
+    } catch (error) { if (alive.current) setWorkerError(`${failure(error)}。停止结果未确认，请手动刷新检查，不会自动重试或提交声明。`); }
+    finally { writing.current = false; if (alive.current) setBusy(false); }
+  }
   async function submit() {
-    if (writing.current || storageError) return;
+    if (writing.current || storageError || !canReconcile) return;
     const saved = pendingRef.current;
     if (!saved && (!run || loading || readError || record || run.state !== 'unknown' || !stopped || !checked || !note.trim())) return;
     const sent: Pending = saved ?? { execution_id: run!.id, payload: { request_id: crypto.randomUUID(), attempt: run!.attempt, requirement_version: run!.requirement_version, process_stopped: true, external_effects_checked: true, note: note.trim() } };
@@ -85,10 +100,19 @@ export function ExecutionReconciliation({ executionId = '', onClose }: { executi
     <p>这是 Owner 对进程及外部影响的人工核查声明，不会停止进程，也不构成机器退出成功或成果验收证据。</p>
     <p className="error">保存最后一条未核查声明后，调度可能恢复所有此前已授权的排队 CLI 任务，并调用模型产生费用。此操作本身不会新建执行。</p>
     <button disabled={loading || busy} onClick={() => void load(selected)}>{loading ? '读取核查状态中…' : '刷新核查状态'}</button>
+    {selected && <section><h3>原 Worker 状态</h3><button disabled={loading || busy} onClick={() => void load(selected)}>检查并刷新 Worker 状态</button>
+      {workerError && <p className="error" role="alert">{workerError}</p>}
+      {worker && <><p>执行后端：{worker.backend === 'docker' ? 'Docker 容器' : worker.backend === 'local' ? '本地 CLI' : '尚未绑定 Worker'} · {worker.verified ? '状态已核实' : '状态未核实'}</p><p>{worker.message}</p>
+        {worker.state && <p>容器状态：{worker.state.status} · {worker.state.running ? '仍在运行' : '未运行'} · 退出码：{worker.state.exit_code ?? '未知'}{worker.state.container_id && <small> · 容器 {worker.state.container_id}</small>}</p>}
+        {worker.backend === 'docker' && <><p>容器未知、不存在或已停止都不表示任务成功；仍需人工核查外部影响，成果须另行验收。</p>{!workerReady && <p className="error">Docker 停止状态尚未核实，不能首次提交进程已停止声明。</p>}
+          {worker.can_stop && run?.state === 'unknown' && <><label className="check"><input type="checkbox" disabled={busy || loading} checked={stopConfirmed} onChange={event => setStopConfirmed(event.target.checked)} />我确认停止此执行的受管容器；必要时强制终止，然后检查实际状态</label><button disabled={busy || loading || !stopConfirmed} onClick={() => void stopWorker()}>确认停止此 Docker Worker</button></>}
+        </>}
+      </>}
+    </section>}
     {readError && <p className="error" role="alert">{readError}。读取失败不代表没有待核查执行。</p>}{storageError && <p className="error" role="alert">{storageError}</p>}{error && <p className="error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
-    {pending ? <section><h3>原核查请求待确认</h3><p>执行 ID：{pending.execution_id} · 第 {pending.payload.attempt} 次 · 原需求 v{pending.payload.requirement_version}</p><small>请求 ID：{pending.payload.request_id}</small><p className="task-source">{pending.payload.note}</p><p>已确认进程停止、外部影响已核查。核对会使用原请求；如果服务端尚未接收，可能首次保存声明并恢复已授权队列。</p><button disabled={busy || !!storageError} onClick={() => void submit()}>{busy ? '核对中…' : '核对原核查请求'}</button>{record && !matches(record, pending) && <section><h4>服务端已有另一条不可覆盖的声明</h4><p className="task-source">{record.note}</p><small>请求 {record.request_id} · {record.reconciled_at}</small><p>此记录不等于原请求被接受。确认已有声明后，可以结束本地等待并继续核查其他执行。</p><button disabled={busy || loading || !!readError || !!storageError} onClick={acknowledgeExisting}>确认已有核查并结束本地待确认</button></section>}</section> : <section><h3>待核查执行（最多显示 100 条）</h3>{listLoaded && !loading && !readError && !rows.length && <p>暂无待核查执行。</p>}{rows.map(row => <button key={row.id} disabled={busy || loading} aria-pressed={row.id === selected} onClick={() => select(row.id)}><strong>{taskNames[row.task_id] ?? `任务 ${row.task_id}`}</strong> · {agentNames[row.agent_id] ?? `Agent ${row.agent_id}`}<br /><small>执行 {row.id} · 第 {row.attempt} 次 · v{row.requirement_version}</small></button>)}</section>}
+    {pending ? <section><h3>原核查请求待确认</h3><p>执行 ID：{pending.execution_id} · 第 {pending.payload.attempt} 次 · 原需求 v{pending.payload.requirement_version}</p><small>请求 ID：{pending.payload.request_id}</small><p className="task-source">{pending.payload.note}</p><p>已确认进程停止、外部影响已核查。核对会使用原请求；如果服务端尚未接收，可能首次保存声明并恢复已授权队列。</p><button disabled={busy || !!storageError || !canReconcile} onClick={() => void submit()}>{busy ? '核对中…' : '核对原核查请求'}</button>{record && !matches(record, pending) && <section><h4>服务端已有另一条不可覆盖的声明</h4><p className="task-source">{record.note}</p><small>请求 {record.request_id} · {record.reconciled_at}</small><p>此记录不等于原请求被接受。确认已有声明后，可以结束本地等待并继续核查其他执行。</p><button disabled={busy || loading || !!readError || !!storageError} onClick={acknowledgeExisting}>确认已有核查并结束本地待确认</button></section>}</section> : <section><h3>待核查执行（最多显示 100 条）</h3>{listLoaded && !loading && !readError && !rows.length && <p>暂无待核查执行。</p>}{rows.map(row => <button key={row.id} disabled={busy || loading} aria-pressed={row.id === selected} onClick={() => select(row.id)}><strong>{taskNames[row.task_id] ?? `任务 ${row.task_id}`}</strong> · {agentNames[row.agent_id] ?? `Agent ${row.agent_id}`}<br /><small>执行 {row.id} · 第 {row.attempt} 次 · v{row.requirement_version}</small></button>)}</section>}
     {run && <article className="task-card"><h3>{task?.title ?? `任务 ${run.task_id}`}</h3><p>负责人：{agent?.name ?? run.agent_id}{agent && !agent.enabled ? ' · 已停用' : ''}</p><small>执行 ID：{run.id}</small><p>第 {run.attempt} 次 · 原需求 v{run.requirement_version} · {run.state === 'unknown' ? '结果未知' : run.state} · 退出码：{run.exit_code ?? '尚未确认'}</p>{run.summary && <p className="task-source">{run.summary}</p>}
-      {record ? <section><h3>Owner 已核查</h3><p>声明：进程已停止；外部影响已核查。</p><p className="task-source">{record.note}</p><small>{record.reconciled_at} · 请求 {record.request_id}</small><p>此声明不改变原执行结果；再次执行仍须在任务中单独确认。</p></section> : !pending && <form onSubmit={event => { event.preventDefault(); void submit(); }}><fieldset className="task-fields" disabled={loading || busy || !!readError || !!storageError || run.state !== 'unknown'}><label className="check"><input type="checkbox" checked={stopped} onChange={event => setStopped(event.target.checked)} />我已核实原执行及其子进程均已停止</label><label className="check"><input type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)} />我已核查文件、服务及其他外部影响</label><label>核查依据<textarea required maxLength={2000} value={note} onChange={event => setNote(event.target.value)} placeholder="记录核查方式、实际结果及已处理的外部影响" /></label><button className="primary" disabled={!stopped || !checked || !note.trim()}>保存 Owner 核查声明</button></fieldset></form>}
+      {record ? <section><h3>Owner 已核查</h3><p>声明：进程已停止；外部影响已核查。</p><p className="task-source">{record.note}</p><small>{record.reconciled_at} · 请求 {record.request_id}</small><p>此声明不改变原执行结果；再次执行仍须在任务中单独确认。</p></section> : !pending && <form onSubmit={event => { event.preventDefault(); void submit(); }}><fieldset className="task-fields" disabled={loading || busy || !!readError || !!storageError || !canReconcile || run.state !== 'unknown'}><label className="check"><input type="checkbox" checked={stopped} onChange={event => setStopped(event.target.checked)} />我已核实原执行及其子进程均已停止</label><label className="check"><input type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)} />我已核查文件、服务及其他外部影响</label><label>核查依据<textarea required maxLength={2000} value={note} onChange={event => setNote(event.target.value)} placeholder="记录核查方式、实际结果及已处理的外部影响" /></label><button className="primary" disabled={!stopped || !checked || !note.trim()}>保存 Owner 核查声明</button></fieldset></form>}
     </article>}
   </dialog>;
 }

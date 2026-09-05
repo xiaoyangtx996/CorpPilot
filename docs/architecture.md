@@ -446,6 +446,16 @@ completed结果作为待审阅建议显示，不能因模型完成就创建项�
 
 本轮最终44模块构建为index-BLeLdit0.js；排除未提交Docker修改的F39纯暂存树导出后，全量448项及8子用例通过，最终定向23项通过，独立审查Pass，详见 [F39验收记录](acceptance-report.md#f39-owner-api访问鉴权验收)。此前含Docker的488项工作树回归另作历史记录。此权限边界不隔离同一OS用户，不限制Worker任意网络出口，也不证明真实Docker、供应商或CLI运行。
 
-## F40：真实 Docker Worker（未提交，待接入与实测）
+## F40：Docker Worker 适配与恢复（真实容器尚未验收）
 
-原拟Docker增量改编号F40，与F39鉴权分别交付。工作树中的Docker配置和执行适配仍待集成、容器身份恢复及真实双Worker验证；当前docker_engine管道不存在、WSL2不可用，不能把命令替身或鉴权通过作为Docker可运行证据。F40不得在未确认原容器退出时解除unknown，也不能因固定镜像或只读挂载就推断网络和凭据隔离完成。
+`CLISettings.backend` 在 local/docker 间选择，复用原 CLI 队列、任务版本、attempt、权限和成果评审。Docker 配置包含 .exe 绝对路径、固定 sha256 镜像 ID 或 repo@sha256 摘要、CPU/内存/PID 上限。显式 probe 只向固定本机 `npipe:////./pipe/docker_engine` 执行 info 和 image inspect，要求服务及镜像均为 Linux；不拉取镜像、不启动容器、不调用模型。宿主 Docker 命令使用独立空配置及精简环境，忽略环境中的远程 context 和 Docker 登录凭据。
+
+派发前将原 backend 与 executable 绑定到不可变 `execution_backends` 数据库记录，UPDATE/DELETE/REPLACE 均拒绝。改变当前配置、丢失本地 Worker 文件不能把历史 Docker 执行降级为普通人工声明流程。每次执行在宿主独立 run 根保存 `docker-worker.json`，记录 create/start 意图、容器 ID、实际 image ID 和随机身份标记；该根和数据库不挂入容器。容器 inspect 必须核对执行标签、随机标记、容器 ID 与 image ID，不能只相信名称或 Docker 客户端退出码。
+
+`run_docker` 使用 create（pull=never）、start/attach/stdin、inspect、stop/必要时kill及最终remove。容器固定 UID/GID 1000、只读根文件系统、cap-drop ALL、no-new-privileges、无自动重启；仅当前 run/work 可写挂载、inputs 只读挂载，HOME/CODEX_HOME 与 tmp 使用独立 tmpfs。CPU、内存/交换内存、PID、执行时限和输出量均有上限。确认不再运行后才返回可信退出信息并进入原成果捕获链，成功仍需 Codex 完成事件与 Owner 成果评审；停止已证实但 remove 失败保留记录并报告清理失败。
+
+镜像在 `docker/worker/Dockerfile` 固定 Codex 0.153.3。内层使用 `--sandbox danger-full-access`，隔离依赖上述外层容器限制，不能作为本机 CLI 参数使用。模型 key 经 attach stdin 传给入口，再进入 Codex 进程环境；不进入 Docker argv、容器 Config.Env、登录配置或持久 HOME，工具 shell 不主动继承 key。此设计不承诺同容器同 UID 工具无法读取进程凭据；身份 labels 的随机标记不是模型密钥或 F39 Owner token。F39 访问凭据不传给 Worker。当前 bridge 网络不是域名出口白名单，完整凭据及网络隔离仍需真实验证。
+
+Owner API 增加 `GET /api/workbench/executions/{id}/worker` 与 `POST /api/workbench/executions/{id}/worker/stop`，均沿用 F39 鉴权。仍由控制器持有的执行使用原任务停止请求；恢复入口只停止未被当前控制器持有的 unknown Docker 实例，先核实身份，stop 后再次 inspect，仍 running 才 kill 并回读，不自动启动或删除历史容器。机器证据未知时禁止“已停止”声明；本地记录缺失不是 absent，必须成功核对 daemon 的完整容器清单及执行标签。首次保存声明前服务端再次核查，浏览器旧的 exited 状态不能绕过当前 running；既有不可变声明按原请求精确重放，不要求 daemon 后来仍可用。
+
+浏览器已验证禁用配置保存、真实 probe 失败，以及受控 Worker 状态的核查、两次停止、提交前状态竞争拒绝和原键恢复；这些替身未创建真实容器。最终主代理全量511项及8子用例通过，Tech Lead独立36项与Worker定向37项通过、审查Pass；QA新标签页恢复原执行、声明和禁用配置，测试服务经实际句柄中断并确认退出。详细结果与环境证据见 [F40 验收记录](acceptance-report.md#f40-docker-worker-适配与恢复验收)，安装/操作及未验收边界见 [Docker Worker](docker-worker.md)。本机 Windows 修复授权待答，尚未进行系统写入，F40 不代表真实 CLI、双 Worker 或整体目标通过。
