@@ -646,3 +646,7 @@ BudgetPanel复用预算接口，USD输入经BigInt拆分为整数微美元，界
 ## F63 费用声明账本
 
 budget_settlements 在现有 SQLite 内追加不可变修订，预算准入按未核销预留加最新声明计算。控制器在原锁内验证不再持有实例，先规范化 ID；同键重放核验完整请求，可在控制器关闭后精确读取原回执。金额、版本、事务及并发约束留在 budgets，HTTP 沿用 Owner 鉴权，不增加服务或依赖。声明只改变费用账本，不修改原执行、审批或历史预留。契约见 [budget-admission.md](budget-admission.md)。
+
+## F64 费用界面与恢复
+
+FeeSettlement复用F63 API，不新增后台服务或计费写入来源。按kind/Run ID挂载，读取实际attempt和需求版本，完整请求以独立sessionStorage键冻结；精确request回执核验后才释放pending。serial阻止卸载后的异步更新及清理。首次写入拒绝与后续读取失败分开，明确拒绝后的无记录和当前版本读取成功才允许Owner结束该请求。AgentActivity独立读取身份最新费用列表，错误不影响原活动；查看不会扩大Agent上下文或产生执行请求。

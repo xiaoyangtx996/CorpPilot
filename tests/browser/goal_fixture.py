@@ -29,6 +29,7 @@ def main():
     parser.add_argument('--data-dir', required=True, type=Path)
     parser.add_argument('--checkpoint', action='store_true')
     parser.add_argument('--budget', action='store_true')
+    parser.add_argument('--fees', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -132,8 +133,17 @@ def main():
         batches.executions.cancel(c)
         checkpoint = dict(plan=plan, batch=batch, retained_execution_id=a)
 
+    fee_model = None
+    if args.fees:
+        from workbench.runs import Runs
+        runs = Runs(store)
+        fee_model = runs.create(source['id'], dict(agent_id=people[0]['id'], source_message_id=message['id'], request_id='fee-historical-model'))
+        assert runs.claim(fee_model['id'])
+        runs.fail(fee_model['id'], 'Historical ended fixture; unknown usage is not zero')
+        fee_model = runs.get(fee_model['id'])
+
     budget = None
-    if args.budget:
+    if args.budget or args.fees:
         from workbench.collaboration import Collaboration
         from workbench.project_executions import ProjectExecutions
         from workbench.budgets import Budgets
@@ -141,7 +151,7 @@ def main():
             model_reserve_micro_usd=1000000, cli_reserve_micro_usd=1000000))
         plan = Collaboration(store).create(source['id'], dict(request_id='budget-plan', source_message_id=message['id'],
             title='F62 预算项目', shared_brief='Explicit budget fixture', coordinator_id=people[0]['id'],
-            tasks=[{**task, 'depends_on': []} for task in proposal['tasks'][:2]]))
+            tasks=[{**task, 'depends_on': []} for task in proposal['tasks'][:3 if args.fees else 2]]))
         batch = ProjectExecutions(store).create(plan['id'], {'request_id': 'budget-batch', 'tasks': [
             dict(task_id=identity, expected_version=1, previous_execution_id=None, reconciliation_note='') for identity in plan['task_ids'].values()]})
         budget = dict(plan=plan, batch=batch)
@@ -150,6 +160,10 @@ def main():
         rejected = set()
 
         def do_POST(self):
+            if '/budget-settlements/' in self.path:
+                raw = self.rfile.read(int(self.headers['Content-Length']))
+                self.rfile = io.BytesIO(raw)
+                event('fee_post', payload=json.loads(raw), path=self.path)
             if self.path.endswith('/checkpoint-recoveries'):
                 raw = self.rfile.read(int(self.headers['Content-Length']))
                 self.rfile = io.BytesIO(raw)
@@ -174,6 +188,16 @@ def main():
             return Handler.do_PATCH(self)
 
         def respond(self, status, value):
+            if '/budget-settlements/' in self.path:
+                if self.command == 'GET' and control().get('fee_get503'):
+                    return Handler.respond(self, 503, {'error': 'Fee readback unavailable'})
+                if self.command == 'POST' and status == 201:
+                    event('fee_accepted', receipt=value)
+                    if control().get('drop_fee'):
+                        self.close_connection = True
+                        try: self.connection.shutdown(socket.SHUT_RDWR)
+                        except OSError: pass
+                        return
             if '/budget-' in self.path:
                 if self.command == 'GET' and control().get('budget_get503'):
                     return Handler.respond(self, 503, {'error': 'Budget readback unavailable'})
@@ -225,6 +249,7 @@ def main():
         agent_names=[p['name'] for p in people], data_dir=str(home), pid=os.getpid())
     if checkpoint is not None: manifest['checkpoint'] = checkpoint
     if budget is not None: manifest['budget'] = budget
+    if fee_model is not None: manifest['fee_model'] = fee_model
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():

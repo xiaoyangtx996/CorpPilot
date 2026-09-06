@@ -1,6 +1,6 @@
 # USD 预算准入与持久预留
 
-F61 提供后端准入和查询接口，F62 接通预算设置与 Agent 观察界面；F63 增加 Owner 费用声明与修订接口，录入界面待接入。这是每次派发的额度预留，不是供应商实际账单、单次 CLI 费用上限或自动退款。
+F61 提供后端准入和查询接口，F62 接通预算设置与 Agent 观察界面；F63 增加 Owner 费用声明与修订接口，F64 接通费用录入、更正和历史界面。这是每次派发的额度预留，不是供应商实际账单、单次 CLI 费用上限或自动退款。
 
 Owner 设置一个累计 USD 总额，以及每个模型 Run、每个 CLI 执行各自的预留额。金额为整数微美元：1 USD = 1000000 微美元。总额允许 0–1000000000000，每次预留允许 1–1000000000000；不接受浮点、布尔、负数或缺失字段。预算默认关闭，默认预留值不构成执行授权。
 
@@ -45,4 +45,16 @@ queued/running/stopping 或控制器仍持有的实例不能声明。unknown 必
 
 同路径 GET 返回最新回执或 null，`/history` 返回最近100个修订，`/requests/{request_id}` 精确读取原请求回执。GET `/api/workbench/budget-settlements` 与 `/api/workbench/agents/{id}/budget-settlements` 分别返回全局或该身份最近100个实例的最新声明，均须 Owner 认证。请求ID作为单一路径段编码。
 
-预算界面展示未核销预留、Owner 声明费用与当前占用；费用录入、更正和历史操作界面尚待 F64。验证：pytest tests/test_workbench_budget_settlements.py tests/test_workbench_settlement_integration.py -q，以及 npm run test:browser:budget。这里不构成服务方硬费用上限。
+预算界面展示未核销预留、Owner 声明费用与当前占用；F64 已接通下述费用操作界面。验证：pytest tests/test_workbench_budget_settlements.py tests/test_workbench_settlement_integration.py -q，以及 npm run test:browser:budget。这里不构成服务方硬费用上限。
+
+## 费用操作界面（F64）
+
+右侧 Agent 活动的每条实际执行、模型调用可打开“费用声明与更正”；“此身份的费用声明”另列最近100个实例的最新声明并提供同一入口，因此不局限于最近50条活动。列表只按当前身份查询，不是全局或全历史费用总和。
+
+弹窗读取实际实例、最新声明和最近100个修订，金额初始为空。填写完整实例费用、证据参考与说明，明确确认可能放行既有队列后提交。允许六位小数和明确的零；修改任意字段撤销确认。正在排队或执行的实例只读；unknown仍须先走既有停止与外部影响核查。向上更正追加版本，不修改原成果和审批。
+
+每个 kind/Run ID 使用独立 sessionStorage 待确认键，发出请求前保存完整授权。POST回执还须通过原 request_id 精确GET核验；丢响应、401、读取失败或不一致回执保留原请求，不自动重发。已核对的原回执与最新声明分开展示，即使期间其他客户端追加了修订，也不会把旧金额恢复成最新费用。
+
+首次POST明确400/409/422拒绝后，再读原请求无回执及当前版本，才提供“结束已拒绝请求并重新核查”；随后新请求仍须重新确认。仅GET无回执不能证明未受理。坏会话存储保留并锁定，不静默覆盖。关闭或切换身份后迟到读取不能清除原pending或污染新弹窗。sessionStorage不承诺关闭浏览器后的待确认恢复，服务端历史与精确请求查询仍持久保存。
+
+浏览器验证入口：frontend 中 `npm run test:browser:fees`，独立fixture包含三项真实持久队列和本地受控runner；无真实供应商调用。原预算设置仍由 `npm run test:browser:budget` 验证。

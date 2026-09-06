@@ -712,3 +712,15 @@ handoff_review 实现账本及19项新测试，根负责控制器/API、7项集�
 正常99751零活动停止后创建 f63-normal-backup，数据库 SHA256 d3a7c6c3b0621d649fe930966eb4cb47f5f4d6e4e089700d31151393666b5338；新76129运行7892，原41表逐行不变，仅新增空 budget_settlements，完整性、外键、health200及JS字节一致（f63-normal-readback.json）。首次只读检查误用 status 列，修正为实际 state 后通过，未改数据。
 
 独立提交后立即推送，精确提交和远端结果见仓库外 H:\item\CorpPilot-test-evidence-20260906\f63-delivery-result.json；远端回读成功前不标记远端交付。整体目标仍未完成。
+
+## F64 费用录入、更正与身份费用历史
+
+handoff_review负责FeeSettlement、AgentActivity和API类型；根负责隔离fixture、浏览器测试、集成与文档；verify_prompt_push只读终审Pass。没有新增后端、依赖或调度层。费用源明确为Owner声明，原请求与最新版本分开；身份最近100实例列表独立可用。根补修空费用列表项导致活动加载异常及回执安全整数检查，作者落实。
+
+正式npm run test:browser:fees最终session29735退出0，corppilot-fees-dUm084报告通过、fixture退出0、pageErrors空。三任务预算链精确2次受控CLI、0模型调用、第三项保持queued；显式0释放及2USD更正阻断、原执行不变。完整测试含11边界、丢响应/401精确旧请求恢复、不同身份费用列表、null列表不阻断活动、CAS重新授权、上界精度、卸载迟到与StrictMode/Escape；追加POST201后GET400保留accepted请求通过。8次费用POST包括2次另一客户端更正和1次CAS拒绝，未自动重发。
+
+前轮9Qbjd2是空字段原生required校验的测试假定错误，修测试未放宽产品校验；oLq1NN发现textarea隐式标签随值变化，补固定aria-label。7vBosI主链通过后补列表异常验证，qpDAx0通过；最终dUm084另含精确GET400专项。证据保留在仓库外，不隐去失败轮次。构建54模块index-CgVhIIqB.js，根目视原revision1和最新revision2分开的截图。
+
+原goal浏览器WMsoYi（session73238）和预算浏览器9Noj4C均通过、fixture退出0。后端生产未改，未重复全量Python；最近F63全量814+8为既有基线。正常76129继续运行，无需重启；原41表与F63离线备份逐行一致，费用表仍空，完整性/外键/health200和实际JS字节通过（f64-normal-readback.json）。
+
+独立提交后立即推送，精确提交及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f64-delivery-result.json。远端确认前不标记远端交付；真实CLI/双Docker、可见上下文摘要和工具活动观察的剩余验收及全目标验收仍未完成。

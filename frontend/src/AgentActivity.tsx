@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type Agent, type Conversation, type Task, type TaskExecution, type ReplyRun, type ReplyRuntime } from './api';
+import { api, type Agent, type Conversation, type Task, type TaskExecution, type ReplyRun, type ReplyRuntime, type FeeReceipt } from './api';
 import { TaskExecutions } from './TaskExecutions';
 import { ExecutionUsage } from './ExecutionUsage';
+import { FeeSettlement, feeMoney } from './FeeSettlement';
 
 type Page<T> = { items: T[]; total: number; has_more: boolean };
 type Activity = { agent_id: string; tasks: Page<Task>; executions: Page<TaskExecution & { task_title: string; conversation_id: string; artifact_count: number; review_decision: 'approved' | 'rejected' | null }>; model_runs: Page<ReplyRun & { kind: 'reply' | 'planning' | 'retrospective' | 'peer_review' }> };
@@ -17,10 +18,13 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
   const [error, setError] = useState(''), [runtimeError, setRuntimeError] = useState('');
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [detail, setDetail] = useState<{ task: Task; conversation: Conversation } | null>(null);
+  const [fee, setFee] = useState<{ kind: 'model' | 'cli'; run_id: string } | null>(null);
+  const [fees, setFees] = useState<FeeReceipt[] | null>(null), [feeError, setFeeError] = useState('');
   async function load() {
     const request = ++version.current;
     setLoading(true); setError(''); setRuntimeError(''); setValue(null); setRuntime(null);
-    const replies = await Promise.allSettled([api<Activity>(`/agents/${agent.id}/activity`), api<ReplyRuntime>('/cli-runtime')]);
+    setFees(null); setFeeError('');
+    const replies = await Promise.allSettled([api<Activity>(`/agents/${agent.id}/activity`), api<ReplyRuntime>('/cli-runtime'), api<FeeReceipt[]>(`/agents/${agent.id}/budget-settlements`)]);
     if (request !== version.current) return;
     const activity = replies[0];
     if (activity.status === 'fulfilled') {
@@ -29,6 +33,11 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
     } else setError(failure(activity.reason));
     const status = replies[1];
     if (status.status === 'fulfilled') setRuntime(status.value); else setRuntimeError(failure(status.reason));
+    const feeRows = replies[2];
+    if (feeRows.status === 'fulfilled') {
+      if (!Array.isArray(feeRows.value) || feeRows.value.length > 100 || feeRows.value.some(row => !row || typeof row !== 'object' || typeof row.run_id !== 'string' || !row.run_id.trim() || !Number.isSafeInteger(row.revision) || row.revision < 1 || row.agent_id !== agent.id || !['model', 'cli'].includes(row.kind) || !Number.isSafeInteger(row.amount_micro_usd) || row.amount_micro_usd < 0 || row.amount_micro_usd > 1e12 || row.source !== 'owner_declared')) setFeeError('费用列表关联或格式不一致。');
+      else setFees(feeRows.value);
+    } else setFeeError(failure(feeRows.reason));
     setLoading(false);
   }
   useEffect(() => { void load(); return () => { version.current++; }; }, [agent.id]);
@@ -69,6 +78,7 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
           <small>执行 {run.id} · 第{run.attempt}次 · 当次需求 v{run.requirement_version}</small>
           <p>退出码：{run.exit_code ?? '未观测'} · 已保存成果 {run.artifact_count} 个</p>
           <ExecutionUsage run={run} />
+          <button onClick={() => setFee({ kind: 'cli', run_id: run.id })}>费用声明与更正</button>
           <p>当次 Owner 验收：{run.review_decision === 'approved' ? '已批准' : run.review_decision === 'rejected' ? '已拒绝' : '未批准'}</p>
           {run.summary && <p>{run.summary}</p>}
           <button disabled={busy} onClick={() => void open(run.conversation_id, run.task_id)}>查看该任务全部执行</button>
@@ -80,14 +90,17 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
           <h4>{kinds[run.kind]} · {labels[run.state] ?? run.state}</h4><small>{run.id}</small>
           <p>模型：{run.model ?? '待回执'} · 输入/输出 token：{run.usage?.prompt_tokens ?? '未知'} / {run.usage?.completion_tokens ?? '未知'}</p>
           {run.error && <p className="error">{run.error}</p>}
+          <button onClick={() => setFee({ kind: 'model', run_id: run.id })}>费用声明与更正</button>
           <button disabled={busy} onClick={() => void open(run.conversation_id)}>打开所属会话</button>
         </article>)}
       </details>
-      <p className="muted">Token 是用量，费用尚未核算。这里只展示任务要求和活动回执，不是完整模型输入或工具调用明细。</p>
+      <p className="muted">Token 是用量，不能等同费用。费用需 Owner 核查声明。这里只展示任务要求和活动回执，不是完整模型输入或工具调用明细。</p>
     </>}
     <p>全局 CLI 队列：{runtime ? `${runtime.running ? '控制服务运行中' : '控制服务已关闭'} · 活动实例 ${runtime.active_requests}` : '尚未读回'}</p>
     {runtime?.error && <p className="error">全局调度提示：{runtime.error}</p>}
     {runtimeError && <p className="error" role="alert">全局队列读取失败：{runtimeError}</p>}
+    <details><summary>此身份的费用声明（最近100个实例）</summary><p>每实例仅列最新声明，按声明时间排序；不是全部费用总额。刷新 Agent 活动获取当前记录。</p>{feeError && <p className="error" role="alert">{feeError}</p>}{fees?.map(row => <article className="task-card" key={`${row.kind}:${row.run_id}`}><p>{row.kind === 'model' ? '模型' : 'CLI'} · {row.run_id} · 修订 {row.revision} · USD {feeMoney(row.amount_micro_usd)}</p><button onClick={() => setFee({ kind: row.kind, run_id: row.run_id })}>费用声明与更正</button></article>)}{fees?.length === 0 && <p>暂无费用声明；这不表示费用为零。</p>}</details>
     {detail && <TaskExecutions {...detail} agents={agents} onClose={() => setDetail(null)} />}
+    {fee && <FeeSettlement key={`${fee.kind}:${fee.run_id}`} {...fee} agent_id={agent.id} onClose={() => setFee(null)} />}
   </section>;
 }

@@ -551,3 +551,11 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 全量814 passed、8 subtests passed，236.63s。覆盖不可变追加更正、旧键精确回执、并发版本、溢出回滚、历史无预留、控制器持有保护、unknown核查、认证和实际备份恢复。受控CLI验证差额只放行符合预算的后续实例，超支更正阻止新派发；不修改原执行和审批。独立只读终审Pass。
 
 预算浏览器vtp8w1及原目标浏览器wL34v3通过，fixture正常退出；UI如实展示0.5 USD Owner声明、1.000001 USD未核销预留和1.500001 USD当前占用。类型检查与构建通过。正常库41旧表未变，仅一张空新表，health与资源读回通过，见外部f63-normal-readback.json。费用录入UI尚未实现，声明不代表供应商验真；真实CLI、双Docker及整体目标仍待完成。
+
+## F64 费用界面验收
+
+根正式npm run test:browser:fees退出0，最终corppilot-fees-dUm084报告通过、11项边界、pageErrors为空、fixture正常退出。验证金额显式零/六位精度/上界、减少占用只放行一个实例、超支阻断后续、原执行不变、CAS冲突重新确认、精确旧回执与最新修订分开、丢响应/401恢复、POST201后GET400、坏存储/错误回执、身份列表隔离、null回执列表及卸载迟到、StrictMode/Escape。2次本地受控CLI、0模型调用；不替代真实CLI或Docker。独立只读审查Pass。
+
+类型检查和54模块index-CgVhIIqB.js构建通过；原goal WMsoYi及预算9Noj4C回归通过。两轮早期金额原生校验假定/textarea标签失败分别修测试与产品，过程见功能台账。正常库未被测试修改，服务76129无需重启，health与实际静态资源字节一致（f64-normal-readback.json）。后端生产未改，未重跑Python全量，最近F63基线814+8不作为本轮新运行。
+
+本功能完成Owner费用录入、不可变更正和持久历史的浏览器入口；费用仍是Owner声明，非服务方账单验真或单调用硬cap。整体目标仍未完成。
