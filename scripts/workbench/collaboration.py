@@ -8,6 +8,14 @@ from .tasks import Tasks
 from . import dependencies
 
 
+def require_delegate(db, agent_id):
+    row = db.execute('SELECT tools FROM agents WHERE id=?', (agent_id,)).fetchone()
+    if row is None:
+        raise KeyError('协调人不存在')
+    if 'delegate' not in json.loads(row['tools']):
+        raise PermissionError('协调人尚未获得 delegate 工具权限')
+
+
 class Collaboration:
     @staticmethod
     def _receipt(row):
@@ -82,6 +90,7 @@ class Collaboration:
                 raise ValueError('request_id 已用于不同协作计划')
             return self._receipt(prior)
         coordinator = _text(payload['coordinator_id'], '协调人 ID')
+        require_delegate(db, coordinator)
         source = self.store._conversation(db, source_conversation_id, coordinator)
         if source['archived']:
             raise ValueError('源会话已归档')

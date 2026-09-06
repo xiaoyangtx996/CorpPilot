@@ -66,6 +66,7 @@ def main():
     people = store.agents()[:3]
     for person in people:
         store.save_agent({'enabled': True, 'tools': ['read', 'write', 'execute'], 'model': 'default'}, person['id'])
+    store.save_agent({'tools': ['read', 'write', 'execute', 'delegate']}, people[0]['id'])
     source = store.save_conversation({'type': 'dm', 'title': 'F53 QA Secretary', 'member_ids': [people[0]['id']]})
     store.send_message(source['id'], {'content': 'F53_PRIVATE_HISTORY_DO_NOT_SHARE', 'request_id': 'private'})
     message = store.send_message(source['id'], {'content': 'F53_PRIVATE_TARGET: create a three-step deliverable; explicitly choose what to share', 'request_id': 'target'})

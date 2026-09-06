@@ -4,7 +4,7 @@
 
 ## 当前待完成项（F83审计）
 
-- 工具权限一致性：F84已限制CLI派发必须具备read/write/execute；delegate委派权限尚待独立落实，不能将整组工具范围标为完全验收。
+- 当前版本最终回归：F84已限制CLI三权限，F85已落实协调人delegate；分项通过仍须纳入最终全量及真实执行验收。
 - 真实已授权模型/CLI完整交付，以及两个实际Docker Worker隔离、停止、失败互不影响和重建恢复；本地fixture及原生Git不能替代。
 - 最终Python/浏览器集成回归、独立QA及PM逐项验收；本轮结果在末尾单列，不覆盖早期失败记录。
 - GitHub功能分支远端交付：F82提交a85b25f立即push403，当前账号无仓库写权限，不能标已推送。
@@ -710,3 +710,9 @@ F83提交后原live session8580正常退出0，完整Python回归1169 passed、8
 根定向103 passed、44.36秒（f84-targeted-final.log），相关目标/批次/检查点/评审集成90 passed、40.94秒（f84-integration.log），共193项。新增17项Store及12项真实HTTP/受控runner场景覆盖缺权限无创建/预算、排队和运行前撤权、local/Docker零调用、运行停止信号/退出19、重启原回执与历史Owner评审。两种runner为故障替身，不是实际Docker或付费CLI。
 
 浏览器agent-creation wjzm9V与原goal QpCpZh均通过、fixture退出0。前端仅增加真实权限说明，构建62模块、551.08kB/162.55kB gzip，保留体积提示。源码/Ponytail独立审查Pass；运行撤权测试误等cancelled已改为既有failed结果且保留停止信号/实际退出码断言。正常数据重启与回读通过（f84-normal-readback.json），没有迁移或自动补权。当前功能未重复全量Python，不将F83全量冒称包含本次修改；delegate、真实CLI/双Docker、远端交付和最终PM验收仍未完成。
+
+## F85 协调人权限验收
+
+根170 passed、57.95秒（f85-targeted-final.log，session48085退出0），包含10项新权限回归、2项真实HTTP及原协作/规划/目标/启动/上下文/评议/复盘测试。新行为缺delegate拒绝且无部分状态；规划期间撤权禁止输入/发布，规划完成后撤权不启动项目；同键/GET/重启恢复，已启动批次worker无delegate仍可执行。真实HTTP使用本机受控模型，非付费供应商。
+
+原goal浏览器IkIZc3通过（38741退出0、fixture0），62模块构建551.33kB/162.64kB gzip，体积提示保留。独立源码/PM/Ponytail/根测试审查Pass。首轮93pass1fail为原协作API成功夹具遗漏F84的write，补显式授权，未放宽检查。正常重启及f85-normal-readback.json确认原数据/空创建表、完整性/外键/health200和当前资源一致，无自动增权或数据迁移。真实CLI/双Docker、远端交付及最终全量/PM仍未完成。

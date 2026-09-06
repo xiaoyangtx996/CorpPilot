@@ -1041,3 +1041,13 @@ skill_inputs_backend负责executions及新17项测试；frontend_integration负�
 正式agent-creation构建并运行wjzm9V通过（23215退出0）；原goal QpCpZh通过（85094退出0），均fixture0。62模块index-1df8cjYF.js构建成功，保留超过500kB提示。正常55052确认live且三类active均0后明确停止；f84-normal-backup数据库704512字节，SHA256 f34cd422f23a899825d06d292defa4b625695b2bfa1ad7a683e41d1cd6872a03；56575在原目录7892启动。f84-normal-readback.json确认51旧表逐行不变、创建请求表空、完整性/外键/health200与JS字节SHA256 f8e110597e99d2363e482dd1307bfb5d0996858cedbcd4cd5a47728ce1b08b2e一致。
 
 F83最终全量1169+8、611.04秒的日志/XML已独立确认，属于本次改动之前。F84即时提交/push/远端回读精确结果见H:\item\CorpPilot-test-evidence-20260906\f84-delivery-result.json；远端回读前不标已交付，整体目标继续。
+
+## F85 协调人委派权限
+
+skill_inputs_backend负责collaboration/planning/runs三文件与10项测试；frontend_integration负责AgentEditor短说明，并独立审后端/根HTTP/夹具改动；根负责HTTP交付、旧测试显式协调人授权、构建/浏览器、正常数据、文档与Git。复用同事务当前tools检查，原回执先返回，新规划/认领/输入/发布和项目创建检查delegate；worker不额外授权，已有批次不因协调人撤权整体停止。Owner直接peer评议无Agent委派人字段，PM独立确认不凭空新增该主体。
+
+根首轮93 passed、1 failed、45.93秒（f85-targeted.log）：旧collabAPI成功worker仅read/execute，补F84所需write。最终新旧170 passed、57.95秒（f85-targeted-final.log、48085退出0）；作者10项1.29秒属重复不累加。实际HTTP验证缺权403无模型/项目、授予后成功、撤权原key/GET/重启不重跑以及worker无delegate。浏览器原goal IkIZc3通过（38741退出0、fixture0），正式npm run test:browser含62模块构建，index-ClAG5vgI.js 551.33kB/162.64kB gzip；保留体积提示。
+
+正常56575确认live及三类active0后明确停止；f85-normal-backup DB704512字节、SHA256 f34cd422f23a899825d06d292defa4b625695b2bfa1ad7a683e41d1cd6872a03；44029沿原数据7892启动。f85-normal-readback.json确认51旧表逐行不变、创建表空、完整性/外键/health200与JS SHA256 991b827ff8cb935d554af03e07f2ca59e5e69ab84d561f64705c809c41ea5431一致。无迁移或自动补权限。
+
+本功能即时commit/push/远端回读结果见H:\item\CorpPilot-test-evidence-20260906\f85-delivery-result.json；远端未确认不称已交付。最近全量F83不包含F84/F85，本次仍需最终整体验收，真实CLI/双Docker与远端权限继续保留未完成。

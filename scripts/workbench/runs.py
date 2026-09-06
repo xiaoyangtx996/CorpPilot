@@ -60,6 +60,8 @@ class Runs:
         self.store._enabled_member(db, run["agent_id"])
         if conversation["archived"]:
             raise ValueError("会话已归档，不能生成回复")
+        if run.get('id') and db.execute('SELECT 1 FROM planning_requests WHERE run_id=?', (run['id'],)).fetchone():
+            planning.require_delegate(db, run['agent_id'])
 
     def create(self, conversation_id, payload):
         with self.store.connect() as db:

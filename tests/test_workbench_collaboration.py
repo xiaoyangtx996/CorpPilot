@@ -14,6 +14,7 @@ from workbench.store import Store
 def setup(tmp_path):
     store = Store(tmp_path)
     people = store.agents()[:3]
+    store.save_agent({'tools': ['read', 'delegate']}, people[0]['id'])
     source = store.save_conversation({'type': 'dm', 'title': 'secretary', 'member_ids': [people[0]['id']]})
     message = store.send_message(source['id'], {'content': 'PRIVATE ORIGINAL', 'request_id': 'owner'})
     api = Collaboration(store)

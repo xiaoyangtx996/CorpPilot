@@ -2,7 +2,7 @@
 import json
 
 from .store import Store, _text
-from .collaboration import Collaboration
+from .collaboration import Collaboration, require_delegate
 
 
 class PlanningError(ValueError):
@@ -142,6 +142,7 @@ class Planning:
             if plan is None or _json(plan['request_payload']) != original:
                 raise ValueError('request_id 已用于不同规划或回复')
             return plan
+        require_delegate(db, _text(payload['agent_id'], 'Agent ID'))
         catalog = []
         for identity in candidates:
             self.store._enabled_member(db, identity)

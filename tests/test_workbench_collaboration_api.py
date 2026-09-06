@@ -9,6 +9,7 @@ from workbench.executions import Executions
 def setup_plan(path):
     store = Store(path)
     coordinator, builder, reviewer = store.agents()[:3]
+    store.save_agent({'tools': ['read', 'delegate']}, coordinator['id'])
     source = store.save_conversation({'type': 'dm', 'title': 'Secretary private discussion',
                                       'member_ids': [coordinator['id']]})
     private = store.send_message(source['id'], {'content': 'PRIVATE-PREHISTORY-ONLY', 'request_id': 'private'})
@@ -95,7 +96,7 @@ def test_plan_tasks_use_existing_execution_authority_and_private_context_boundar
     receipt = Collaboration(store).create(source['id'], payload)
     executions = Executions(store)
     builder_id = payload['tasks'][0]['agent_id']
-    store.save_agent({'tools': ['read', 'execute']}, builder_id)
+    store.save_agent({'tools': ['read', 'write', 'execute']}, builder_id)
     run = executions.create(receipt['task_ids']['build'], {
         'request_id': 'separate-owner-execution-confirmation', 'expected_version': 1,
         'previous_execution_id': None, 'reconciliation_note': '',

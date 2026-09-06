@@ -145,6 +145,7 @@ def test_real_peer_single_source(tmp_path):
 def test_real_planning_source_and_candidate_instructions_hash(tmp_path):
     from workbench.planning import Planning
     store, _, _, task, runs, _, _, service = fixture(tmp_path)
+    store.save_agent({'tools': ['read', 'write', 'execute', 'delegate']}, task['agent_id'])
     row = Planning(store).create(task['conversation_id'], {'agent_id': task['agent_id'], 'source_message_id': task['source_message_id'], 'request_id': 'planning', 'candidate_ids': [task['agent_id']]})
     runs.claim(row['id']); snapshot = runs.snapshot(row['id'])
     result = service.record_model(row['id'], snapshot, 'fixture')

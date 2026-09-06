@@ -87,7 +87,7 @@ def test_only_created_project_is_not_silently_launched(tmp_path):
 def test_capacity_failure_rolls_back_entire_new_project(tmp_path):
     store,plans,cid,launch,p=fixture(tmp_path)
     owner=p['plan']['coordinator_id']
-    store.save_agent({'tools':['read','write','execute']},owner)
+    store.save_agent({'tools':['read','write','execute','delegate']},owner)
     # Real public admissions establish 99 independent queued tasks, leaving one slot.
     for index in range(99):
         task=plans.tasks.create(cid,dict(request_id=f'fill-{index}',source_message_id=p['plan']['source_message_id'],title='capacity',scope='scope',acceptance='accept',agent_id=owner))

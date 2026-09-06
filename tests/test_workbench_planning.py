@@ -11,6 +11,7 @@ from workbench.planning import Planning
 
 def setup(tmp_path):
     store=Store(tmp_path); api=Planning(store); agents=store.agents()[:3]
+    store.save_agent({'tools': ['read', 'delegate']}, agents[0]['id'])
     cid=store.save_conversation(dict(type='dm',title='source',member_ids=[agents[0]['id']]))['id']
     store.send_message(cid,dict(content='PRIVATE PRIOR',request_id='prior'))
     source=store.send_message(cid,dict(content='TARGET ONLY',request_id='source'))

@@ -706,3 +706,7 @@ CodeIntegrations保存固定授权、原生操作状态及Owner未知核查声�
 ## F84 CLI工具范围准入
 
 Executions._authorize沿原方法增加显式dispatch参数，仅_create、claim、snapshot启用read/write附加检查；execute原门保持。CLIController调用snapshot后才准备调用local/Docker，两者共享该门；运行轮询撤权设置cancel信号，仍等待实际runner退出/报告。report和Reviews保留原权限规则，新增读写门不回溯剥夺已产出成果的核查能力。创建回执在新派发检查前按完整原payload回放，无新依赖、数据表或默认权限迁移。
+
+## F85 协调人delegate门
+
+Collaboration.require_delegate读取同一事务中的身份tools，Planning新请求在原回执匹配后调用；Runs._authorize仅对planning_requests已有绑定应用，覆盖claim、snapshot及finish。Collaboration新项目同事务检查覆盖ProjectLaunches和GoalExecutions规划完成至启动之间的权限变化，不新增调度器/权限存储。GET与完整同键回执不重演新行为；已经启动的批次继续依据执行身份权限管理。普通reply、retro及Owner直接peer授权不应用协调人门。
