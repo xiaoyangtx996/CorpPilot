@@ -662,3 +662,7 @@ ContextSummary复用F65只读API和现有实例详情，严格校验kind/身份/
 ## F67 工具观察账本
 
 local/Docker复用parse_tools处理返回的有界stdout，在现有SQLite保存不可变tool_activities；不另建流服务，不改变原停止或成果验收权威。控制器在采集成果前持久化，保存失败保留同一Future仅重试写入。Owner GET只查账本，历史缺失不重建；仅保存顺序、枚举、状态及白名单内容的hash/长度。完整协议及限制见 [tool-activities.md](tool-activities.md)。
+
+## F68 工具观察界面
+
+ToolActivities复用F67接口与实际execution详情，严格验证绑定及完整元数据白名单。原生dialog/details承担交互，serial在刷新与卸载时废弃旧响应，按执行ID挂载；AgentActivity原身份key隔离视角。前端不承担事件采集或补造，不新增宿主依赖、后台服务或写接口。事件明细和说明默认折叠，关键计数常显。

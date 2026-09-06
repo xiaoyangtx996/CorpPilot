@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--budget', action='store_true')
     parser.add_argument('--fees', action='store_true')
     parser.add_argument('--context', action='store_true')
+    parser.add_argument('--tools', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -204,6 +205,41 @@ def main():
             memory.rollback(scope,identity,dict(request_id='context-rollback-'+scope,expected_version=1,target_version=0,note='Later memory changed'))
         context=dict(model=runs.get(model['id']),legacy=runs.get(legacy['id']),execution=executions.get(execution['id']),room=room)
 
+    tool_samples = None
+    if args.tools:
+        from workbench.tasks import Tasks
+        from workbench.executions import Executions
+        from workbench.tool_activities import ToolActivities, parse_tools
+        tasks, executions = Tasks(store), Executions(store)
+        observations = ToolActivities(store)
+        room = store.save_conversation(dict(type='project', title='F68 工具观察项目', member_ids=[p['id'] for p in people]))
+        owner_message = store.send_message(room['id'], dict(content='F68_PRIVATE_SOURCE', request_id='tools-source'))
+        def tool_event(kind, phase='completed', **data):
+            return dict(type='item.'+phase, item=dict(id='F68_PRIVATE_ITEM_'+kind+data.get('command',''), type=kind, **data))
+        rows = [
+            tool_event('command_execution','started',status='in_progress',command='F68_PRIVATE_COMMAND',aggregated_output=''),
+            tool_event('command_execution','updated',status='in_progress',command='F68_PRIVATE_COMMAND',aggregated_output='F68_PRIVATE_OUTPUT'),
+            tool_event('command_execution',status='failed',exit_code=7,command='F68_PRIVATE_COMMAND',aggregated_output='F68_PRIVATE_OUTPUT'),
+            tool_event('command_execution',status='declined',command='F68_PRIVATE_DECLINED',aggregated_output=''),
+            tool_event('file_change',status='completed',changes=[dict(path='F68_PRIVATE_PATH',kind='update')]),
+            tool_event('mcp_tool_call',status='completed',server='F68_PRIVATE_SERVER',tool='F68_PRIVATE_TOOL',arguments={'value':'F68_PRIVATE_ARGUMENT'},result={'content':[]}),
+            tool_event('collab_tool_call',status='completed',tool='spawn_agent',sender_thread_id='F68_PRIVATE_THREAD',receiver_thread_ids=[],prompt='F68_PRIVATE_PROMPT',agents_states={}),
+            tool_event('web_search',query='F68_PRIVATE_QUERY',action={'type':'search'}),
+        ]
+        tool_samples = dict(room=room)
+        for key, actor in [('observed',0),('limited',1),('empty',1),('legacy',2)]:
+            task = tasks.create(room['id'], dict(agent_id=people[actor]['id'],source_message_id=owner_message['id'],
+                request_id='tools-'+key,title='F68 '+key,scope='Fixture observation',acceptance='Read-only metadata'))
+            run = executions.create(task['id'],dict(expected_version=1,request_id='tools-execution',previous_execution_id=None,reconciliation_note=''))
+            assert executions.claim(run['id'])
+            if key != 'legacy':
+                selected = rows if key == 'observed' else [rows[0]]*501 if key == 'limited' else []
+                raw = b'\n'.join(json.dumps(row).encode() for row in selected)
+                if key == 'limited':raw += b'\n{"type":"future.event"}\n{broken'
+                observations.record(run['id'],1,1,parse_tools({'stdout':raw,'reason':'output_limit' if key=='limited' else 'exited'}))
+            executions.report(run['id'],1,1,1,'Controlled JSONL fixture; no tool or provider was invoked')
+            tool_samples[key] = executions.get(run['id'])
+
     class FixtureHandler(Handler):
         rejected = set()
 
@@ -299,6 +335,7 @@ def main():
     if budget is not None: manifest['budget'] = budget
     if fee_model is not None: manifest['fee_model'] = fee_model
     if context is not None: manifest['context'] = context
+    if tool_samples is not None: manifest['tools'] = tool_samples
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():

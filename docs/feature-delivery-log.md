@@ -756,3 +756,13 @@ handoff_review实现单一tool_activities模块及36项测试；根负责两后�
 原goal浏览器NeOL3W通过，session10027退出0、fixture退出0；55模块构建和原index-CzyzG-3T.js一致。未新增UI，不将原浏览器回归当作工具弹窗验收。正常75331无活动后停止，f67-normal-backup数据库hash2da965140bc707fd5ebf1d980953114876d27818189bc4ffe5f81a5056dd88bd；新81102在同目录7892运行，43旧表逐行相同，仅新增空tool_activities，完整性/外键/health200/JS字节通过（f67-normal-readback.json）。
 
 独立提交后立即推送；精确commit及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f67-delivery-result.json。远端确认前不标为远端交付。工具活动UI、真实CLI/双Docker及全目标仍未完成，测试中的受控runner不替代这些验收。
+
+## F68 工具活动观察界面
+
+handoff_review负责ToolActivities与AgentActivity接线，仅typecheck，根独占构建、fixture/浏览器测试、PM目视、文档与Git；verify_prompt_push读最终代码及报告终审Pass。仅复用Owner GET核对实际实例及回执，strict白名单和500条上限，错误清旧、serial卸载隔离，原生dialog/details与焦点恢复，无新依赖或业务写入。根目视后将冗长说明折叠，关键状态和计数保持可见。
+
+正式test:browser:tools最终wIlDIE通过，session29330退出0：21项坏关联/字段/503/401/迟到边界、手机390px无横向溢出、StrictMode/Escape及0业务写入/0外部调用；fixture退出0。五类受控JSONL经生产parser/账本生成记录，500条及三项丢失计数、输出受限、0条与null均在UI核对。首轮PJ8u8h手机resize后未打开移动Agent视角导致测试超时，桌面21项已通过；只修测试走实际手机入口，1aNyhn通过。最终再加入计数/阶段断言并复验说明折叠后的版本，未放宽产品检查。
+
+最终56模块index-9mVRW7fo.js构建通过；根目视最终summary和mobile截图。原goal R1Ae54（session47543）及context ssyTN9通过、fixture退出0，共用已完成的最终构建且无并行清dist。后端生产未改，未重复全量Python，最近F67的892+8为既有基线。正常81102继续运行，43旧表与F67备份逐行一致、新活动表仍空，完整性/外键/health和实际JS字节通过（f68-normal-readback.json），无需数据迁移或重启。
+
+独立提交后立即推送；精确哈希及远端结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f68-delivery-result.json。远端确认前不标为远端交付。观察仍是after_process元数据，真实CLI、双Docker、执行中实时观察与全目标仍未完成。

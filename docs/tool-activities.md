@@ -1,6 +1,6 @@
 # 工具活动回执（F67）
 
-Owner 认证后的 `GET /api/workbench/executions/{id}/tool-activities` 返回该 CLI 实例的持久观察回执，旧实例或未保存回执返回 null，不存在的实例返回404。没有公开写入接口，也不会因读取而启动工具、重建上下文或扫描工作目录。浏览器入口由后续独立功能接入。
+Owner 认证后的 `GET /api/workbench/executions/{id}/tool-activities` 返回该 CLI 实例的持久观察回执，旧实例或未保存回执返回 null，不存在的实例返回404。没有公开写入接口，也不会因读取而启动工具、重建上下文或扫描工作目录。F68已在Agent活动卡片接入浏览器入口。
 
 ## 观察边界
 
@@ -25,3 +25,11 @@ details只保留白名单字段的字符数与SHA-256。文本按原UTF-8计算�
 控制器在成果采集前保存回执。活动或用量首次保存失败时不采集成果，保留同一已完成Future及预留，仅重试写入，不重新启动CLI。保存恢复后仍沿原保守失败结果处理：已确认退出码会转failed（停止中的实例按原规则cancelled），退出未知保持unknown，不自动恢复为成功。若先保存成功而成果采集失败，观察回执仍可查询。保存前进程崩溃的缺失证据不能靠重试工具来补齐。
 
 验证入口：`.venv\Scripts\python.exe -m pytest tests/test_workbench_tool_activities.py tests/test_workbench_tool_activity_integration.py tests/test_workbench_cli_usage.py tests/test_workbench_cli.py -q`。协议和受控runner测试分别验证解析及接线，不能替代真实付费CLI/两个Docker Worker验收。
+
+## 浏览器入口（F68）
+
+当前Agent的CLI活动卡片点击“查看工具活动”，面板只读实际执行和回执，核对实例ID、身份、attempt和需求版本。常显保存时间、观察阶段、返回原因、事件数量与无效/未知/超限/输出受限计数。事件明细和hash默认折叠，阶段、工具状态、退出码分列，未提供的值不填0；详细含义可展开“工具观察说明”。最多显示已保存的500条，事件条数不等于工具调用次数。
+
+没有回执与0条事件分别说明未知和未记录，不声称没有使用工具。错误/刷新先清旧数据，切换身份或关闭后的迟到响应不能覆盖新视角；401沿现有本机授权入口恢复。关闭及Escape恢复入口焦点，手机从“Agent 视角”进入。只请求实例与回执，不请求正文、记忆或成果，不产生模型/CLI调用或业务写入。
+
+在frontend运行 `npm run test:browser:tools` 可复现隔离浏览器验证：五类事件、同一item多阶段、拒绝及非零退出码、500条/截断计数、空与缺失、21项坏关联/字段/服务错误/授权/迟到边界、手机布局和StrictMode焦点。测试记录来自受控JSONL经生产解析/账本存储，不能冒充真实CLI输出验收。
