@@ -29,6 +29,7 @@ from workbench import cli_controller
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir', required=True, type=Path)
+    parser.add_argument('--onboarding', action='store_true')
     parser.add_argument('--checkpoint', action='store_true')
     parser.add_argument('--budget', action='store_true')
     parser.add_argument('--fees', action='store_true')
@@ -85,7 +86,16 @@ def main():
             deadline = time.monotonic() + 20
             while control().get('pause_model') and time.monotonic() < deadline and not (home / 'shutdown').exists():
                 time.sleep(0.02)
-            result = {'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(proposal)}}],
+            reply = proposal
+            if args.onboarding:
+                # Only read the identity created and authorized through the browser UI.
+                workers = [agent for agent in store.agents() if agent['name'] == 'F86 执行者']
+                if len(workers) != 1:
+                    raise ValueError('Onboarding requires exactly one UI-created worker')
+                reply = dict(title='F86 新身份成果', shared_brief='Owner-approved onboarding brief', tasks=[
+                    dict(key='a', title='F86 交付', scope='Write a small evidence file in artifacts/',
+                         acceptance='Captured text file is readable', agent_id=workers[0]['id'], depends_on=[])])
+            result = {'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(reply)}}],
                       'usage': {'prompt_tokens': 40, 'completion_tokens': 30}}
             raw = json.dumps(result).encode()
             self.send_response(200)

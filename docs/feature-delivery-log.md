@@ -1051,3 +1051,11 @@ skill_inputs_backend负责collaboration/planning/runs三文件与10项测试；f
 正常56575确认live及三类active0后明确停止；f85-normal-backup DB704512字节、SHA256 f34cd422f23a899825d06d292defa4b625695b2bfa1ad7a683e41d1cd6872a03；44029沿原数据7892启动。f85-normal-readback.json确认51旧表逐行不变、创建表空、完整性/外键/health200与JS SHA256 991b827ff8cb935d554af03e07f2ca59e5e69ab84d561f64705c809c41ea5431一致。无迁移或自动补权限。
 
 本功能即时commit/push/远端回读结果见H:\item\CorpPilot-test-evidence-20260906\f85-delivery-result.json；远端未确认不称已交付。最近全量F83不包含F84/F85，本次仍需最终整体验收，真实CLI/双Docker与远端权限继续保留未完成。
+
+## F86 默认新身份到批准成果浏览器验收
+
+frontend_integration负责新onboarding脚本、package入口及fixture --onboarding分支；skill_inputs_backend独立审非自己编写的脚本/fixture/实际报告事件Pass；根独立检查/正式构建复跑和截图验收。前端代理交付后收到模型capacity异常，未据此宣称后续工作完成；根直接验证实际文件及运行结果。
+
+新增身份/授权/消息/目标/成果审批全为page UI写入，辅助请求仅GET，保存后核精确tools和身份ID。受控provider只读取UI创建的指定worker构造单任务结果，默认fixture分支保持原行为；1模型/1CLI与私聊秘密未进入规划输入有断言。作者两次本机临时输出不作为根结果，根正式npm run test:browser:onboarding所得corppilot-onboarding-fYVz0U/browser-report.json通过、fixture0、pageErrors/errorResponses空，Owner批准截图已目视。62模块构建资源不变，体积提示保留。
+
+根11补充浏览器均通过（98303退出0；f86-browser-suite.json及f86-browser-verified.json），完整Python64924尚live，记录仍待完成。无生产源码修改。F86精确commit、即时push、远端回读见H:\item\CorpPilot-test-evidence-20260906\f86-delivery-result.json；真实执行手册另作独立F87，整体目标不提前完成。

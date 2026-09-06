@@ -1,13 +1,13 @@
 # 浏览器工作台验收记录
 
-整体结论：未完成。当前能力与15项逐项状态见 [需求矩阵](product-requirements.md#当前验收矩阵f83核对至f82)。本文按F编号保存历史测试事实，早期“待实现”不是当前缺口清单。
+整体结论：未完成。当前能力与15项逐项状态见 [需求矩阵](product-requirements.md#当前验收矩阵)。本文按F编号保存历史测试事实，早期“待实现”不是当前缺口清单。
 
 ## 当前待完成项（F83审计）
 
 - 当前版本最终回归：F84已限制CLI三权限，F85已落实协调人delegate；分项通过仍须纳入最终全量及真实执行验收。
 - 真实已授权模型/CLI完整交付，以及两个实际Docker Worker隔离、停止、失败互不影响和重建恢复；本地fixture及原生Git不能替代。
 - 最终Python/浏览器集成回归、独立QA及PM逐项验收；本轮结果在末尾单列，不覆盖早期失败记录。
-- GitHub功能分支远端交付：F82提交a85b25f立即push403，当前账号无仓库写权限，不能标已推送。
+- GitHub功能分支远端交付：功能分支即时push仍403（逐次结果见台账），当前账号无仓库写权限，不能标已推送。
 - Tauri仅迁移规划属于本轮交付，安装包留后续；批准记忆路径已实现，不额外把Skill市场列成本轮硬要求。
 
 
@@ -716,3 +716,9 @@ F83提交后原live session8580正常退出0，完整Python回归1169 passed、8
 根170 passed、57.95秒（f85-targeted-final.log，session48085退出0），包含10项新权限回归、2项真实HTTP及原协作/规划/目标/启动/上下文/评议/复盘测试。新行为缺delegate拒绝且无部分状态；规划期间撤权禁止输入/发布，规划完成后撤权不启动项目；同键/GET/重启恢复，已启动批次worker无delegate仍可执行。真实HTTP使用本机受控模型，非付费供应商。
 
 原goal浏览器IkIZc3通过（38741退出0、fixture0），62模块构建551.33kB/162.64kB gzip，体积提示保留。独立源码/PM/Ponytail/根测试审查Pass。首轮93pass1fail为原协作API成功夹具遗漏F84的write，补显式授权，未放宽检查。正常重启及f85-normal-readback.json确认原数据/空创建表、完整性/外键/health200和当前资源一致，无自动增权或数据迁移。真实CLI/双Docker、远端交付及最终全量/PM仍未完成。
+
+## F86 新身份完整浏览器旅程
+
+新增正式npm run test:browser:onboarding并由根实际构建/运行，fYVz0U通过、fixture退出0。两个身份通过UI新建且默认仅read，经UI分别授予协调人read/delegate和执行者read/write/execute；新协调人私聊发目标，真实HTTP权限检查后仅1次受控模型、1次CLI替身，原成果字节SHA256一致并由UI批准。辅助API仅GET；不是数据库补权或复用已赋权身份。pageErrors/errorResponses为空，根目视Owner批准截图，独立QA复核事件与报告Pass。该套为桌面成功旅程，不扩充移动/故障/真实供应商声明。
+
+F85源码补跑其余11浏览器脚本均通过，f86-browser-verified.json逐份确认fixture退出0；原goal沿F85 IkIZc3。完整Python64924在本次独立测试提交时仍运行，f86-full-pytest.log/XML待最终结果，不能提前标当前全量通过。未改生产源码，构建资源仍index-ClAG5vgI.js。真实模型/CLI及双Docker、远端交付和最终PM仍未完成。

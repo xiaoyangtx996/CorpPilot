@@ -22,7 +22,8 @@
     "test:browser:code-integration": "npm run build && node tests/code-integration-browser.mjs",
     "test:browser:skills": "npm run build && node tests/skills-browser.mjs",
     "test:browser:memory-inputs": "npm run build && node tests/memory-inputs-browser.mjs",
-    "test:browser:agent-creation": "npm run build && node tests/agent-creation-browser.mjs"
+    "test:browser:agent-creation": "npm run build && node tests/agent-creation-browser.mjs",
+    "test:browser:onboarding": "npm run build && node tests/onboarding-browser.mjs"
   },
   "dependencies": {
     "react": "19.2.8",
