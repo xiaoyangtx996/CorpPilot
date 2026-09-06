@@ -322,6 +322,11 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.planning.list(conversation_id))
                     if self.command == "POST":
                         return self.respond(202, self.server.planning.create(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "goal-executions":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.controller.goals.list(conversation_id))
+                    if self.command == "POST":
+                        return self.respond(202, self.server.controller.enqueue_goal(conversation_id, self.read_json()))
                 if len(parts) == 3 and parts[1] == "members" and parts[2] and self.command == "PATCH":
                     payload = self.read_json()
                     if set(payload) != {"joined"}:
@@ -394,6 +399,13 @@ class Handler(BaseHTTPRequestHandler):
                 if identity and "/" not in identity:
                     return self.respond(200, self.server.controller.peer_reviews.get(identity))
             prefix = "/api/workbench/runs/"
+            goal_prefix = '/api/workbench/goal-executions/'
+            if path.startswith(goal_prefix):
+                parts = path[len(goal_prefix):].split('/')
+                if len(parts) == 1 and parts[0] and self.command == 'GET':
+                    return self.respond(200, self.server.controller.goals.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == 'stop' and self.command == 'POST':
+                    return self.respond(200, self.server.controller.goals.stop_goal(parts[0], self.read_json()))
             proposal_prefix = "/api/workbench/collaboration-proposals/"
             if path.startswith(proposal_prefix) and self.command == "GET":
                 identity = path[len(proposal_prefix):]

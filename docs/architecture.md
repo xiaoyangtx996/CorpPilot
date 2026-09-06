@@ -583,3 +583,11 @@ ready_inputs在claim/check_bound中接收具体execution身份。授权边要求
 artifacts.input_snapshots仅在Executions.snapshot传入downstream_execution_id时核对固定输入和交接许可，继续验证非空成果、真实BLOB长度、SHA-256及总量上限。没有裸allow_unapproved参数。memories/retrospectives原单字段调用保持默认Owner approved要求；审查发现的dependency_task_id KeyError已通过短路读取修复及原场景回归。
 
 前端原pending保存完整confirm_handoff，恢复/回执不一致锁定，选项改变撤最终确认。普通任务及依赖页面明确交接就绪不等于Owner批准。该许可不会启动额外Run、扩工具权限、跳过unknown核查或自动更新个人记忆。
+
+## F52 持久目标授权连接规划与启动
+
+GoalExecutions在SQLite保存不可变原授权、唯一planning_run_id、稳定launch_request_id，以及单向停止标记和启动关联。Planning._create接受现有事务，使规划Run与目标授权同时提交或回滚；普通Planning.create仍自行开事务。goal规划上下文替换为Owner明确shared_brief，校验max_tasks及候选范围，并固定最终共享摘要。普通提案历史与目标执行记录分开读取。
+
+复用ReplyController的单控制器生命周期、原模型队列和CLIController.launch_project；不增加工作流引擎或后台线程。每轮先处理目标停止恢复与计划衔接，再调度CLI。停止先落持久标记，再取消仍排队的原规划和停止固定首批；失败清理可在重启后继续，运行中或未知模型状态仍独立呈现。启动与关联之间中断按固定请求恢复，异常不另建模型Run或CLI尝试。
+
+Owner鉴权沿用全局Bearer边界。接口为GET/POST `/api/workbench/conversations/{id}/goal-executions`、GET `/api/workbench/goal-executions/{id}`、POST `/api/workbench/goal-executions/{id}/stop`（严格`confirm:true`）。创建严格使用request_id、source_message_id、agent_id、candidate_ids、shared_brief、max_tasks、confirm_execution和confirm_handoff八字段。回执同时提供原规划和固定launch/batch；本功能暂未增加浏览器入口、货币硬预算或第二套桌面后端。

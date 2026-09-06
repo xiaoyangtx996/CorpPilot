@@ -13,6 +13,7 @@ from .planning import PlanningError
 from .retrospectives import RetrospectiveError
 from .cli_controller import CLIController
 from .model_reconciliations import ModelReconciliations
+from .goal_executions import GoalExecutions
 
 
 class ReplyController:
@@ -49,6 +50,7 @@ class ReplyController:
             self.uncertain_submissions = set()
             self.error = ""
             self.cli = CLIController(store)
+            self.goals = GoalExecutions(store, self.cli)
             self.thread = threading.Thread(target=self._dispatch, daemon=True, name="reply-dispatch")
             self.thread.start()
         except Exception:
@@ -62,6 +64,7 @@ class ReplyController:
     def _dispatch(self):
         while not self.stop.wait(0.2):
             try:
+                self.goals.tick()
                 self.cli.tick()
                 self._reconcile()
                 pending = self.runs.pending()
@@ -154,6 +157,20 @@ class ReplyController:
                 raise ValueError("模型控制器正在关闭，不能创建新的评议")
             self.settings.resolve()
             return self.peer_reviews.create(conversation_id, payload)
+
+    def enqueue_goal(self, conversation_id, payload):
+        with self.state_lock:
+            if isinstance(payload, dict) and isinstance(payload.get('request_id'), str):
+                with self.runs.store.connect() as db:
+                    existing = db.execute('SELECT 1 FROM goal_executions WHERE source_conversation_id=? AND request_id=?',
+                                          (conversation_id, payload['request_id'])).fetchone()
+                if existing:
+                    return self.goals.create(conversation_id, payload)
+            if self.stop.is_set():
+                raise ValueError('控制器正在关闭，不能创建目标执行')
+            self.settings.resolve()
+            self.cli.settings.resolve()
+            return self.goals.create(conversation_id, payload)
 
     def _execute(self, identity, config):
         try:
