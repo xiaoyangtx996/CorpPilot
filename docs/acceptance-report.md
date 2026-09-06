@@ -533,3 +533,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 根新增浏览器最终TQHjz0通过：固定成果不重跑、两次恢复和独立停止、重新批准前置后下游执行；精确3次本地受控runner、0模型调用。响应丢失后重新打开保留原请求；真实POST202随后GET400不变成首拒，只读核验后释放；另有GET400、错批次、错授权、坏存储4项隔离边界。fixture正常退出、pageErrors为空。原goal浏览器ZPR0nV全链通过；未新增首次4xx/401浏览器专项覆盖，不扩大声明。
 
 独立审查Return要求补精准路径，补证后Pass。根构建52模块index-BN3hmzBK.js通过并目视恢复页截图。正常服务未重启，健康和静态资源字节一致，正常数据未被测试写入（f60-normal-readback.json）。未重跑Python全量，沿用F59后端765+8基线。这里是本地受控功能验收，不代表真实付费CLI/双容器、金额硬限制或整体交付完成。
+
+## F61 预算服务验收
+
+全量788 passed、8 subtests passed，214.22s（session1736退出0）。预算与claim同事务、模型/CLI并发争抢、不足保留queued、冻结金额/版本、旧数据不追扣、不可变、撤权/依赖无预留、失败/unknown不退款及真实backup/restore均有验证。RPM拒绝/异常无消耗、成功后起算，真实本地请求证明追加额度后第二Run可继续；CLI使用受控runner，不能替代真实CLI/双Docker。独立只读终审Pass。
+
+原浏览器kDvKNg通过、session78933退出0、fixture正常退出；前端未修改，尚无预算设置界面验收。正常库经实际离线备份再启动99751，原39表逐行相同、两张预算表为空、integrity/外键/health及JS字节一致（外部f61-normal-readback.json）。本阶段预留不是账单硬上限，尚无结算/退款能力；完整目标保持未完成。

@@ -1,0 +1,24 @@
+# USD 预算准入与持久预留
+
+F61 提供后端准入和查询接口；配置界面及实际费用估算/核销仍待接入。这是每次派发的额度预留，不是供应商实际账单、单次 CLI 费用上限或自动退款。
+
+Owner 设置一个累计 USD 总额，以及每个模型 Run、每个 CLI 执行各自的预留额。金额为整数微美元：1 USD = 1000000 微美元。总额允许 0–1000000000000，每次预留允许 1–1000000000000；不接受浮点、布尔、负数或缺失字段。预算默认关闭，默认预留值不构成执行授权。
+
+模型和 CLI 共用同一额度。首次 claim 在同一 SQLite 写事务中校验状态和权限、检查总预留加本次金额不超过总额、写入固定实例预留并转为运行。余额不足时保持原请求排队；依赖未就绪和已失效请求不扣额。普通回复、规划、复盘、同行评审共用模型入口，项目批次、目标自动启动及检查点恢复共用执行入口。实际 Runner 启动还须通过既有模型/CLI配置、并发、资源和权限检查。
+
+预留绑定执行类型、Run ID、Agent ID、attempt、需求版本、当时金额及配置 revision。重复 claim 不二次占用；数据库事务失败回滚，提交线程结果不确定、运行失败、取消、unknown和重启均保留原占用。本阶段不自动释放或核销，已确认未启动也保守保留。增加累计额度可允许后续原队列继续，降低额度可能使可用金额为负并阻止新派发。修改配置不改变旧记录；关闭预算后不新增预留，但历史仍保存。关闭期间的调用不纳入预算，旧无预留记录不能当作费用为零。
+
+每分钟调用限制和预算共同准入：只有持久 claim 成功才占用 RPM，预算不足的轮询不会烧掉调用次数。RPM 预留以 claim 成功时刻开始。
+
+全部接口需要现有本机 Owner 认证，不向 Agent 上下文注入预算记录：
+
+- `GET /api/workbench/budget-settings`：完整配置、USD、revision、总预留、可用金额和记录总数。
+- `PATCH /api/workbench/budget-settings`：完整对象 `enabled`、`total_micro_usd`、`model_reserve_micro_usd`、`cli_reserve_micro_usd`。成功后读取回执，金额变化不清空历史。
+- `GET /api/workbench/budget-reservations`：最近100条不可变预留。
+- `GET /api/workbench/agents/{id}/budget-reservations`：指定身份最近100条；身份不存在返回404。
+
+例如启用总额10 USD、每次模型0.1 USD、每次CLI1 USD，对应 `{ "enabled": true, "total_micro_usd": 10000000, "model_reserve_micro_usd": 100000, "cli_reserve_micro_usd": 1000000 }`。这是配置格式示例，不是已应用的额度或价格推荐。
+
+实际费用可能超过预留，尤其 CLI 内部可能连续调用模型。最终账单硬限制需要服务方或工具可验证的限制能力。后续需补当次费率快照、已观测费用估算、账单核查与有证据的结算；不能用 token、运行超时或本预留金额代替账单证据。
+
+测试：`.venv\Scripts\python.exe -m pytest tests/test_workbench_budgets.py tests/test_workbench_budget_integration.py -q`。包含模型/CLI争抢最后余额、重复请求、事务回滚、权限与依赖、改配置、HTTP认证、真实本地请求子进程、RPM、CLI受控runner和实际离线备份恢复；不会调用付费服务。

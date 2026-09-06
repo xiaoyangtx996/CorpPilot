@@ -634,3 +634,7 @@ ReplyController 在发布消息或解析规划/复盘之前独立提交回执到
 ## F60 检查点浏览器恢复
 
 CheckpointRecovery 嵌入现有项目批次面板，复用服务接口和新批次停止入口，不增加调度层或依赖。发送前持久化完整请求/快照，服务接受后持久化不可变关联，再独立 GET 核验执行绑定才释放；POST/GET 错误阶段分开处理。历史读取使用该回执原快照。详细用户流程与会话存储边界见 [checkpoint-recovery.md](checkpoint-recovery.md)。
+
+## F61 共享预算准入
+
+budgets在现有SQLite内保存独立配置与不可变预留，Runs.claim/Executions.claim在同一写事务原子占用，不新增调度服务。BudgetDenied保留queued并通过现有runtime错误展示。模型RPM通过成功claim回调才计数，避免预算拒绝轮询消耗次数。查询和完整配置接口见 [budget-admission.md](budget-admission.md)；无结算或前端预算设置交付声明。

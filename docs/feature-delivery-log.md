@@ -682,3 +682,13 @@ handoff_review负责3个前端生产文件；根负责隔离fixture、浏览器�
 根检查点浏览器最终corppilot-checkpoint-TQHjz0/browser-report.json通过、fixture退出0、pageErrors空：两次恢复、保留成果不重跑、新批次停止、新前置Owner批准、精确3次受控CLI和0模型调用，响应丢失重新打开、POST202后GET400只读恢复及4个独立边界。原goal浏览器corppilot-browser-ZPR0nV/browser-report.json通过、session19937退出0。根目视恢复截图，根typecheck/build通过52模块index-BN3hmzBK.js。没有修改后端生产逻辑，未重复全量Python；最近后端全量是F59的765+8，不作为本轮新运行。
 
 正常39515持续运行无需重启，health200、实际JS字节与构建一致。与F59离线备份相比原37表逐行未变、两张F59检查点表仍空、无活动执行、integrity/外键通过（外部f60-normal-readback.json）。本功能单独提交并立即推送，精确结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f60-delivery-result.json；远端回读前不标记远端交付。费用约束、真实CLI/双Docker及整体目标仍未完成。
+
+## F61 USD预算准入与持久预留（后端增量）
+
+handoff_review负责budgets、Runs/Executions事务钩子与18项测试；根负责模型/CLI控制器错误、RPM协调、HTTP接口、5项集成测试与迁移；verify_prompt_push只读PM/Ponytail终审Pass。预算单独配置，默认关闭；不足不派发且不烧RPM，原占用不因关闭/失败/重启消失。没有加入价格估算、核销或前端设置，不把预留称为实际费用。
+
+子代理新旧定向43 passed10.01s；根新测试23 passed8.26s。根首轮集成1 failed4 passed：备份恢复后试图创建同一未知模型操作，触发既有保护。改用另一Agent独立操作验证共享预算，未更改产品未知保护。全量最终788 passed、8 subtests passed，214.22s（session1736退出0）。含真实本地模型请求、模型/CLI共享最后额度、并发/事务回滚、RPM回调成功时刻、HTTP权限和实际备份恢复。
+
+原浏览器全链corppilot-browser-kDvKNg/browser-report.json通过，session78933退出0且fixture正常退出；前端未改，用现有52模块index-BN3hmzBK.js，本轮没有新预算界面验收。正常39515零活动停止，离线f61-normal-backup hashf10cbf13f47fb02e044630faf18472ab13ebc821cf882e2a196a752081d9e91f；新99751启动7892，原39表逐行一致、仅两张预算表为空、integrity/外键/health200及JS字节回读通过（f61-normal-readback.json）。
+
+本功能独立提交并立即推送，精确hash和远端结果记录在仓库外H:\item\CorpPilot-test-evidence-20260906\f61-delivery-result.json。远端未回读成功不能视为远端交付；预算UI、费用证据/核销、真实CLI/双Docker和完整目标仍未完成。

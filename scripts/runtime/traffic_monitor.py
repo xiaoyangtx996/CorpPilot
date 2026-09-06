@@ -85,8 +85,12 @@ class TrafficMonitor:
             ]
         return len(recent) >= limit_rpm
 
-    def reserve_call(self, limit_rpm: int = 60) -> bool:
-        """Atomically admit one provider attempt across this controller's agents."""
+    def reserve_call(self, limit_rpm: int = 60, admit=None) -> bool:
+        """Reserve RPM only after an optional durable claim succeeds.
+
+        The callback must not re-enter this monitor. Rejected budgets/claims do
+        not consume RPM; uncertain submissions retain both reservations.
+        """
         if type(limit_rpm) is not int or limit_rpm < 1:
             raise ValueError("RPM 必须为正整数")
         with self._lock:
@@ -95,7 +99,9 @@ class TrafficMonitor:
                 self._admissions.popleft()
             if len(self._admissions) >= limit_rpm:
                 return False
-            self._admissions.append(now)
+            if admit is not None and not admit():
+                return False
+            self._admissions.append(time.monotonic())
             return True
 
     def get_stats(self, window: str = "1h", group_by: Optional[str] = None) -> Dict[str, Any]:

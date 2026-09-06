@@ -10,6 +10,7 @@ from . import artifacts as artifact_store
 from . import dependencies
 from . import memories
 from . import reconciliations
+from . import budgets
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -45,6 +46,7 @@ class Executions:
             dependencies.initialize_inputs(db)
             memories.initialize(db)
             reconciliations.initialize(db)
+            budgets.initialize(db)
             db.execute('''CREATE TABLE IF NOT EXISTS execution_usage (
                 execution_id TEXT PRIMARY KEY REFERENCES task_executions(id),
                 attempt INTEGER NOT NULL, requirement_version INTEGER NOT NULL, usage TEXT NOT NULL)''')
@@ -193,6 +195,7 @@ class Executions:
                 inputs = dependencies.ready_inputs(db, run["task_id"], run["requirement_version"], identity)
             except dependencies.DependencyBlocked:
                 return False
+            budgets.reserve(db, 'cli', run)
             db.executemany("INSERT INTO execution_inputs VALUES(?,?,?)",
                            [(identity, item["dependency_task_id"], item["upstream_execution_id"]) for item in inputs])
             task = self.tasks._task(db, run["task_id"])

@@ -15,6 +15,7 @@ from .cli_controller import CLIController
 from .model_reconciliations import ModelReconciliations
 from .goal_executions import GoalExecutions
 from .directory_lock import acquire
+from .budgets import BudgetDenied
 
 
 class ReplyController:
@@ -73,15 +74,16 @@ class ReplyController:
                     with self.state_lock:
                         if self.stop.is_set() or len(self.futures) + len(self.uncertain_submissions) >= config["max_concurrency"]:
                             break
-                        if not self.monitor.reserve_call(config["rpm"]):
+                        if not self.monitor.reserve_call(config["rpm"], lambda: self.runs.claim(run["id"])):
                             break
-                        if self.runs.claim(run["id"]):
-                            self.unsettled.add(run["id"])
-                            self.uncertain_submissions.add(run["id"])
-                            future = self.pool.submit(self._execute, run["id"], config)
-                            self.futures[future] = run["id"]
-                            self.uncertain_submissions.remove(run["id"])
-                            self.unsettled.remove(run["id"])
+                        self.unsettled.add(run["id"])
+                        self.uncertain_submissions.add(run["id"])
+                        future = self.pool.submit(self._execute, run["id"], config)
+                        self.futures[future] = run["id"]
+                        self.uncertain_submissions.remove(run["id"])
+                        self.unsettled.remove(run["id"])
+            except BudgetDenied as exc:
+                self.error = str(exc)
             except Exception:
                 # Do not print arbitrary database/provider exceptions containing user data.
                 # The next poll can recover temporary SQLite contention; claims stay observable.

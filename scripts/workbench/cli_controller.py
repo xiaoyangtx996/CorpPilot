@@ -13,6 +13,7 @@ from .checkpoints import Checkpoints
 from .artifacts import capture
 from .reconciliations import Reconciliations, unresolved
 from . import resource_admission
+from .budgets import BudgetDenied
 
 
 class CLIController:
@@ -191,6 +192,8 @@ class CLIController:
                         future.set_result({"exit_code": None, "summary": "执行线程提交异常，实例与结果待核实",
                                            "success": False, "not_started": False})
                     self.active[run["id"]] = (run, cancel, future)
+        except BudgetDenied as exc:
+            self.error = str(exc)
         except Exception:
             self.error = "CLI 调度或状态写入异常；已开始的执行不会自动重发"
 

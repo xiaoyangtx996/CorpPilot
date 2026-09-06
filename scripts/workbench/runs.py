@@ -7,6 +7,7 @@ import uuid
 from .store import Store, _text
 from . import planning, retrospectives, model_reconciliations, peer_reviews
 from .memories import Memories
+from . import budgets
 
 
 class Runs:
@@ -41,6 +42,7 @@ class Runs:
             retrospectives.initialize(db)
             peer_reviews.initialize(db)
             model_reconciliations.initialize(db)
+            budgets.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -125,6 +127,12 @@ class Runs:
             run = self._run(db, identity)
             if run["state"] != "queued" or model_reconciliations.unresolved(db, run):
                 return False
+            try:
+                self._authorize(db, run)
+            except (ValueError, PermissionError, KeyError):
+                db.execute("UPDATE runs SET state='failed',error='会话或身份授权已变化，未启动模型请求',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (identity,))
+                return False
+            budgets.reserve(db, 'model', run)
             return db.execute("""UPDATE runs SET state='running',
                 updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND state='queued'""", (identity,)).rowcount == 1
 

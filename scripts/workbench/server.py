@@ -25,6 +25,7 @@ from .memories import Memories
 from .collaboration import Collaboration
 from .planning import Planning
 from .retrospectives import Retrospectives
+from .budgets import Budgets
 
 MAX_BODY_BYTES = 64 * 1024
 
@@ -45,6 +46,7 @@ class WorkbenchServer(ThreadingHTTPServer):
         self.collaboration = Collaboration(store)
         self.planning = Planning(store)
         self.retrospectives = Retrospectives(store)
+        self.budgets = Budgets(store)
         super().__init__(("127.0.0.1", port), Handler)
         try:
             self.controller = ReplyController(store, self.settings)
@@ -179,6 +181,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, self.server.controller.cli.reconciliations.pending())
             if self.command == "GET" and path == "/api/workbench/model-run-reconciliations/pending":
                 return self.respond(200, self.server.controller.model_reconciliations.pending())
+            if path == "/api/workbench/budget-settings":
+                if self.command == "GET":
+                    return self.respond(200, self.server.budgets.get())
+                if self.command == "PATCH":
+                    return self.respond(200, self.server.budgets.save(self.read_json()))
+            if self.command == "GET" and path == "/api/workbench/budget-reservations":
+                return self.respond(200, self.server.budgets.list())
+            if self.command == "GET" and path.startswith("/api/workbench/agents/") and path.endswith("/budget-reservations"):
+                parts = path[len("/api/workbench/agents/"):].split("/")
+                if len(parts) == 2 and parts[0]:
+                    return self.respond(200, self.server.budgets.list(parts[0]))
             if path == "/api/workbench/model-settings":
                 if self.command == "GET":
                     return self.respond(200, self.server.settings.get())
