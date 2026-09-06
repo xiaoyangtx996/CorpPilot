@@ -663,3 +663,11 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 最终专用ROSapp通过20项边界、390px布局及StrictMode焦点，3次明确身份PATCH、0次模型/CLI调用、pageErrors为空、fixture退出0。错误关联/hash/字节/来源、目录503、401、迟到响应和上下文错误独立查看均通过。早期测试导航失败及修正详见功能台账，未计为通过。原上下文YFH0gy与原goal yYiOpQ回归通过，独立源码/Ponytail与最终测试审查Pass，根目视手机与桌面。
 
 61模块构建成功，保留超过500kB体积提示；正常数据库49旧表未变、新Skill表空、完整性/外键/health和实际资源字节通过（f78-normal-readback.json）。未修改后端生产代码、未迁移或重启，未新增Python全量声明。真实CLI、双Docker、普通聊天记忆、创建身份幂等与远端交付和最终验收仍未完成。
+
+## F79 普通回复批准记忆验收
+
+普通reply已消费claim时固定的批准个人/当前群共享记忆，DM不携带其他群记忆；新版本与回滚不改变旧绑定。执行前重查权限，规划/成员评议/复盘不扩大范围。Owner历史只读接口返回scope/version/chars/hash，无正文；null与版本0明确区分。专用浏览器历史查看尚待后续接线，现有指令摘要hash已涵盖合成输入。
+
+根两组定向115项通过（49项27.26s与66项39.47s），含实际HTTP输入、身份隔离、审批/回滚、授权撤销、特殊分支、事务回滚、Owner授权/只读及实际离线备份恢复。独立源码/Ponytail审查Pass；受控本机HTTP不替代真实供应商验收。本轮未重复全量，保留F77已知全量结果及修正范围。
+
+正常数据先备份再迁移，仅新增空model_memory_snapshots；50旧表逐行不变，完整性/外键/health200和原F78资源一致（f79-normal-readback.json）。原上下文浏览器4qam6Y与原goal最终UsmrIH通过；原goal首轮CZSbdd因测试控制文件rename EPERM失败已保留，新隔离目录重跑通过，未修改生产或测试断言。前端生产未改；整体目标、真实CLI、双Docker、身份创建幂等及远端交付仍未完成。

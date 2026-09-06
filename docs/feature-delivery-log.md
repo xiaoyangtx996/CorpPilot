@@ -892,3 +892,13 @@ frontend_integration负责AgentEditor、ContextSummary及新Skills三文件；sk
 61模块index-C_2NvbWv.js构建成功，538.22kB/158.82kB gzip，保留Vite超过500kB提示。正常服务无需重启；f78-normal-readback.json确认49原表逐行不变、新Skill表仍空、完整性/外键/health200与实际资源SHA256 10db287212cd95c2f6a982af4a762566c44653be661cd5ce2a16736806bcf278一致。Browser plugin未提供，按frontend-testing-debugging使用现有Playwright。
 
 独立提交后立即推送；精确commit、结果及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f78-delivery-result.json，远端未确认前不标记远端交付。普通聊天批准记忆、身份创建未知响应幂等、真实CLI和双Docker与最终全目标验收仍未完成。
+
+## F79 普通聊天使用批准记忆
+
+skill_inputs_backend负责chat_memories模块与20项自测；根负责Runs认领/实际输入、Owner元数据API、12项交付测试、正常备份迁移、文档和Git；verify_prompt_push独立技术/Ponytail审查Pass；frontend_integration仅做后续历史界面的只读方案。本轮复用现有memory_revisions与审批/回滚，一张不可变model_memory_snapshots保存引用及hash，不复制记忆正文，不增加依赖。沿现有enabled/member/archive授权，不改变tools.read语义。
+
+根交付+Runs/context/controller 49 passed、27.26s（session54163退出0）；模块+原memories/Skill交付/API 66 passed、39.47s（session72153退出0），共115项。覆盖真实本机HTTP system正文、DM/board/project范围、其他身份不读个人记忆、候选不生效、旧claim保留v1而回滚后新claim读取v2空、退出/停用/归档禁止消费但Owner历史仍可查、三类专用模型无普通绑定、Owner401及GET零写、实际备份恢复、预算拒绝完整回滚两类快照。作者独立20项5.30s为重复验证不累加；控制模型响应不作为真实付费供应商验收。
+
+正常35607确认live且三类活动均0后明确停止；f79-normal-backup数据库688128字节，SHA256 369d61bf4b379a498e842645a768f57cf00065849538bc3b76dc0d876eb068de；新服务6655沿原目录7892。f79-normal-readback.json确认50旧表逐行未变、仅新增空model_memory_snapshots，完整性/外键/health200与未变F78资源字节一致。没有新增前端构建声明。
+
+原上下文浏览器4qam6Y通过、fixture正常退出；原goal首轮CZSbdd因测试控制文件rename的Windows EPERM退出1，fixture正常退出0，不计通过。新的隔离目录UsmrIH完整重跑通过（session94565退出0、fixture退出0），生产和测试代码未为此修改。未重复Python全量，F77初轮失败及定向修正记录保留，最终整体回归仍需完成。专用固定记忆历史界面、身份创建未知响应幂等、真实CLI和双Docker仍待完成。精确commit、推送及远端分支回读见H:\item\CorpPilot-test-evidence-20260906\f79-delivery-result.json，远端确认前不标记已交付。

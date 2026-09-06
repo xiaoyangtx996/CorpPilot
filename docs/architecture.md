@@ -1,5 +1,7 @@
 # CorpPilot 架构说明
 
+F79普通聊天在claim事务内将本身份个人记忆和当前非私聊会话的共享记忆固定为版本引用。model_memory_snapshots保存scope/version/chars/hash，正文复用不可变memory_revisions；未批准候选不生效，回滚只影响后续claim。执行前重查enabled/member/archive，规划、成员评议和复盘不自动扩大记忆范围。最终角色、Skill与非空记忆参考输入合计上限64000字符；现有上下文指令hash覆盖实际合成输入。Owner GET /api/workbench/runs/{id}/memories仅提供固定元数据，无历史返回null，版本0明确空；专用浏览器历史版本查看另行接入。
+
 F77补齐身份技能的实际应用：固定内置目录为正文权威，执行在SQLite保存本身份有序正文及内容哈希，模型四分支和CLI均消费固定输入。Skill不扩大权限，空快照与旧无记录区分，旧运行不追随文件修改。目录和历史快照使用现有Owner API，不新建调度器或发布平台；协议及限制见 [Skill输入说明](skill-authoring.md#新工作台内置-skill-实际输入f77)。
 
 ## 浏览器工作台增量（2026-09-06）

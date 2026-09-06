@@ -7,7 +7,7 @@ import uuid
 from .store import Store, _text
 from . import planning, retrospectives, model_reconciliations, peer_reviews
 from .memories import Memories
-from . import budgets, skill_inputs
+from . import budgets, skill_inputs, chat_memories
 
 
 class Runs:
@@ -44,6 +44,7 @@ class Runs:
             model_reconciliations.initialize(db)
             budgets.initialize(db)
             skill_inputs.initialize(db)
+            chat_memories.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -131,8 +132,10 @@ class Runs:
             try:
                 self._authorize(db, run)
                 skill_inputs.freeze(db, 'model', run)
+                if chat_memories.is_reply(db, run):
+                    chat_memories.freeze(db, run)
             except (ValueError, PermissionError, KeyError):
-                db.execute("UPDATE runs SET state='failed',error='会话、身份授权或绑定 Skill 不可用，未启动模型请求',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (identity,))
+                db.execute("UPDATE runs SET state='failed',error='会话、身份授权、绑定 Skill 或记忆不可用，未启动模型请求',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (identity,))
                 return False
             budgets.reserve(db, 'model', run)
             return db.execute("""UPDATE runs SET state='running',
@@ -166,9 +169,12 @@ class Runs:
             # ponytail: bound context to 100 messages; add token budgeting if large inputs require it.
             rows = list(db.execute("""SELECT * FROM messages WHERE conversation_id=? AND sequence<=?
                 ORDER BY sequence DESC LIMIT 101""", (run["conversation_id"], sequence[0])))
-            return with_skills({"agent": agent, "instructions": instructions,
+            documents = chat_memories.snapshot(db, run)
+            result = with_skills({"agent": agent, "instructions": instructions,
                     "messages": [dict(row) for row in reversed(rows[:100])],
                     "context_truncated": len(rows) > 100, "source_sequence": sequence[0]})
+            return {**result, 'memories': documents,
+                    'instructions': chat_memories.augment(result['instructions'], documents)}
 
     def finish(self, identity, content, model, prompt_tokens, completion_tokens):
         content = _text(content, "模型回复", 16000)
