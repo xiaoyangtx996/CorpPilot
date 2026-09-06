@@ -615,3 +615,13 @@ F52实际交付：本地提交 ec60c186772372bd37736e74d37d489ffaec488a，10文�
 - 最终 npm run test:browser 退出0（session69261）：类型检查、生产构建index-DXckru0z.js、真实Vite StrictMode、一次规划A→B→C、最终成果hash校验且仅C批准、17组边界、模型/执行中停止丢响应+503+reload均Pass。fixture最终退出0。证据corppilot-browser-eEnl7f/browser-report.json，详情见验收报告。
 - PM/TechLead/Ponytail/QA针对本增量验收；沿用F52后端全量671及8子用例，本次没有产品后端变更。测试使用独立临时库、本地HTTP provider和受控runner，不等于真实CLI、付费模型、Docker或浏览器真实服务重启验收。Tauri沿用既有迁移边界，未生成安装包。
 - 本功能独立提交后立即推送，实际结果记录外部f53-delivery-result.json；完整目标仍未完成。
+
+F53实际交付：已核实f53-delivery-result.json，本地提交5d888ae5267b40bd174d99c7346278154273d542，12文件900新增/7删除，立即推送退出1、GitHub403，suiyue1990无写权限。远端回读退出0、无分支；工作区干净。本地通过不等于远端交付。
+
+## F54 本机资源准入（本地验收Pass）
+
+- handoff_review负责后端与25项新检查，根负责前端设置、浏览器、集成和文档；根复核资源预约释放与close并发，子代理独立审查前端/Ponytail/PM Pass。明确保守预约不是OS硬限、Docker虚拟机容量或费用预算。
+- 子代理新25项及原CLIController21项共46 passed5.96s；根最终完整696 passed、8 subtests passed，130.87s（session11423）。原并发/依赖/unknown控制保持，不放宽旧断言。最终生产代码已包含，随后仅文档。
+- 根浏览器session95391退出0，证据corppilot-browser-A3gqZp/browser-report.json；类型检查、49模块index-BzqwJHzC.js、原目标链和17恢复边界继续Pass。资源开关及2048宿主保留自动重开断言，1536本地内存和2CPU由根截图人工核对；实际GET资源8206MiB/32CPU，预约0。fixture退出0，未增加模型/runner调用。
+- 正常数据备份SHA-256为84df2fc2cd8f5a6d43bcf04521096441768ec814079fac412dbaca8952ff2bd6。49304确认live后停止退出1，73418同数据目录启动；36张表逐行未变，integrity=ok、外键空、health200、新bundle回读通过。先访问错误健康路径获401，随后按源码正确/health核实200。
+- F54独立提交后立即推送，结果外部f54-delivery-result.json；真实CLI/Docker、费用硬门和整体目标仍未完成。

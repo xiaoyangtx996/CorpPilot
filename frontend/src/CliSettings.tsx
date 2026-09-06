@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type CliSettingsValue, type CliProbeResult } from './api';
+import { api, type CliSettingsValue, type CliProbeResult, type ResourceAdmission } from './api';
 
-type Fields = { enabled: boolean; backend: 'local' | 'docker'; executable: string; docker_executable: string; docker_image: string; docker_cpus: string; docker_memory_mb: string; docker_pids_limit: string; model: string; api_key_env: string; timeout_seconds: string; max_concurrency: string };
+type Fields = { resource_admission_enabled: boolean; host_reserve_memory_mb: string; local_worker_memory_mb: string; local_worker_cpus: string; enabled: boolean; backend: 'local' | 'docker'; executable: string; docker_executable: string; docker_image: string; docker_cpus: string; docker_memory_mb: string; docker_pids_limit: string; model: string; api_key_env: string; timeout_seconds: string; max_concurrency: string };
 const numericFields = [
   { key: 'timeout_seconds', label: '执行超时（秒）', minimum: 1, maximum: 3600 },
   { key: 'max_concurrency', label: '最大并发数', minimum: 1, maximum: 16 },
+  { key: 'host_reserve_memory_mb', label: '为宿主保留内存（MiB）', minimum: 0, maximum: 1048576 },
+  { key: 'local_worker_memory_mb', label: '每个本地执行预留内存（MiB）', minimum: 128, maximum: 1048576 },
+  { key: 'local_worker_cpus', label: '每个本地执行预留逻辑 CPU 数', minimum: 1, maximum: 256 },
   { key: 'docker_cpus', label: '每容器 CPU 核数', minimum: 1, maximum: 16 },
   { key: 'docker_memory_mb', label: '每容器内存（MiB）', minimum: 128, maximum: 32768 },
   { key: 'docker_pids_limit', label: '每容器进程数上限', minimum: 16, maximum: 1024 },
 ] as const;
 function fields(value: CliSettingsValue): Fields {
-  return { enabled: value.enabled, executable: value.executable, model: value.model, api_key_env: value.api_key_env,
+  return { resource_admission_enabled: value.resource_admission_enabled ?? false, host_reserve_memory_mb: String(value.host_reserve_memory_mb ?? 1024), local_worker_memory_mb: String(value.local_worker_memory_mb ?? 1024), local_worker_cpus: String(value.local_worker_cpus ?? 1), enabled: value.enabled, executable: value.executable, model: value.model, api_key_env: value.api_key_env,
     backend: value.backend ?? 'local', docker_executable: value.docker_executable ?? '', docker_image: value.docker_image ?? '',
     docker_cpus: String(value.docker_cpus ?? 1), docker_memory_mb: String(value.docker_memory_mb ?? 1024), docker_pids_limit: String(value.docker_pids_limit ?? 128),
     timeout_seconds: String(value.timeout_seconds), max_concurrency: String(value.max_concurrency) };
@@ -28,6 +31,19 @@ export function CliSettings({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [probe, setProbe] = useState<CliProbeResult | null>(null);
+  const [resources, setResources] = useState<ResourceAdmission | null>(null);
+  const [resourceError, setResourceError] = useState('');
+  const [resourceLoading, setResourceLoading] = useState(false);
+  const resourceRequest = useRef(0);
+  async function readResources() {
+    const request = ++resourceRequest.current;
+    setResourceLoading(true); setResourceError('');
+    try {
+      const value = await api<{ resource_admission: ResourceAdmission }>('/cli-runtime');
+      if (request === resourceRequest.current) setResources(value.resource_admission);
+    } catch (error) { if (request === resourceRequest.current) { setResources(null); setResourceError(failure(error)); } }
+    finally { if (request === resourceRequest.current) setResourceLoading(false); }
+  }
   const dirty = saved && draft ? JSON.stringify(fields(saved)) !== JSON.stringify(draft) : false;
   async function load() {
     const request = ++requests.current;
@@ -43,7 +59,8 @@ export function CliSettings({ onClose }: { onClose: () => void }) {
     const previous = document.activeElement;
     dialog.current?.showModal();
     void load();
-    return () => { requests.current++; if (previous instanceof HTMLElement) previous.focus(); };
+    void readResources();
+    return () => { requests.current++; resourceRequest.current++; if (previous instanceof HTMLElement) previous.focus(); };
   }, []);
   function update<K extends keyof Fields>(key: K, value: Fields[K]) {
     setDraft(current => current ? { ...current, [key]: value } : current); setSuccess(false); setProbe(null);
@@ -73,6 +90,7 @@ export function CliSettings({ onClose }: { onClose: () => void }) {
       }
       const value = await api<CliSettingsValue>('/cli-settings', 'PATCH', patch);
       setSaved(value); setDraft(fields(value)); setSuccess(true);
+      void readResources();
     } catch (error) { setError(failure(error)); }
     finally { working.current = false; setBusy(null); }
   }
@@ -85,7 +103,7 @@ export function CliSettings({ onClose }: { onClose: () => void }) {
   }
   return <dialog ref={dialog} className="model-settings task-dialog" aria-labelledby="cli-settings-title" aria-busy={loading || busy !== null} onCancel={event => { event.preventDefault(); if (!working.current) onClose(); }}>
     <form onSubmit={save}><header><h2 id="cli-settings-title">CLI 设置</h2><button type="button" disabled={busy !== null} onClick={onClose}>关闭</button></header>
-      <p className="muted">选择本地 CLI 或 Docker Worker。保存不会执行程序、调用模型或启动任务；已有运行继续使用启动时的配置。</p>
+      <p className="muted">选择本地 CLI 或 Docker Worker。已有运行继续使用启动时的配置；调整配置后，此前已授权的排队任务可能继续启动。</p>
       {loading && <p role="status">正在读取已保存配置…</p>}
       {!loading && !saved && <p className="muted">尚未成功读取配置，暂不可编辑或保存。</p>}
       {saved && draft && <>
@@ -94,6 +112,8 @@ export function CliSettings({ onClose }: { onClose: () => void }) {
         <p className="muted">密钥环境变量：{saved.credential_available ? '服务进程中已设置' : '服务进程中未设置'}。此状态不代表凭据有效。</p>
         <fieldset className="settings-fields" disabled={busy !== null || loading}><legend className="sr-only">CLI 配置字段</legend>
           <label className="check"><input type="checkbox" checked={draft.enabled} onChange={event => update('enabled', event.target.checked)} />启用 CLI 配置</label>
+          <label className="check"><input type="checkbox" checked={draft.resource_admission_enabled} onChange={event => update('resource_admission_enabled', event.target.checked)} />启用本机资源准入</label>
+          <p>资源不足或读取失败时暂停新执行，已有执行不因此被终止。本地预留值用于控制启动数量，不是进程内存硬限制或费用预算。Docker 使用每容器资源配置参与准入。</p>
           <label>执行后端<select value={draft.backend} onChange={event => update('backend', event.target.value as Fields['backend'])}><option value="local">本地 CLI（工作目录隔离）</option><option value="docker">Docker Worker（容器隔离）</option></select></label>
           {draft.backend === 'local' ? <label>CLI 可执行文件路径<input required={draft.enabled} maxLength={2048} autoComplete="off" spellCheck={false} value={draft.executable} placeholder="例如 C:\Tools\codex.exe" onChange={event => update('executable', event.target.value)} /><small>填写可信程序的绝对 .exe 路径，不含命令参数或引号。本地后端不是容器沙箱。</small></label> : <>
             <label>Docker 可执行文件路径<input required={draft.enabled} maxLength={2048} autoComplete="off" spellCheck={false} value={draft.docker_executable} placeholder="例如 C:\Tools\docker.exe" onChange={event => update('docker_executable', event.target.value)} /></label>
@@ -101,15 +121,19 @@ export function CliSettings({ onClose }: { onClose: () => void }) {
           </>}
           <label>模型标识<input required={draft.enabled} maxLength={200} value={draft.model} placeholder="填写可用的 OpenAI 模型标识" onChange={event => update('model', event.target.value)} /><small>当前 Codex 适配器使用 OpenAI API，不复用聊天的 API 基础地址。</small></label>
           <label>密钥环境变量名<input required={draft.enabled} pattern="[A-Za-z_][A-Za-z0-9_]*" maxLength={128} autoComplete="off" spellCheck={false} value={draft.api_key_env} placeholder="例如 OPENAI_API_KEY（不是密钥值）" onChange={event => update('api_key_env', event.target.value)} /><small>仅填写变量名。请在启动服务前设置该环境变量；修改环境后需重启服务。</small></label>
-          {numericFields.filter(field => draft.backend === 'docker' || !field.key.startsWith('docker_')).map(field => <label key={field.key}>{field.label}<input type="number" required min={field.minimum} max={field.maximum} step={1} value={draft[field.key]} onChange={event => update(field.key, event.target.value)} /><small>范围 {field.minimum}–{field.maximum}，仅接受整数。</small></label>)}
+          {numericFields.filter(field => draft.backend === 'docker' ? !field.key.startsWith('local_worker_') : !field.key.startsWith('docker_')).map(field => <label key={field.key}>{field.label}<input type="number" required min={field.minimum} max={field.maximum} step={1} value={draft[field.key]} onChange={event => update(field.key, event.target.value)} /><small>范围 {field.minimum}–{field.maximum}，仅接受整数。</small></label>)}
         </fieldset>
         <button type="button" disabled={busy !== null || loading || dirty || !(saved.backend === 'docker' ? saved.docker_executable && saved.docker_image : saved.executable) || !saved.platform_supported} onClick={() => void checkVersion()}>{busy === 'probe' ? '正在检查…' : saved.backend === 'docker' ? '检查本地 Docker 与固定镜像' : '检查已保存 CLI 版本'}</button>
         <p className="muted">{saved.backend === 'docker' ? '检查只读取本地 Docker 服务和固定 Linux 镜像状态，不启动容器、不拉取镜像。' : '检查只运行已保存程序的 --version。'}不调用模型、不验证模型账号。{dirty ? '有未保存修改，请先保存，再手动检查。' : '检查成功不代表任务已调度或执行。'}</p>
       </>}
       {probe && <p className={probe.available ? 'settings-status' : 'error'} role="status">{probe.available ? '检查成功' : '检查未通过'}{probe.version ? `：${probe.version}` : ''}。{probe.message}</p>}
+      <section aria-label="本机资源状态"><h3>本机资源状态</h3><button type="button" disabled={resourceLoading} onClick={() => void readResources()}>{resourceLoading ? '读取资源中…' : '刷新本机资源'}</button>
+        {resources && <><p>已保存准入：{resources.enabled === null ? '未知' : resources.enabled ? '启用' : '关闭'} · 可用内存 {resources.available_memory_mb ?? '未知'} MiB · 逻辑 CPU {resources.cpu_count ?? '未知'}</p><p>活动预约：{resources.reserved_memory_mb} MiB / {resources.reserved_cpus} CPU。{resources.message}</p></>}
+        {resourceError && <p role="alert" className="error">资源状态读取失败：{resourceError}</p>}
+      </section>
       {error && <p className="error" role="alert">{error}</p>}
       {!loading && !saved && <button type="button" onClick={() => void load()}>重试读取配置</button>}
-      <p className="settings-status" role="status">{success ? 'CLI 配置已保存，未执行程序或调用模型。' : dirty ? '有未保存的修改' : ''}</p>
+      <p className="settings-status" role="status">{success ? 'CLI 配置已保存，后续调度使用新配置。' : dirty ? '有未保存的修改' : ''}</p>
       <footer><button type="button" disabled={busy !== null} onClick={onClose}>{dirty ? '取消修改' : '关闭'}</button><button className="primary" disabled={!saved || loading || busy !== null || !dirty}>{busy === 'save' ? '保存中…' : '保存配置'}</button></footer>
     </form>
   </dialog>;

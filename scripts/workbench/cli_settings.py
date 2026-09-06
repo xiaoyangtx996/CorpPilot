@@ -15,11 +15,14 @@ from .cli import execution_environment, prepare_workspace
 from .process_tree import run_process
 
 LIMITS = {"timeout_seconds": (1, 3600), "max_concurrency": (1, 16),
-          "docker_cpus": (1, 16), "docker_memory_mb": (128, 32768), "docker_pids_limit": (16, 1024)}
+          "docker_cpus": (1, 16), "docker_memory_mb": (128, 32768), "docker_pids_limit": (16, 1024),
+          "host_reserve_memory_mb": (0, 1048576), "local_worker_memory_mb": (128, 1048576), "local_worker_cpus": (1, 256)}
 DEFAULTS = {"enabled": False, "executable": "", "model": "", "api_key_env": "",
             "timeout_seconds": 120, "max_concurrency": 2, "backend": "local",
             "docker_executable": "", "docker_image": "", "docker_cpus": 1,
-            "docker_memory_mb": 1024, "docker_pids_limit": 128}
+            "docker_memory_mb": 1024, "docker_pids_limit": 128,
+            "resource_admission_enabled": False, "host_reserve_memory_mb": 1024,
+            "local_worker_memory_mb": 1024, "local_worker_cpus": 1}
 # ponytail: one probe per server process; use shared admission if multiple servers are supported.
 _PROBE_LOCK = threading.Lock()
 
@@ -29,9 +32,9 @@ def _validate(payload):
         raise ValueError("包含不支持的 CLI 配置字段；只允许保存密钥环境变量名")
     values = dict(payload)
     for field, value in values.items():
-        if field == "enabled":
+        if field in ("enabled", "resource_admission_enabled"):
             if type(value) is not bool:
-                raise ValueError("enabled 必须为布尔值")
+                raise ValueError(f"{field} 必须为布尔值")
         elif field in LIMITS:
             low, high = LIMITS[field]
             if type(value) is not int or not low <= value <= high:

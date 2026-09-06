@@ -11,6 +11,7 @@ from .project_executions import ProjectExecutions
 from .project_launches import ProjectLaunches
 from .artifacts import capture
 from .reconciliations import Reconciliations, unresolved
+from . import resource_admission
 
 
 class CLIController:
@@ -38,6 +39,7 @@ class CLIController:
         self.executions.recover()
         self.pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="task-cli")
         self.active = {}
+        self.reservations = {}
         self.error = ""
         self.closed = False
 
@@ -117,6 +119,7 @@ class CLIController:
                     continue
                 # Keep the same completed future if writing fails; retry only the report.
                 del self.active[identity]
+                self.reservations.pop(identity, None)
             else:
                 try:
                     self.executions.snapshot(identity)
@@ -130,6 +133,11 @@ class CLIController:
             raise RuntimeError("CLI 状态尚未落库")
 
     def tick(self):
+        # The same lock serializes admission against close and concurrent ticks.
+        with self.launch_lock:
+            self._tick()
+
+    def _tick(self):
         if self.closed:
             return
         try:
@@ -151,7 +159,14 @@ class CLIController:
             for run in pending:
                 if len(self.active) >= config["max_concurrency"]:
                     break
+                request = resource_admission.requirements(config)
+                resources = resource_admission.snapshot(config, self.reservations)
+                denied = resource_admission.denial(resources, config, request)
+                if denied:
+                    self.error = '资源准入等待：' + denied
+                    break
                 if self.executions.claim(run["id"]):
+                    self.reservations[run['id']] = request
                     cancel = threading.Event()
                     try:
                         future = self.pool.submit(self._execute, run, config, cancel)
@@ -166,7 +181,20 @@ class CLIController:
             self.error = "CLI 调度或状态写入异常；已开始的执行不会自动重发"
 
     def status(self):
-        return {"error": self.error, "active_requests": len(self.active), "running": not self.closed}
+        with self.launch_lock:
+            try:
+                config = self.settings.get()
+                resources = resource_admission.snapshot(config, self.reservations)
+                denied = resource_admission.denial(resources, config, resource_admission.requirements(config))
+                if denied:
+                    resources['message'] = '下一实例准入受限：' + denied
+            except Exception:
+                resources = {'enabled': None, 'available_memory_mb': None, 'cpu_count': None,
+                             'reserved_memory_mb': sum(row['memory_mb'] for row in self.reservations.values()),
+                             'reserved_cpus': sum(row['cpus'] for row in self.reservations.values()),
+                             'message': '无法读取资源准入配置；请核查配置，未改变任务状态'}
+            return {"error": self.error, "active_requests": len(self.active), "running": not self.closed,
+                    'resource_admission': resources}
 
     def enqueue(self, task_id, payload):
         # Exact replay remains readable after configuration changes. create validates
@@ -274,6 +302,7 @@ class CLIController:
                 self.error = "停止请求写入失败，仍已通知本地进程退出"
         self.pool.shutdown(wait=True)
         try:
-            self._reconcile()
+            with self.launch_lock:
+                self._reconcile()
         except Exception:
             self.error = "停止时结果写入失败，下次启动将标记未知"

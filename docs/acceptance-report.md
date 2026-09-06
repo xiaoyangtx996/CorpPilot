@@ -474,3 +474,15 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 两种真实fixture停止分别在模型运行及CLI运行时，已落库停止响应被丢弃、读取503、页面reload仍保留原目标和停止记录，恢复GET后仅核对不重发。模型停止无迟到launch，执行停止三项cancelled；共3次本地provider、4次受控runner。页面异常0，主流程console/HTTP仅允许注入400/503/断线，边界无非预期console与业务写入。独审提出的StrictMode锁和停止关联校验已修复并纳入最终检查。
 
 正常应用数据库未参与测试，未操作真实供应商、CLI、Docker或安装系统组件；本地通过不代表远端推送、费用硬门或完整目标完成。浏览器测试运行方式与环境变量见frontend/README.md。
+
+## F54 本机资源准入验收
+
+启用资源门时，真实Windows可用内存/逻辑CPU参与新实例准入。根直接探测曾读到8239MiB/32CPU；数值随宿主变化。新25项覆盖严格配置持久化、坏探测null、内存/CPU/探测失败保持原queued并恢复、并发tick不超卖、启用门前已活动预约及配置更改保持、claim失败零预约、结果写入失败保留预约、压力不取消活动实例、Docker复用资源值、空队列实时status。调度边界使用确定性资源样本及受控runner；原生探测单独实测，不冒充真实双容器运行。
+
+子代理46项5.96s通过；根完整套件 **696 passed、8 subtests passed，130.87s，session11423退出0**。根审查close末尾回收与status同锁，pool.shutdown保持锁外。前端类型检查、49模块构建index-BzqwJHzC.js及独立只读审查Pass。
+
+最终浏览器corppilot-browser-A3gqZp/browser-report.json（session95391）Pass，fixtureExit0。原一次授权三步交接、最终C验收、17边界和两类停止均回归；新设置开关与2048自动保存重开断言，1536和2由根目视resource-settings.png核对。HTTP实际快照为available_memory_mb=8206,cpu_count=32,预约0且enabled=true。没有因为保存设置增加fixture模型或runner调用。首轮SGDYEL因测试精确label遗漏范围说明而超时，页面正常；修正定位后通过，失败报告保留。
+
+正常库在零活动下SQLite备份，f54-normal-backup.json记录hash。旧49304确认live并停止后新73418启动7892，36原表逐行同备份，完整性及外键通过，新bundle可读、/health200（此前误用/api/workbench/health得401，不是服务失败）。证据f54-normal-readback.json。没有改变正常数据的准入开关或配置；Owner可自行启用。
+
+本增量可验收；默认关闭兼容旧配置，资源准入不代表费用硬门、宿主实时CPU负载或Docker VM容量控制。真实CLI、双Docker和全目标验收仍未完成，推送以实际远端回读为准。

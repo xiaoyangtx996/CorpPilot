@@ -591,3 +591,13 @@ GoalExecutions在SQLite保存不可变原授权、唯一planning_run_id、稳定
 复用ReplyController的单控制器生命周期、原模型队列和CLIController.launch_project；不增加工作流引擎或后台线程。每轮先处理目标停止恢复与计划衔接，再调度CLI。停止先落持久标记，再取消仍排队的原规划和停止固定首批；失败清理可在重启后继续，运行中或未知模型状态仍独立呈现。启动与关联之间中断按固定请求恢复，异常不另建模型Run或CLI尝试。
 
 Owner鉴权沿用全局Bearer边界。接口为GET/POST `/api/workbench/conversations/{id}/goal-executions`、GET `/api/workbench/goal-executions/{id}`、POST `/api/workbench/goal-executions/{id}/stop`（严格`confirm:true`）。创建严格使用request_id、source_message_id、agent_id、candidate_ids、shared_brief、max_tasks、confirm_execution和confirm_handoff八字段。回执同时提供原规划和固定launch/batch；本功能暂未增加浏览器入口、货币硬预算或第二套桌面后端。
+
+## F54 本机资源准入
+
+CLI设置增加resource_admission_enabled（默认false）、host_reserve_memory_mb（默认1024）、local_worker_memory_mb（默认1024）和local_worker_cpus（默认1）。旧配置按默认值读取，不批量改写已有数据。Owner可在CLI设置保存并从本机资源状态查看实际可用内存、逻辑CPU及活动预约。调整设置可能使此前已授权的排队工作恢复调度。
+
+Windows通过GlobalMemoryStatusEx和os.cpu_count只读探测，无额外进程或依赖。启用时，新实例CPU与活动预约之和不得超过逻辑CPU；内存按活动完整预约+新实例预约+宿主保留不得超过当前实际可用内存。Docker沿用每容器cpus/memory设置；本地使用明确的启动预约值。实际可用内存已经反映部分活动用量，继续计入完整预约是保守余量，可能少启动实例；不是动态RSS计费或本地进程OS硬限制。
+
+无论准入开关状态，每次claim成功后都保存启动时预约，报告成功落库后才释放；修改设置不缩旧预约，报告写失败继续占用。资源不足或探测失败只阻止新启动，原queued记录及实例标识不变，后续tick重新核对；不杀死活动执行、不新建替代Run。沿用unknown全局阻塞、依赖授权及最大并发。重启先把原活动执行恢复为unknown，需原核查门后才能再次启动。
+
+GET /api/workbench/cli-runtime新增resource_admission，含enabled、available_memory_mb、cpu_count、reserved_memory_mb、reserved_cpus、message；enabled=null表示配置无法读取。状态读取也实时探测，不启动程序。此能力只控制本机CLI启动数量，不涵盖Docker虚拟机可用容量、实时CPU负载或货币预算；Docker实际限制继续由容器参数执行，真实双Worker验收另列。
