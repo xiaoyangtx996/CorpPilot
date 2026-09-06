@@ -535,6 +535,17 @@ Owner Bearer 鉴权覆盖 `POST/GET /api/workbench/conversations/{id}/peer-revie
 
 只允许未归档board/project中的不同启用成员A与B。源消息须证明由同会话A的completed Run发布：source_run.reply_message_id与消息ID一致，Run的conversation_id/agent_id与消息相符。入队、模型快照与发布事务复查来源和双方当前权限；撤权后不得发布。冻结输入只含选定source本体和B自身指令，不默认共享原Owner目标、其他聊天历史或A的私有记忆。普通reply的Owner来源校验保持不变。
 
-同会话request_id跨reply/planning/retrospective/peer_review冲突拒绝；精确原请求回放优先返回原回执，不因配置关闭或后续撤权创建替代Run。F45为peer_review独立分类，unknown按类型、会话、源消息和目标Agent精确阻断新建及queued领取；已保存核查不改写原unknown，原请求不重发。每次Owner授权只产生一个目标Run，不自动续轮；允许Owner之后另行确认让C评议B。后端/API实现及独立审查已通过；F48前端正在开发，尚未构建或测试。
+同会话request_id跨reply/planning/retrospective/peer_review冲突拒绝；精确原请求回放优先返回原回执，不因配置关闭或后续撤权创建替代Run。F45为peer_review独立分类，unknown按类型、会话、源消息和目标Agent精确阻断新建及queued领取；已保存核查不改写原unknown，原请求不重发。每次Owner授权只产生一个目标Run，不自动续轮；允许Owner之后另行确认让C评议B。后端/API实现及独立审查已通过；F48前端已通过本地fixture浏览器验收，详见F48验收记录。
 主代理定向25项通过（7.61s，当时尚未加入冻结角色单用例）；随后新增冻结角色测试单项通过（0.22s）。完整 pytest tests/ -q 为 **596 passed、8 subtests passed（105.83s）**，session37270退出0，包含冻结角色和HTTP严格字段用例。独立QA/TechLead/Ponytail审查Pass，四文件定向41项通过（9.88s），另复跑冻结角色1项通过（0.22s）；这是分次验证记录，不相加成42个不同用例。
-原生控制器经实际本地HTTP provider子进程完成A回复→B评议，各一次调用，8并发同key仅1个peer Run；来源/目标撤权、未知核查新key和重启精确回读均验收。本增量不验证真实供应商、CLI或Docker，F47提交与推送待主代理实际执行。
+原生控制器经实际本地HTTP provider子进程完成A回复→B评议，各一次调用，8并发同key仅1个peer Run；来源/目标撤权、未知核查新key和重启精确回读均验收。本增量不验证真实供应商、CLI或Docker，F47已本地提交并立即尝试推送，403阻塞；实际记录见下文。
+
+
+F47 实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f47-delivery-result.json`，本地提交 `a4f7875c73bc29d0d1570b4e3aaaf9f17f2562c4` 成功，11文件、461行新增/19行删除；随即推送退出1，GitHub403（suiyue1990无目标仓库写权限）。远端回读退出0但 `remote_head=null`，因此远端交付仍阻塞；F48五个前端文件未包含在F47提交中。
+
+## F48 评议前端与请求恢复（本地fixture已验证）
+
+新PeerReviews组件通过App全局入口及ConversationMessages群内Agent消息入口接入；api.ts增加专门request/run类型，ModelRunReconciliation增加peer_review标签。普通ReplyRuns保持不变。请求使用独立sessionStorage键corppilot.peer-review-pending.v1，保存原conversation、source全文和四字段payload，附加已受理run_id；不创建通用恢复框架。
+
+POST响应须严格匹配原会话、来源、目标、请求键及payload，但仅持久化Run编号，不设置已核验current。从列表找回编号也必须另GET /peer-reviews/{id}精确回读，才能展示可释放状态。串行读写及失效回调检查防止旧会话结果污染新选择；存储损坏保守锁定，不清原请求。unknown核查回调按record.run_id关联，释放阶段持有写锁并重新GET原声明；失败清除该Run的checked许可，原请求继续保留。核查、列表轮询均不自动发起新模型调用。
+
+原生dialog提供Escape/关闭与焦点恢复；UI明确一次调用、仅分享选中正文、排队可取消和完成后原群刷新。typecheck及48modules构建index-BDbMUDFL.js通过，之后无代码修改；两恢复边界及正常调用、重启401、取消已通过本地fixture浏览器验收，详见[验收记录](acceptance-report.md#f48-群内评议界面验收本地fixture验收pass)。本轮fixture不记录provider输入，输入隐私证据沿用F47用例，不扩大新增声明；提交结果待实际操作。

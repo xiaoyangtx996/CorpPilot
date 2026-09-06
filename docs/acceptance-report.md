@@ -364,4 +364,21 @@ F46 实际交付记录：已直接读取外部 `H:\item\CorpPilot-test-evidence-
 
 peer unknown核查后显式新key只调用一次，原unknown不变；provider返回前撤销目标B权限不发布消息。源/目标快照及完成双阶段撤权、事务故障回滚、单次完成无自动续轮、后续Owner再次授权peer源评议均有核心测试。配置关闭、成员停用、归档、shutdown/restart后的完整原请求仍精确回读；跨kind冲突拒绝。
 
-主代理亲读五模块、核心测试及其HTTP测试，产品验收符合F47范围。F48前端正在开发，尚未构建或测试；不把此后端证据记为浏览器完成。全部模型调用为本地HTTP测试供应商，真实供应商质量、CLI和双Docker未验收，整体目标未完成。F47提交/推送等待主代理实际操作，不预填交付结果。
+主代理亲读五模块、核心测试及其HTTP测试，产品验收符合F47范围。F48前端已通过本地fixture浏览器验收，详见F48验收记录；不把此后端证据记为浏览器完成。全部模型调用为本地HTTP测试供应商，真实供应商质量、CLI和双Docker未验收，整体目标未完成。F47已本地提交并立即尝试推送，403阻塞；实际记录见下文。
+
+
+F47 实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f47-delivery-result.json`，本地提交 `a4f7875c73bc29d0d1570b4e3aaaf9f17f2562c4` 成功，11文件、461行新增/19行删除；随即推送退出1，GitHub403（suiyue1990无目标仓库写权限）。远端回读退出0但 `remote_head=null`，因此远端交付仍阻塞；F48五个前端文件未包含在F47提交中。
+
+## F48 群内评议界面验收（本地fixture验收Pass）
+
+五个前端文件提供群内消息评议入口、全局原请求恢复、来源全文/作者及逐次调用确认，复用Run排队取消和模型核查。根与独立审查退回的两处恢复缺陷已修复：POST终态只保存编号，必须独立GET详情精确匹配后才许可释放；unknown释放时声明GET失败撤销checked，原pending保留。typecheck与48modules构建通过（index-BDbMUDFL.js），此后无代码修改。
+
+已直接读取外部f48-ui-review.json、f48-boundary-review.json、f48-restart-review.json和f48-cancel-review.json，报告均passed=true；主代理已亲读对应四个浏览器脚本并查看桌面、移动及发布截图。主流程3项验证首400→同key接受丢响应/GET503→刷新GET恢复→显式释放；B完成后Owner再确认C第二跳；原unknown通过UI核查且不新建调用。第二跳source_run_id精确引用第一跳cf1c4231…，目标Run为eb9f3930…；主代理CUA最终历史为3published、1cancelled、1unknown，并展开核对。
+
+独立边界3项验证：模拟POST202终态不能绕过独立GET；损坏pending在关闭重开后原样保留且锁定；unknown声明GET503撤销许可、保留pending，恢复读取后再显式释放。模拟POST未转发到服务端，unexpected_writes=[]、console_errors=[]、page_errors=[]，2条预期503另列；1280×900和390×844截图dialog均在视口内。重启同库口令401后原request_id ced6d73c…和Run cf1c4231…保留，仅GET恢复，writes=[]、page_errors=[]。取消用例为一个延迟running占用槽，另一queued经UI取消，不产生该请求模型调用或消息。
+
+最终f48-verification.json实际运行退出0、passed=true：7runs、7messages、5peer_review_requests、1model_run_reconciliation、0memory_candidates、0task_executions；原2completed及1unknown完整Run和原消息均未变，原Run调用0。新3completed各恰好一次本地HTTP调用且发布消息来源绑定正确，新1cancelled零调用且reply_message_id=null；无额外消息，integrity_check=ok、foreign_key_check=[]。以上使用state-only种子和本地HTTP fixture，不是真实供应商、CLI或Docker。本轮不记录provider输入，隐私入参证据沿用F47已测用例，不新增未验证的隐私结论。
+
+正常库备份f48-normal-backup.json的SHA256为870f4cef4f31d00460674fb4c8d520d5a17bff3e2fba858a51ea445e5257d356；f48-normal-readback.json直接回读31张原有表逐行比较无变化、peers=0、完整性ok、外键检查空。旧正常session19278确认live后Ctrl+C退出1，新session68562加载F47，health200并提供新bundle，正常历史unknown保留。收尾直接核实f48-cleanup.json：fixture96419先live poll再Ctrl+C退出1，主代理独立回读7896/7897均无监听，正常68562保留。
+
+PM/QA/TechLead/Ponytail对F48本地增量Pass。后端沿用F47完整596项及8子用例证据，不虚构新全量；F48提交与推送待实际操作，真实供应商、CLI、双Docker及整体目标未完成。

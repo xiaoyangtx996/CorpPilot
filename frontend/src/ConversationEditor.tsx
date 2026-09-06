@@ -52,8 +52,8 @@ export function ConversationEditor({ conversation, agents, onClose, onSaved }: {
   </dialog>;
 }
 
-export function ConversationMessages({ conversation, agents, draft, onMessage, onSettings, onCollaboration, onPlanning }: {
-  conversation: Conversation; agents: Agent[]; draft: Draft; onMessage: (message: Message) => void; onSettings: () => void; onCollaboration: (source: Message) => void; onPlanning: (source: Message) => void;
+export function ConversationMessages({ conversation, agents, draft, onMessage, onSettings, onCollaboration, onPlanning, onPeerReview }: {
+  conversation: Conversation; agents: Agent[]; draft: Draft; onMessage: (message: Message) => void; onSettings: () => void; onCollaboration: (source: Message) => void; onPlanning: (source: Message) => void; onPeerReview: (source: Message) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [content, setContent] = useState(draft.content);
@@ -115,7 +115,7 @@ export function ConversationMessages({ conversation, agents, draft, onMessage, o
   return <>
     <div className="message-history" aria-label="消息历史" aria-busy={loading}>
       {messages.length === 0 && <p className="muted">{loading ? '正在读取消息…' : '暂无消息，发送第一条消息开始讨论。'}</p>}
-      {messages.map(message => <article className={`message ${message.sender_kind}`} key={message.id} id={`message-${message.id}`}><header><strong>{message.sender_kind === 'owner' ? '你 · Owner' : agents.find(agent => agent.id === message.sender_id)?.name ?? 'Agent'}</strong><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time></header><p>{message.content}</p>{message.sender_kind === 'owner' && <><button type="button" className="text-button" disabled={conversation.archived} onClick={() => setReplySource(message)}>请 Agent 回复</button><button type="button" className="text-button" disabled={conversation.archived} onClick={() => setTaskSource({ message })}>创建任务</button><button type="button" className="text-button" disabled={conversation.archived} onClick={() => onCollaboration(message)}>组建协作项目</button><button type="button" className="text-button" disabled={conversation.archived} onClick={() => onPlanning(message)}>请 Agent 提出协作计划</button></>}</article>)}
+      {messages.map(message => <article className={`message ${message.sender_kind}`} key={message.id} id={`message-${message.id}`}><header><strong>{message.sender_kind === 'owner' ? '你 · Owner' : agents.find(agent => agent.id === message.sender_id)?.name ?? 'Agent'}</strong><time dateTime={message.created_at}>{new Date(message.created_at).toLocaleString()}</time></header><p>{message.content}</p>{message.sender_kind === 'agent' && conversation.type !== 'dm' && <button type="button" className="text-button" disabled={conversation.archived} onClick={() => onPeerReview(message)}>请另一成员评议</button>}{message.sender_kind === 'owner' && <><button type="button" className="text-button" disabled={conversation.archived} onClick={() => setReplySource(message)}>请 Agent 回复</button><button type="button" className="text-button" disabled={conversation.archived} onClick={() => setTaskSource({ message })}>创建任务</button><button type="button" className="text-button" disabled={conversation.archived} onClick={() => onCollaboration(message)}>组建协作项目</button><button type="button" className="text-button" disabled={conversation.archived} onClick={() => onPlanning(message)}>请 Agent 提出协作计划</button></>}</article>)}
       {loadError && <p className="error" role="alert">消息读取失败：{loadError}</p>}
       <button className="history-more" disabled={loading} onClick={() => void load()}>{loading ? '读取中…' : loadError ? '重试读取消息' : more ? '继续加载历史（按时间正序）' : '刷新消息'}</button>
       <TaskBoard conversation={conversation} agents={agents} messages={messages} source={taskSource} draft={draft} />

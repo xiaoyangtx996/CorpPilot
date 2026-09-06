@@ -543,4 +543,13 @@ F46 实际交付记录：已直接读取外部 `H:\item\CorpPilot-test-evidence-
 - 同群不同启用成员，来源须真实completed Run发布；快照和发布复查权限。一次授权仅一个目标调用，无自动续轮，允许Owner另行授权下一轮。精确幂等回放、跨kind冲突和F45独立unknown范围均为验收门。
 - task_execution_ui完成核心实施与测试，主代理集成严格HTTP用例并亲读五模块与测试；verify_history_scope独立QA/TechLead/Ponytail审查Pass。
 - 主代理定向25项通过（7.61s，当时尚未加入冻结角色单用例）；随后新增冻结角色测试单项通过（0.22s）。完整 pytest tests/ -q 为 **596 passed、8 subtests passed（105.83s）**，session37270退出0，包含冻结角色和HTTP严格字段用例。独立QA/TechLead/Ponytail审查Pass，四文件定向41项通过（9.88s），另复跑冻结角色1项通过（0.22s）；这是分次验证记录，不相加成42个不同用例。
-- 原生控制器及本地HTTP provider子进程A→B各调用一次、8同key只1peer、unknown声明后新key一次、返回前撤B不发布、重启精确回读均通过。F48正在开发，尚未构建/测试；真实供应商/CLI/Docker未验收。F47提交推送待主代理立即执行，不预填结果。
+- 原生控制器及本地HTTP provider子进程A→B各调用一次、8同key只1peer、unknown声明后新key一次、返回前撤B不发布、重启精确回读均通过。F48前端已通过本地fixture浏览器验收，详见F48验收记录；真实供应商/CLI/Docker未验收。F47已本地提交并立即尝试推送，403阻塞；实际记录见下文。
+
+F47 实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f47-delivery-result.json`，本地提交 `a4f7875c73bc29d0d1570b4e3aaaf9f17f2562c4` 成功，11文件、461行新增/19行删除；随即推送退出1，GitHub403（suiyue1990无目标仓库写权限）。远端回读退出0但 `remote_head=null`，因此远端交付仍阻塞；F48五个前端文件未包含在F47提交中。
+
+## F48：群内逐次授权评议界面（本地fixture验收Pass）
+
+- verify_prompt_push实现五个前端文件，复用F47 API和原模型核查；根/独立审查两处恢复缺陷已修复：POST须独立GET精确核验后才可释放，unknown声明复查失败撤旧许可且保留pending。普通reply路径保持。
+- 48modules构建index-BDbMUDFL.js通过且之后无代码修改。主代理已读四份浏览器脚本与报告、看桌面/手机/发布截图并CUA确认历史；主流程3项、边界3项、401重启恢复及queued取消均Pass。精确恢复和来源链接证据见[验收记录](acceptance-report.md#f48-群内评议界面验收本地fixture验收pass)。
+- 最终外部f48-verification.json通过：7runs/7messages/5peer/1声明/0候选/0CLI，新3completed各1次本地HTTP调用、1cancelled零调用，原Run及消息未变，DB完整性通过。31张正常原表逐行同备份；fixture96419已确认live后退出1，7896/7897无监听，正常68562保留。
+- PM/QA/TechLead/Ponytail本地增量Pass；本轮不记录provider输入，隐私证据沿用F47，不扩大为真实供应商/CLI/Docker验证。F48提交及推送待主代理实际执行，整体目标未完成。
