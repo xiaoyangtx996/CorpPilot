@@ -1,4 +1,5 @@
 import { TaskDependencies } from './TaskDependencies';
+import { CodeIntegration } from './CodeIntegration';
 import { TaskExecutions } from './TaskExecutions';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, type Agent, type Conversation, type Message, type Task, type TaskDraft, type TaskFields, type TaskRevision } from './api';
@@ -28,6 +29,7 @@ export function TaskBoard({ conversation, agents, messages, source, draft }: {
   const [loadError, setLoadError] = useState('');
   const [editor, setEditor] = useState(false);
   const [executionTask, setExecutionTask] = useState<Task | null>(null);
+  const [integrationOpen, setIntegrationOpen] = useState(false);
   const [dependencyTask, setDependencyTask] = useState<Task | null>(null);
   const [value, setValue] = useState<TaskDraft | undefined>(draft.taskDraft);
   const [busy, setBusy] = useState(false);
@@ -130,6 +132,8 @@ export function TaskBoard({ conversation, agents, messages, source, draft }: {
   }
   const current = tasks.find(task => task.id === value?.id);
   return <section className="task-board" aria-label="本会话任务">
+    {conversation.type === 'project' && <button onClick={() => setIntegrationOpen(true)}>代码集成</button>}
+    {integrationOpen && <CodeIntegration key={conversation.id} conversation={conversation} tasks={tasks} agents={agents} onClose={() => setIntegrationOpen(false)} />}
     <header><h2>本会话任务 <span className="count">{tasks.length}</span></h2><button disabled={loading} onClick={() => void load()}>{loading ? '读取任务中…' : '刷新任务'}</button></header>
     <p className="muted">任务保存需求与负责人，不会调用模型或启动执行。{conversation.archived ? '本会话已归档，任务只读。' : '从 Owner 消息下方创建任务。'}</p>
     {notice && <p role="status">{notice}</p>}{loadError && <p className="error" role="alert">任务读取失败：{loadError}</p>}{storageError && <p className="error" role="alert">{storageError}<button onClick={restorePending}>重新读取待确认记录</button></p>}

@@ -4,7 +4,7 @@ import { checkRepository, type RepositoryBinding } from './RepositorySettings';
 
 type Change = { path: string; status: 'A' | 'M' | 'D'; old_mode: string | null; new_mode: string | null; old_size: number | null; new_size: number | null; old_sha256: string | null; new_sha256: string | null };
 type Manifest = { version: 1; execution_id: string; conversation_id: string; repository_revision: number; integration_agent_id: string; base_commit: string; base_tree: string; observed_head: string; target_tree: string; selection: string; content: string; changes: Change[]; patch_sha256: string; patch_bytes: number };
-type Snapshot = { source_execution: Pick<TaskExecution, 'id' | 'task_id' | 'agent_id' | 'attempt' | 'requirement_version' | 'state'>; source_task: Pick<Task, 'id' | 'conversation_id' | 'source_message_id' | 'requirement_version'>; repository: RepositoryBinding | null; artifacts: ExecutionArtifact[]; manifest: Manifest | null; owner_review: OwnerReview | null; source_inputs: { dependency_task_id: string; upstream_execution_id: string }[]; integrator: { id: string; enabled: boolean; execute: boolean; member: boolean } | null; project: { id: string; archived: boolean } };
+export type Snapshot = { source_execution: Pick<TaskExecution, 'id' | 'task_id' | 'agent_id' | 'attempt' | 'requirement_version' | 'state'>; source_task: Pick<Task, 'id' | 'conversation_id' | 'source_message_id' | 'requirement_version'>; repository: RepositoryBinding | null; artifacts: ExecutionArtifact[]; manifest: Manifest | null; owner_review: OwnerReview | null; source_inputs: { dependency_task_id: string; upstream_execution_id: string }[]; integrator: { id: string; enabled: boolean; execute: boolean; member: boolean } | null; project: { id: string; archived: boolean } };
 type Preview = { fingerprint: string; snapshot: Snapshot; blockers: string[] };
 type Request = { request_id: string; fingerprint: string; confirm: true };
 type Receipt = { id: string; source_execution_id: string; request_id: string; request_payload: Request; task_id: string; requirement_version: 1; initial_execution_request_id: string; initial_execution_id: string; source_snapshot: Snapshot; created_at: string };
@@ -20,12 +20,12 @@ const stateLabels: Record<string, string> = { queued: '排队中', running: '运
 const errorText = (e: unknown) => e instanceof Error ? e.message : '代码评审读取失败';
 function requireValue(ok: unknown): asserts ok { if (!ok) throw Error('代码评审回执或预览的格式、来源与固定关联不一致。'); }
 function keys(v: unknown, names: string): asserts v is Record<string, unknown> { requireValue(object(v) && Object.keys(v).sort().join() === names.split(' ').sort().join()); }
-function canonical(value: unknown): string { return JSON.stringify(value, (_key, v) => object(v) ? Object.fromEntries(Object.keys(v).sort().map(k => [k, v[k]])) : v); }
+export function canonical(value: unknown): string { return JSON.stringify(value, (_key, v) => object(v) ? Object.fromEntries(Object.keys(v).sort().map(k => [k, v[k]])) : v); }
 const same = (a: unknown, b: unknown) => canonical(a) === canonical(b);
 async function digest(snapshot: Snapshot, blockers: string[]) { const bytes = new TextEncoder().encode(canonical({ snapshot, blockers })); return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(v => v.toString(16).padStart(2, '0')).join(''); }
 function request(v: unknown): asserts v is Request { keys(v, 'request_id fingerprint confirm'); requireValue(text(v.request_id, 120) && !!v.request_id.trim() && v.request_id === v.request_id.trim() && hash(v.fingerprint) && v.confirm === true); }
 function path(v: unknown) { return text(v, 1000) && !!v && v.split('/').every(p => p && p !== '.' && p !== '..' && !/[\\:\u0000-\u001f\u007f]/.test(p)); }
-function snapshot(raw: unknown, source: TaskExecution, ready: boolean): Snapshot {
+export function snapshot(raw: unknown, source: TaskExecution, ready: boolean): Snapshot {
   keys(raw, 'source_execution source_task repository artifacts manifest owner_review source_inputs integrator project');
   const run = raw.source_execution, task = raw.source_task, project = raw.project;
   keys(run, 'id task_id agent_id attempt requirement_version state'); keys(task, 'id conversation_id source_message_id requirement_version'); keys(project, 'id archived');
@@ -55,7 +55,7 @@ function snapshot(raw: unknown, source: TaskExecution, ready: boolean): Snapshot
   return result;
 }
 async function checkPreview(raw: unknown, source: TaskExecution): Promise<Preview> { keys(raw, 'fingerprint snapshot blockers'); requireValue(hash(raw.fingerprint) && Array.isArray(raw.blockers) && raw.blockers.length <= 100 && raw.blockers.every(v => text(v) && !!v)); const value = snapshot(raw.snapshot, source, raw.blockers.length === 0); requireValue(await digest(value, raw.blockers as string[]) === raw.fingerprint); return raw as Preview; }
-async function checkReceipt(raw: unknown, source: TaskExecution, sent?: Pending): Promise<Receipt> {
+export async function checkReceipt(raw: unknown, source: TaskExecution, sent?: Pending): Promise<Receipt> {
   keys(raw, 'id source_execution_id request_id request_payload task_id requirement_version initial_execution_request_id initial_execution_id source_snapshot created_at'); request(raw.request_payload);
   requireValue(id(raw.id) && raw.source_execution_id === source.id && raw.request_id === raw.request_payload.request_id && id(raw.task_id) && raw.task_id !== source.task_id && raw.requirement_version === 1 && id(raw.initial_execution_request_id) && id(raw.initial_execution_id) && raw.initial_execution_id !== source.id && text(raw.created_at, 100) && Number.isFinite(Date.parse(raw.created_at)));
   const fixed = snapshot(raw.source_snapshot, source, true); requireValue(await digest(fixed, []) === raw.request_payload.fingerprint);

@@ -160,7 +160,7 @@ Owner 先核对并批准来源执行的完整成果，再读取评审预览并�
 
 目的目录必须不存在且不能与源仓库重叠；失败留下的目录不自动复用。Git 使用原有隔离环境、受控进程树及共同180秒工作预算，取消或超限失败，进程停止未确认仍抛出 `PreparationUnknownError`，不得声称已经回滚或自动重试。验证过程可能留下未引用的校验提交，不保留 Worker 原有提交历史。
 
-F74是内部原生服务能力，Owner授权与HTTP由下述F75接入，浏览器确认入口仍待接入。它不自动导出到源仓库、推送或合并 main，现有浏览器评审报告也不会自行触发集成。新 checkout 不在 F56 数据备份白名单内；恢复已保存补丁后仍需要原固定基线对象。
+F74是内部原生服务能力，Owner授权与HTTP由下述F75接入，浏览器确认由F76接入。它不自动导出到源仓库、推送或合并 main，现有浏览器评审报告也不会自行触发集成。新 checkout 不在 F56 数据备份白名单内；恢复已保存补丁后仍需要原固定基线对象。
 
 验证入口：`.venv\Scripts\python.exe -m pytest tests/test_workbench_code_integration.py tests/test_workbench_code_integration_delivery.py -q`。使用本机 Git 与临时仓库，成果链测试的 CLI 适配器受控，不能替代真实付费 CLI、双 Docker 或最终浏览器集成验收。
 
@@ -188,9 +188,21 @@ Owner选择1–16个同项目、原仓库版本、基线和集成人的来源执
 
 服务重启将未完成操作标为unknown，绝不根据目录存在或分支存在猜测成功，也不自动重跑。人工核查请求为 `{request_id, process_stopped: true, effects_checked: true, note}`；回执标为 `source: owner_declared`，原unknown状态仍保留。解除未知阻塞后，此前已授权的CLI排队任务可能继续；新集成仍须另行明确授权，旧集成不重跑也不变成成功。控制器仍持有时拒绝声明。
 
-新增 `code_integrations` 和 `code_integration_reconciliations` 随SQLite备份保存；固定授权、终态和核查声明不可覆盖。恢复后的历史成功回执不证明新机器仍有对应checkout，代码目录仍不在备份内。本阶段提供可调用Owner服务能力，专用浏览器操作在后续接入；不作为真实付费CLI、双Docker或完整产品验收。
+新增 `code_integrations` 和 `code_integration_reconciliations` 随SQLite备份保存；固定授权、终态和核查声明不可覆盖。恢复后的历史成功回执不证明新机器仍有对应checkout，代码目录仍不在备份内。F75提供Owner服务能力，F76提供下述浏览器操作；不作为真实付费CLI、双Docker或完整产品验收。
 
 定向验证：`.venv\Scripts\python.exe -m pytest tests/test_workbench_code_integrations.py tests/test_workbench_code_integrations_delivery.py -q`。
+
+## F76 浏览器代码集成
+
+打开项目群的“代码集成”，展开来源任务并读取执行记录，勾选当前执行；可移除、上移调整1–16份来源的实际应用顺序。读取预览后核对固定基线、原集成人、来源批准和各专用评审任务的最新报告批准，必要时打开来源成果或最新报告。变更选择、读取执行记录或返回报告都会要求重新核对当前预览与确认。
+
+确认后在浏览器当前会话保存原请求，再调用F75接口；独立按原request_id回读验证全部固定关联后才清除本地待确认记录。刷新及只读核对不会重复集成。同键重试可能首次执行已授权请求；超时、401、格式不符或未知后重试4xx均继续保留原请求。首次明确拒绝须再核对原请求为空并读取新预览，才能结束拒绝、重新确认。损坏的本地记录锁定提交并保留证据。
+
+运行状态自动回读，Owner可以请求停止。结果区展示实际commit、tree和服务数据目录下的产物相对路径；原仓库路径单独标注。已形成结果但验收失败时仍展示结果供核查，停止不承诺回滚。历史仅最近100条，精确原请求恢复不依赖该列表。
+
+unknown需要Owner逐项声明进程停止、影响已核查并填写依据。声明先保存原payload再发送，丢响应后独立读取原集成；另一页面已保存不同声明时，明确展示差异，Owner再次确认并回读后才结束本地请求，不冒充原请求成功。首次明确拒绝也须GET核查为空才可重编辑。声明不会把unknown改成成功，可能解除此前已授权CLI队列的阻塞。新集成必须重新预览，引用最新集成、填写前次影响说明并再次确认，使用新的独立目录。
+
+前端复用Owner HTTP、TaskExecutions和原评审严格解析函数；无新依赖或宿主文件访问。Tauri可复用该协议和页面，未新增空壳宿主抽象。验证入口：在frontend运行 `npm run test:browser:code-integration`；独立测试目录内的补丁采集和集成使用真实Git，源码作者、报告和CLI适配器受控，故障通过测试夹具注入，不调用付费模型。
 
 ## 原生仓库准备验证入口
 

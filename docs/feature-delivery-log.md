@@ -854,3 +854,15 @@ handoff_review负责固定授权账本及32项模块测试；根负责原CLICont
 最终全量1078 passed、8 subtests passed，602.79s（session36683退出0），包含冻结后的全部生产修改、32项新模块与10项实际接口/生命周期测试。没有跳过失败用例或放宽断言；源码及文档终审Pass。此前浏览器回归不涉及新增集成停止接口，仍作为原主流程回归证据，专用UI另行验收。
 
 精确commit、立即推送结果及远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f75-delivery-result.json，远端确认前不标记远端交付。专用浏览器确认与核查入口、真实CLI和双Docker仍待完成，整体目标未完成。
+
+## F76 浏览器代码集成与恢复
+
+frontend_integration负责CodeIntegration、TaskBoard项目入口与CodeReview四项纯导出；根负责双源真实Git夹具、独立浏览器脚本、PM目视及验收、文档与Git；verify_prompt_push源码/Ponytail终审Pass。复用F75接口、原TaskExecutions和严格评审解析，无新增依赖、后端生产代码或表。按已完成服务契约压缩重复设计环节，产品操作、工程审查与浏览器验收仍分别完成。
+
+最终 `npm run test:browser:code-integration` 的构建与测试入口已建立并实跑；最终测试-only运行 `corppilot-code-integration-ob7RQ4` 全部通过（session97035退出0），沿最终60模块index-DTJrlm7S.js。双来源有序真实Git、原请求丢响应恢复、错误回执/401保留、未知重试4xx不降格、明确停止、核查首拒与竞争声明、最新评审重试批准，以及390px与StrictMode键盘均通过；pageErrors为空、fixture退出0。4次实际Git完成、1次在受控暂停处取消；未知场景是实际Git返回后故障注入，报告CLI受控、0次模型调用。
+
+早期浏览器业务链通过后发现返回焦点与重复新建textarea名称问题，修复后保留断言通过；独立审查Return的人工核查两条恢复出口已修并实测。测试自身的异步终态等待、401页面及移动/桌面切换定位错误有明确区分，失败结果未计为通过。根目视桌面及移动截图，未用截图代替实际成果验证。
+
+原goal最终WCzd6w回归通过（session12997退出0、fixture退出0），无后端生产变化，不重复Python全量，最近F75的1078+8保持为基线。正常5931继续服务，无迁移或重启；f76-normal-readback.json确认47旧表逐行一致、两集成表空、完整性/外键/health200与最终JS SHA256 81db1d56bde48ed8eb90eba9b0329968c3198231dc7c892d8795b8a1090bcb12一致。Vite532.27kB/156.99kB gzip提示超过500kB，未隐藏。
+
+独立提交后立即推送；精确commit、推送结果及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f76-delivery-result.json，远端回读成功前不标记远端交付。当前完成浏览器独立代码集成，真实CLI、双Docker及全目标最终验收继续保留未完成状态。

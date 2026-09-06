@@ -36,6 +36,7 @@ def main():
     parser.add_argument('--tools', action='store_true')
     parser.add_argument('--repository', action='store_true')
     parser.add_argument('--code-review', action='store_true')
+    parser.add_argument('--code-integration', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -120,7 +121,7 @@ def main():
             time.sleep(0.02)
         directory = paths['work'] / 'artifacts'
         directory.mkdir(exist_ok=True)
-        filename = 'review.md' if args.code_review else 'result.txt'
+        filename = 'review.md' if args.code_review or args.code_integration else 'result.txt'
         (directory / filename).write_text(f'F73 集成人建议，仍待 Owner 批准。{identity}' if args.code_review else f'F53 captured result {identity}; inputs={len(kwargs["input_artifacts"])}', encoding='utf-8')
         return dict(exit_code=0, success=True, reason='exited', summary='Fixture result captured', workspace=str(paths['work']),
                     usage={'input_tokens': 7, 'output_tokens': None, 'cached_input_tokens': 0})
@@ -255,7 +256,8 @@ def main():
 
     repository_sample = None
     code_review_sample = None
-    if args.repository or args.code_review:
+    code_integration_sample = None
+    if args.repository or args.code_review or args.code_integration:
         from workbench.tasks import Tasks
         from workbench.executions import Executions
         from workbench.repo_sources import RepositorySources
@@ -305,10 +307,54 @@ def main():
                 samples[key]=dict(task=task,run=executions.get(run['id']))
             code_review_sample=dict(room=room,samples=samples,repository=saved)
 
+        if args.code_integration:
+            from workbench.code_changes import capture_code
+            from workbench.code_reviews import CodeReviews
+            from workbench.reviews import Reviews
+            from workbench import artifacts
+            from workbench.git_checkout import PreparationUnknownError
+            samples = {}
+            reviews = CodeReviews(store)
+            for key in ('alpha', 'beta'):
+                task=tasks.create(room['id'],dict(agent_id=people[0]['id'],source_message_id=owner_message['id'],request_id='integrate-'+key,
+                    title='F76 来源 '+key,scope='Add an independent file',acceptance='Native captured patch and complete approved review'))
+                run=executions.create(task['id'],dict(expected_version=1,request_id=key,previous_execution_id=None,reconciliation_note=''))
+                assert executions.claim(run['id'])
+                paths=prepare_workspace(store.data_dir,run['id'],[],saved['snapshot'])
+                (paths['work']/('repository/'+key+'.txt')).write_bytes(('F76 '+key+'\n').encode())
+                executions.report(run['id'],1,1,0,'Real Git capture; controlled source author',success=True,
+                    artifacts=capture_code(store.data_dir,run['id'],saved,'fixture-only'))
+                def approve(identity):
+                    return Reviews(store).save(identity,dict(request_id='fixture-approve',expected_version=1,decision='approved',
+                        note='Fixture Owner inspected complete outputs',artifact_ids=[a['id'] for a in artifacts.list_for(store,identity)]))
+                approve(run['id'])
+                receipt=reviews.create(run['id'],dict(request_id='review-'+key,fingerprint=reviews.preview(run['id'])['fingerprint'],confirm=True))
+                review_id=receipt['initial_execution_id']; assert executions.claim(review_id)
+                executions.report(review_id,1,1,0,'Controlled reviewer report; no model invoked',success=True,
+                    artifacts=[dict(path='review.md',data=('F76 review '+key+': inspected fixed patch; recommend acceptance.\n').encode())])
+                approve(review_id)
+                samples[key]=dict(task=task,run=executions.get(run['id']),review=receipt)
+            code_integration_sample=dict(room=room,samples=samples,repository=saved)
+            native = cli_controller.integrate_code
+            def observed_integration(**kwargs):
+                event('integration_call',destination=str(kwargs['destination']),source_ids=[c['manifest']['execution_id'] for c in kwargs['changes']])
+                deadline=time.monotonic()+50
+                while control().get('pause_integration') and time.monotonic()<deadline:
+                    if kwargs['cancel'].is_set():raise ValueError('Fixture observed cancellation before native Git')
+                    time.sleep(.02)
+                result=native(**kwargs)
+                event('integration_native_result',result=result)
+                if control().get('integration_unknown'):raise PreparationUnknownError('Fixture lost native completion observation')
+                return result
+            cli_controller.integrate_code=observed_integration
+
     class FixtureHandler(Handler):
         rejected = set()
 
         def do_POST(self):
+            if '/code-integrations' in self.path:
+                raw=self.rfile.read(int(self.headers['Content-Length'])); self.rfile=io.BytesIO(raw)
+                event('integration_post',payload=json.loads(raw),path=self.path)
             if self.path.endswith('/code-review'):
                 raw = self.rfile.read(int(self.headers['Content-Length'])); self.rfile = io.BytesIO(raw)
                 event('code_review_post',payload=json.loads(raw),path=self.path)
@@ -343,6 +389,16 @@ def main():
             return Handler.do_PATCH(self)
 
         def respond(self, status, value):
+            if '/code-integrations' in self.path:
+                if self.command=='GET' and control().get('integration_get503'):
+                    return Handler.respond(self,503,{'error':'Integration readback unavailable'})
+                if self.command=='POST' and status in (200,201,202):
+                    event('integration_accepted',receipt=value,path=self.path)
+                    if control().get('drop_integration'):
+                        self.close_connection=True
+                        try:self.connection.shutdown(socket.SHUT_RDWR)
+                        except OSError:pass
+                        return
             if '/code-review' in self.path:
                 if self.command == 'GET' and control().get('code_review_get503'):
                     return Handler.respond(self,503,{'error':'Code review readback unavailable'})
@@ -429,6 +485,7 @@ def main():
     if tool_samples is not None: manifest['tools'] = tool_samples
     if repository_sample is not None: manifest['repository'] = repository_sample
     if code_review_sample is not None: manifest['code_review'] = code_review_sample
+    if code_integration_sample is not None: manifest['code_integration'] = code_integration_sample
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():
