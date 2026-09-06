@@ -412,6 +412,13 @@ class Handler(BaseHTTPRequestHandler):
             prefix = "/api/workbench/executions/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")
+                if len(parts) == 2 and parts[0] and parts[1] == 'code-review-preview' and self.command == 'GET':
+                    return self.respond(200, self.server.controller.cli.code_reviews.preview(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == 'code-review':
+                    if self.command == 'GET':
+                        return self.respond(200, self.server.controller.cli.code_reviews.get(parts[0]))
+                    if self.command == 'POST':
+                        return self.respond(202, self.server.controller.cli.enqueue_code_review(parts[0], self.read_json()))
                 if len(parts) == 2 and parts[0] and parts[1] == 'repository' and self.command == 'GET':
                     return self.respond(200, self.server.controller.cli.repositories.execution(parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == 'tool-activities' and self.command == 'GET':

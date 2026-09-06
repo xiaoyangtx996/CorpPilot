@@ -20,6 +20,7 @@ from .store import _text
 from .context_receipts import ContextReceipts
 from .tool_activities import ToolActivities
 from .repo_sources import RepositorySources
+from .code_reviews import CodeReviews, for_task as code_review_for_task
 from .git_checkout import PreparationUnknownError
 
 
@@ -37,6 +38,7 @@ class CLIController:
         self.project_executions = ProjectExecutions(store)
         self.checkpoints = Checkpoints(store, self.project_executions)
         self.project_launches = ProjectLaunches(store)
+        self.code_reviews = CodeReviews(store)
         self.reconciliations = Reconciliations(store)
         with store.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS execution_backends (
@@ -132,6 +134,10 @@ class CLIController:
             if result["success"] is True and result["exit_code"] == 0:
                 try:
                     items = capture(self.store.data_dir, run["id"], config["api_key"])
+                    with self.store.connect() as db:
+                        code_review = code_review_for_task(db, run['task_id'])
+                    if code_review and not any(item['path'] == 'review.md' and item['data'].strip() for item in items):
+                        raise ValueError('代码评审必须提交非空 review.md 报告')
                     if snapshot.get('repository'):
                         if any(item['path'].split('/')[0].casefold() == 'corppilot-code' for item in items):
                             raise ValueError('成果占用了系统代码成果路径')
@@ -270,6 +276,17 @@ class CLIController:
             raise ValueError("CLI 控制器正在关闭，不能创建执行")
         self.settings.resolve()
         return self.executions.create(task_id, payload)
+
+    def enqueue_code_review(self, source_execution_id, payload):
+        with self.launch_lock:
+            # A lost response is resolved against the original authorization even
+            # if the CLI configuration has since changed.
+            if self.code_reviews.get(source_execution_id) is not None:
+                return self.code_reviews.create(source_execution_id, payload)
+            if self.closed:
+                raise ValueError('CLI 控制器正在关闭，不能启动代码评审')
+            self.settings.resolve()
+            return self.code_reviews.create(source_execution_id, payload)
 
     def launch_project(self, source_conversation_id, payload):
         with self.launch_lock:

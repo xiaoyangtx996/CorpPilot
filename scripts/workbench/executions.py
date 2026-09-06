@@ -12,6 +12,7 @@ from . import memories
 from . import reconciliations
 from . import budgets
 from . import repo_sources
+from . import code_reviews
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -49,6 +50,7 @@ class Executions:
             reconciliations.initialize(db)
             budgets.initialize(db)
             repo_sources.initialize(db)
+            code_reviews.initialize(db)
             db.execute('''CREATE TABLE IF NOT EXISTS execution_usage (
                 execution_id TEXT PRIMARY KEY REFERENCES task_executions(id),
                 attempt INTEGER NOT NULL, requirement_version INTEGER NOT NULL, usage TEXT NOT NULL)''')
@@ -102,6 +104,7 @@ class Executions:
                    (state, summary, exit_code, identity))
 
     def _authorize(self, db, run):
+        code_reviews.authorize(self.store, db, run)
         repo_sources.authorize(self.store, db, run.get('id'))
         task = self.tasks._task(db, run["task_id"])
         if task["requirement_version"] != run["requirement_version"]:

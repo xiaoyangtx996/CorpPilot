@@ -103,6 +103,14 @@ def checkpoint_source(db, execution_id, dependency):
     return row[0] if row else None
 
 
+def code_review_source(db, task_id, dependency):
+    from .code_reviews import for_task
+    review=for_task(db,task_id)
+    if review and review['source_snapshot']['source_task']['id']==dependency:
+        return review['source_execution_id']
+    return None
+
+
 def ready_inputs(db, identity, version, execution_id=None):
     """Resolve current approvals or an explicit, immutable same-launch handoff."""
     if execution_id:
@@ -129,8 +137,13 @@ def ready_inputs(db, identity, version, execution_id=None):
                 LEFT JOIN execution_reviews r ON r.execution_id=e.id WHERE t.id=?""", (dependency,)).fetchone()
             authorized = handoff_source(db, execution_id, dependency)
             pinned = checkpoint_source(db, execution_id, dependency)
+            review_source = code_review_source(db, task_id, dependency)
+            if review_source:
+                if pinned and pinned != review_source:
+                    raise DependencyBlocked('代码评审与检查点固定来源不一致')
+                pinned = review_source
             if pinned and (row is None or row['id'] != pinned or row['decision'] != 'approved'):
-                raise DependencyBlocked('检查点固定前置执行已变化或尚未获 Owner 批准')
+                raise DependencyBlocked(('代码评审' if review_source else '检查点') + '固定前置执行已变化或尚未获 Owner 批准')
             if pinned:
                 authorized = None
             if (row is None or row["id"] is None or row["requirement_version"] != row["current_version"]

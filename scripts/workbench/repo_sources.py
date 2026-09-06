@@ -51,8 +51,17 @@ def authorize(store, db, execution_id):
 
 
 def freeze(store, db, execution_id, conversation_id):
-    row=db.execute('SELECT * FROM project_repositories WHERE conversation_id=? ORDER BY revision DESC LIMIT 1',(conversation_id,)).fetchone()
-    record=_row(row)
+    from .code_reviews import for_task
+    task_id=db.execute('SELECT task_id FROM task_executions WHERE id=?',(execution_id,)).fetchone()[0]
+    review=for_task(db,task_id)
+    if review:
+        fixed=review['source_snapshot']['repository']
+        row=db.execute('SELECT * FROM project_repositories WHERE conversation_id=? AND revision=?',(conversation_id,fixed['revision'])).fetchone()
+        record=_row(row)
+        if record!=fixed:raise ValueError('代码评审仓库与固定来源绑定不一致')
+    else:
+        row=db.execute('SELECT * FROM project_repositories WHERE conversation_id=? ORDER BY revision DESC LIMIT 1',(conversation_id,)).fetchone()
+        record=_row(row)
     if record and record['snapshot'] is not None:
         _authorize(store,db,conversation_id,record['snapshot']['integration_agent_id'])
         db.execute('INSERT INTO execution_repositories VALUES(?,?,?)',(execution_id,conversation_id,record['revision']))

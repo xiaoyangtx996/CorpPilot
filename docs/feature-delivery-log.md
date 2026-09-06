@@ -798,3 +798,17 @@ handoff_review负责code_changes及原生Git测试，复用artifacts文件锁；
 原goal浏览器corppilot-browser-4BDkWj通过（session42439退出0、fixture退出0）。前端生产未改，复用F70构建index-CcNlQM1m.js，不将旧浏览器回归当作新增代码合入UI验收。正常93940零活动后停止，f71-normal-backup数据库638976字节/hash f984b47955dd5ef2a052caf93f7590d9a697490a37ee48fc76e4c8b527896a34；新74988在原目录7892运行。46表逐行相同且无新表，完整性/外键/health200及实际JS字节通过（f71-normal-readback.json）。
 
 独立提交后立即推送；精确提交及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f71-delivery-result.json，远端确认前不标记远端交付。已保存补丁可随SQLite备份恢复，但完整源库/基线对象/执行工作区不在备份中。真实付费CLI、双Docker、集成Agent实际评审与代码合入、全目标仍未完成。
+
+## F72 指定集成人的固定来源评审
+
+handoff_review负责code_reviews、执行授权/依赖/仓库冻结接线及21项模块测试；根负责CLI控制器、Owner HTTP接口、7项实际队列集成测试、正常备份迁移、文档与Git；verify_prompt_push独立源码/Ponytail审查Pass。PM以可独立调用的后端任务链验收，专用浏览器入口另行接入。唯一新授权表与原任务/依赖/执行同事务创建，复用队列及成果审批，不增加调度器或自动合入。
+
+根首轮6项集成36.65s（session14633）通过，实际HTTP确认后两个受控后端取得原补丁hash与旧绑定，生成review.md但Owner决定仍为空；包含重启与真实备份恢复。根新增预算等待/释放派发，最终新模块及集成加旧检查点42 passed、41.70s（session93048）。作者先前组合59通过，再追加5项单测，根独立新模块21 passed、15.85s（session88849）。新模块前两次fixture错误为错误成员方法及同值修订未改变版本，修正测试数据后通过，未放宽产品边界。
+
+首轮全量session85300出现旧检查点提示回归，根确认既有测试仍要求正确标明检查点来源，主动终止该轮以修正，不声称其完成。改为按来源分别显示代码评审或原检查点提示，旧测试不变；单项及上述42项通过。报告非空只证明文件存在，不证明建议质量，来源变化、撤权、unknown和无报告均不假称交付。
+
+最终全量1003 passed、8 subtests passed，436.63s（session39714退出0），包含全部最终生产改动、新模块21项与根集成7项。独立审查未发现其他必修问题，已知提示回归修正后原测试及全量均通过。
+
+原goal浏览器corppilot-browser-p7xjGK通过（session79952退出0、fixture退出0）；未改前端生产，沿用F70构建index-CcNlQM1m.js。正常74988确认live且零活动后停止，f72-normal-backup数据库638976字节/hash f984b47955dd5ef2a052caf93f7590d9a697490a37ee48fc76e4c8b527896a34；新31979在原目录7892运行。46旧表逐行不变，仅新增空code_review_requests，完整性/外键/health200和实际JS字节通过（f72-normal-readback.json）。
+
+独立提交后立即推送；精确提交和远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f72-delivery-result.json，远端确认前不标记远端交付。专用浏览器确认入口、实际代码合入、真实付费CLI与双Docker及整体目标仍未完成；本轮受控CLI不能替代这些验收。

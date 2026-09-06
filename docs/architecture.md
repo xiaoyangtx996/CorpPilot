@@ -678,3 +678,7 @@ RepositorySettings复用F69接口，以项目ID隔离完整pending请求及已�
 ## F71 代码改动进入原成果链
 
 code_changes从固定执行目录和DB绑定采集净变化，在干净临时Git元数据中生成完整binary patch和manifest，直接并入原artifact items。已提交/索引/当前原始文件及非ignored新文件按明确策略采集；共同Git时限与取消、原始字节凭据检查、锁和大小限制均在原子保存之前。系统保留corppilot-code命名空间，冲突或超限整体失败，未知进程不能降为已退出。controller保留同Future结果重试report，不重跑Git或CLI。没有新表、审批权威或下载API，复用execution_artifacts与Owner全清单批准及固定依赖输入；专门集成人评议和代码合入尚未实现，详见 [代码成果边界](code-workspaces.md#f71-代码补丁成果)。
+
+## F72 固定来源评审执行
+
+code_review_requests以来源执行和专用任务分别唯一，先保存固定授权与初始执行request_id，再同事务调用Tasks/Executions创建依赖与排队，初始执行ID通过唯一键读回；无第二套调度器或审批权威。Executions授权检查专用任务版本、集成人和原来源快照，dependencies固定来源实例，repo_sources为该任务及普通核查后重试选择原绑定revision。CLIController只允许配置就绪的新请求，同键原回执不受后来配置失效影响；真实队列执行须提交非空review.md才可交付成果。授权回执与执行状态分开读取，后续Owner批准和实际代码合入不由报告自动触发。
