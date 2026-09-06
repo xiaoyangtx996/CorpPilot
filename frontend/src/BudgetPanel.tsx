@@ -25,7 +25,12 @@ function validConfig(value: BudgetConfig) {
 }
 function draftOf(value: BudgetConfig): Draft { return { enabled: value.enabled, total_micro_usd: money(value.total_micro_usd), model_reserve_micro_usd: money(value.model_reserve_micro_usd), cli_reserve_micro_usd: money(value.cli_reserve_micro_usd) }; }
 function validSettings(value: BudgetSettings) {
-  if (!value || !validConfig(config(value)) || value.currency !== 'USD' || !Number.isSafeInteger(value.revision) || value.revision < 0 || !Number.isSafeInteger(value.reserved_micro_usd) || value.reserved_micro_usd < 0 || value.reserved_micro_usd > 1000000000000 || !Number.isSafeInteger(value.available_micro_usd) || value.available_micro_usd !== value.total_micro_usd - value.reserved_micro_usd || !Number.isSafeInteger(value.reservation_count) || value.reservation_count < 0) throw Error('预算读取回执格式或金额不一致');
+  if (!value || !validConfig(config(value)) || value.currency !== 'USD' || !Number.isSafeInteger(value.revision) || value.revision < 0
+    || !['reserved_micro_usd', 'unsettled_reserved_micro_usd', 'settled_micro_usd', 'committed_micro_usd', 'reservation_count', 'settlement_count'].every(key => {
+      const amount = value[key as keyof BudgetSettings]; return typeof amount === 'number' && Number.isSafeInteger(amount) && amount >= 0;
+    }) || value.unsettled_reserved_micro_usd > value.reserved_micro_usd
+    || value.committed_micro_usd !== value.unsettled_reserved_micro_usd + value.settled_micro_usd
+    || !Number.isSafeInteger(value.available_micro_usd) || value.available_micro_usd !== value.total_micro_usd - value.committed_micro_usd) throw Error('预算读取回执格式或金额不一致');
 }
 
 export function BudgetPanel({ agent, onClose }: { agent?: Agent; onClose: () => void }) {
@@ -104,12 +109,12 @@ export function BudgetPanel({ agent, onClose }: { agent?: Agent; onClose: () => 
   const dirty = !!draft && !!current && JSON.stringify(draft) !== JSON.stringify(draftOf(current));
   return <dialog ref={dialog} className="task-dialog model-settings" aria-labelledby="budget-title" onCancel={e => { e.preventDefault(); if (!busy) onClose(); }}>
     <header><h2 id="budget-title">{title}</h2><button disabled={busy} onClick={onClose}>关闭</button></header>
-    <p>这里管理启动额度与持久预留。预留不是已花金额或实际账单，不是 CLI 总费用硬上限；失败、停止和重启不会自动返还，当前不提供核销或释放。</p>
+    <p>这里管理启动额度与持久预留。预留不是已花金额或实际账单，不是 CLI 总费用硬上限；失败、停止和重启不会自动返还。预算占用按未核销预留与 Owner 声明费用计算，声明不代表系统验证过的账单。</p>
     {agent && <p>只读观察：{agent.name}。以下额度汇总为全局，记录仅属于当前 Agent；不会修改配置或调用模型。</p>}
     {error && <p className="error" role="alert">{error}</p>}{storageError && <p className="error" role="alert">{storageError}</p>}
     <button disabled={busy || !!storageError} onClick={() => void load()}>{pending ? '只读核对预算配置' : '刷新预算与预留'}</button>
     {busy && <p role="status">正在读取或核对预算…</p>}
-    {current && <section aria-label="当前预算快照"><h3>当前预算快照</h3><p>准入：{current.enabled ? '启用' : '关闭'} · 配置版本 {current.revision}</p><dl><dt>总额度</dt><dd aria-label="总额度">{money(current.total_micro_usd)} USD</dd><dt>总预留</dt><dd aria-label="总预留">{money(current.reserved_micro_usd)} USD</dd><dt>可用额度</dt><dd aria-label="可用额度">{money(current.available_micro_usd)} USD</dd><dt>预留记录数</dt><dd aria-label="预留记录数">{current.reservation_count}</dd></dl>{current.available_micro_usd < 0 && <p>额度低于既有预留；不会削减旧记录，启用时新启动继续受余额限制。</p>}</section>}
+    {current && <section aria-label="当前预算快照"><h3>当前预算快照</h3><p>准入：{current.enabled ? '启用' : '关闭'} · 配置版本 {current.revision}</p><dl><dt>总额度</dt><dd aria-label="总额度">{money(current.total_micro_usd)} USD</dd><dt>总预留</dt><dd aria-label="总预留">{money(current.reserved_micro_usd)} USD</dd><dt>未核销预留</dt><dd aria-label="未核销预留">{money(current.unsettled_reserved_micro_usd)} USD</dd><dt>Owner 声明费用</dt><dd aria-label="Owner 声明费用">{money(current.settled_micro_usd)} USD</dd><dt>当前预算占用</dt><dd aria-label="当前预算占用">{money(current.committed_micro_usd)} USD</dd><dt>可用额度</dt><dd aria-label="可用额度">{money(current.available_micro_usd)} USD</dd><dt>预留记录数</dt><dd aria-label="预留记录数">{current.reservation_count}</dd></dl>{current.available_micro_usd < 0 && <p>额度低于当前占用；不会削减历史记录，启用时新启动继续受余额限制。</p>}</section>}
     {message && <p role="status">{message}</p>}
     {!agent && pending && <section><h3>原预算配置待核对</h3><p>原配置版本：{pending.previous_revision} · 期望准入：{pending.payload.enabled ? '启用' : '关闭'}</p>{numeric.map(k => <p key={k}>期望{labels[k]}：{money(pending.payload[k])}</p>)}<p>原请求尚未明确核对，不能再次保存或自动覆盖当前配置。</p>{current && <button disabled={busy || !!storageError} onClick={adoptCurrent}>采用当前配置并结束核对</button>}</section>}
     {!agent && draft && <form onSubmit={save}><fieldset disabled={busy || !!pending || !!storageError || !current}>

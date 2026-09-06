@@ -642,3 +642,7 @@ budgets在现有SQLite内保存独立配置与不可变预留，Runs.claim/Execu
 ## F62 预算浏览器入口
 
 BudgetPanel复用预算接口，USD输入经BigInt拆分为整数微美元，界面不承担调度或费用结算。全局入口可配置，当前Agent入口只读。完整pending先存会话存储，PATCH后独立GET核对；异配由Owner采用当前配置，无自动写回。按Agent ID重建组件并验证返回记录身份，不扩大模型上下文。
+
+## F63 费用声明账本
+
+budget_settlements 在现有 SQLite 内追加不可变修订，预算准入按未核销预留加最新声明计算。控制器在原锁内验证不再持有实例，先规范化 ID；同键重放核验完整请求，可在控制器关闭后精确读取原回执。金额、版本、事务及并发约束留在 budgets，HTTP 沿用 Owner 鉴权，不增加服务或依赖。声明只改变费用账本，不修改原执行、审批或历史预留。契约见 [budget-admission.md](budget-admission.md)。

@@ -13,7 +13,8 @@ from .checkpoints import Checkpoints
 from .artifacts import capture
 from .reconciliations import Reconciliations, unresolved
 from . import resource_admission
-from .budgets import BudgetDenied
+from .budgets import BudgetDenied, Budgets
+from .store import _text
 
 
 class CLIController:
@@ -23,6 +24,7 @@ class CLIController:
         self.launch_lock = threading.RLock()
         self.settings = CLISettings(store)
         self.executions = Executions(store)
+        self.budgets = Budgets(store)
         self.project_executions = ProjectExecutions(store)
         self.checkpoints = Checkpoints(store, self.project_executions)
         self.project_launches = ProjectLaunches(store)
@@ -270,6 +272,18 @@ class CLIController:
         if self.closed:
             raise ValueError("CLI 控制器正在关闭，不能停止批次")
         return self.project_executions.stop(identity)
+
+    def settle_fee(self, identity, payload):
+        identity = _text(identity, '执行 ID')
+        with self.launch_lock:
+            if isinstance(payload, dict) and isinstance(payload.get('request_id'), str):
+                if self.budgets.settlement('cli', identity, payload['request_id'].strip()) is not None:
+                    return self.budgets.settle('cli', identity, payload)
+            if self.closed:
+                raise ValueError('CLI 控制器正在关闭，不能提交新的费用声明')
+            if identity in self.active:
+                raise ValueError('执行仍由控制器持有，不能核销费用或释放预算')
+            return self.budgets.settle('cli', identity, payload)
 
     def reconcile_unknown(self, identity, payload):
         if self.closed:

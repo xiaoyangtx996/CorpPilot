@@ -702,3 +702,13 @@ handoff_review负责BudgetPanel/api/App；根负责可复现budget浏览器命�
 浏览器验证0额度阻塞两个CLI实例、追加额度逐个运行、精确2次受控CLI且0模型；6位金额与上限、负余额、禁用保留、三个Agent范围、PATCH受理丢响应+GET503+刷新、异配采用、坏存储、错币种以及401后实际重新授权不PATCH。开发态StrictMode、Esc恢复入口焦点通过。原goal全链PNppvq/browser-report.json通过、session34004退出0；最终修改仅BudgetPanel焦点。无后端生产修改，不重复Python全量；最近基线为F61的788+8。
 
 正常99751持续运行，无需重启；原39表与F61离线备份逐行相同、两预算表仍空、integrity/外键/health200及新JS字节回读通过（外部f62-normal-readback.json）。独立提交并立即推送的精确结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f62-delivery-result.json。实际费用核算/核销、真实CLI/双Docker与完整目标仍未完成，远端回读成功前不称远端交付。
+
+## F63 Owner 费用声明与预算核销
+
+handoff_review 实现账本及19项新测试，根负责控制器/API、7项集成验证与预算显示兼容；verify_prompt_push 独立终审 Pass。修复控制器检查前 ID 规范化，补持有实例及填充空白 ID 拒绝测试。同键旧回执、追加更正、负余额、历史无预留、unknown 核查及备份恢复通过。费用录入 UI 留待 F64，不将声明视作供应商账单验真。
+
+根全量814 passed、8 subtests passed，236.63s（session28763退出0）。正式预算浏览器 corppilot-budget-vtp8w1 通过，原目标浏览器 corppilot-browser-wL34v3 通过，fixture 均退出0；构建53模块 index-D-hUAdJH.js，根目视声明0.5 USD后的预算截图。使用受控runner，没有付费调用或真实Docker验收。
+
+正常99751零活动停止后创建 f63-normal-backup，数据库 SHA256 d3a7c6c3b0621d649fe930966eb4cb47f5f4d6e4e089700d31151393666b5338；新76129运行7892，原41表逐行不变，仅新增空 budget_settlements，完整性、外键、health200及JS字节一致（f63-normal-readback.json）。首次只读检查误用 status 列，修正为实际 state 后通过，未改数据。
+
+独立提交后立即推送，精确提交和远端结果见仓库外 H:\item\CorpPilot-test-evidence-20260906\f63-delivery-result.json；远端回读成功前不标记远端交付。整体目标仍未完成。

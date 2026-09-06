@@ -15,7 +15,8 @@ from .cli_controller import CLIController
 from .model_reconciliations import ModelReconciliations
 from .goal_executions import GoalExecutions
 from .directory_lock import acquire
-from .budgets import BudgetDenied
+from .budgets import BudgetDenied, Budgets
+from .store import _text
 
 
 class ReplyController:
@@ -25,6 +26,7 @@ class ReplyController:
         self.restore_gate = store.data_dir / 'restore-quarantine.json'
         try:
             self.runs = Runs(store)
+            self.budgets = Budgets(store)
             self.peer_reviews = PeerReviews(store)
             self.runs.recover()
             self.model_reconciliations = ModelReconciliations(store)
@@ -125,6 +127,19 @@ class ReplyController:
                     or identity in self.uncertain_submissions):
                 raise ValueError("本地模型请求仍被控制器持有或提交结果不确定；请等待，必要时完整停止服务后再核查")
             return self.model_reconciliations.save(identity, payload)
+
+    def settle_fee(self, identity, payload):
+        identity = _text(identity, '执行 ID')
+        with self.state_lock:
+            if isinstance(payload, dict) and isinstance(payload.get('request_id'), str):
+                if self.budgets.settlement('model', identity, payload['request_id'].strip()) is not None:
+                    return self.budgets.settle('model', identity, payload)
+            if self.stop.is_set():
+                raise ValueError('模型控制器正在关闭，不能提交新的费用声明')
+            if (identity in self.futures.values() or identity in self.unsettled
+                    or identity in self.uncertain_submissions):
+                raise ValueError('模型请求仍由控制器持有，不能核销费用或释放预算')
+            return self.budgets.settle('model', identity, payload)
 
     def enqueue(self, conversation_id, payload):
         with self.state_lock:

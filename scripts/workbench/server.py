@@ -12,7 +12,7 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlsplit, quote
+from urllib.parse import parse_qs, urlsplit, quote, unquote
 
 from .store import REPO_ROOT, Store
 from .settings import Settings
@@ -192,6 +192,27 @@ class Handler(BaseHTTPRequestHandler):
                 parts = path[len("/api/workbench/agents/"):].split("/")
                 if len(parts) == 2 and parts[0]:
                     return self.respond(200, self.server.budgets.list(parts[0]))
+            if self.command == "GET" and path == "/api/workbench/budget-settlements":
+                return self.respond(200, self.server.budgets.settlements())
+            if self.command == "GET" and path.startswith("/api/workbench/agents/") and path.endswith("/budget-settlements"):
+                parts = path[len("/api/workbench/agents/"):].split("/")
+                if len(parts) == 2 and parts[0]:
+                    return self.respond(200, self.server.budgets.settlements(parts[0]))
+            prefix = "/api/workbench/budget-settlements/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) >= 2 and parts[0] in ('model', 'cli') and parts[1]:
+                    kind, identity = parts[:2]
+                    if len(parts) == 2:
+                        if self.command == "GET":
+                            return self.respond(200, self.server.budgets.settlement(kind, identity))
+                        if self.command == "POST":
+                            controller = self.server.controller if kind == 'model' else self.server.controller.cli
+                            return self.respond(201, controller.settle_fee(identity, self.read_json()))
+                    if len(parts) == 3 and parts[2] == 'history' and self.command == "GET":
+                        return self.respond(200, self.server.budgets.settlement_history(kind, identity))
+                    if len(parts) == 4 and parts[2] == 'requests' and parts[3] and self.command == "GET":
+                        return self.respond(200, self.server.budgets.settlement(kind, identity, unquote(parts[3])))
             if path == "/api/workbench/model-settings":
                 if self.command == "GET":
                     return self.respond(200, self.server.settings.get())

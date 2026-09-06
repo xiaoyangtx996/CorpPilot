@@ -545,3 +545,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 根正式运行npm run test:browser:budget退出0，最终VaIIa7报告通过，53modules index-GHogZ-PU.js构建通过。精确金额/范围拒绝、确认重置、2次受控CLI按预算放行、负可用值、停用不清历史、3个Agent只读范围、响应丢失和重开、异配采用零写、坏存储/错币种/401重新授权均覆盖；StrictMode和Escape焦点恢复通过。label与焦点前轮失败已修且原断言保留，证据目录见功能台账。独立只读终审Pass。
 
 原goal浏览器PNppvq通过、fixture退出0；前端最终只局部修预算焦点，未改后端生产逻辑，未重跑Python全量（最近F61基线788+8）。正常数据未改、health200及实际资源字节一致，服务99751无需重启。费用估算、账单核查及真实CLI/双Docker仍未完成，本轮浏览器fixture不能替代真实执行验收。
+
+## F63 费用声明验收
+
+全量814 passed、8 subtests passed，236.63s。覆盖不可变追加更正、旧键精确回执、并发版本、溢出回滚、历史无预留、控制器持有保护、unknown核查、认证和实际备份恢复。受控CLI验证差额只放行符合预算的后续实例，超支更正阻止新派发；不修改原执行和审批。独立只读终审Pass。
+
+预算浏览器vtp8w1及原目标浏览器wL34v3通过，fixture正常退出；UI如实展示0.5 USD Owner声明、1.000001 USD未核销预留和1.500001 USD当前占用。类型检查与构建通过。正常库41旧表未变，仅一张空新表，health与资源读回通过，见外部f63-normal-readback.json。费用录入UI尚未实现，声明不代表供应商验真；真实CLI、双Docker及整体目标仍待完成。

@@ -160,6 +160,24 @@ try {
   await read();
   await dialog().getByRole('button', { name: '采用当前配置并结束核对', exact: true }).click();
   assert.equal(await page.evaluate(key => sessionStorage.getItem(key), key), null);
+  const declaredId = manifest.budget.batch.tasks[0].execution_id;
+  const feeResponse = await context.request.post(`${baseURL}/api/workbench/budget-settlements/cli/${declaredId}`, {
+    headers: { Authorization: `Bearer ${manifest.access_token}` },
+    data: { request_id: 'browser-owner-fee', expected_revision: 0, attempt: 1, requirement_version: 1,
+      amount_micro_usd: 500000, evidence_reference: 'Controlled fixture invoice', note: 'Owner fee declaration fixture, not provider verification', confirm: true }
+  });
+  assert.equal(feeResponse.status(), 201);
+  const declared = await feeResponse.json(); assert.equal(declared.source, 'owner_declared');
+  await read();
+  await dialog().getByLabel('Owner 声明费用', { exact: true }).waitFor();
+  assert.equal(await dialog().getByLabel('Owner 声明费用', { exact: true }).innerText(), '0.5 USD');
+  assert.equal(await dialog().getByLabel('总预留', { exact: true }).innerText(), '2.000002 USD');
+  assert.equal(await dialog().getByLabel('未核销预留', { exact: true }).innerText(), '1.000001 USD');
+  assert.equal(await dialog().getByLabel('当前预算占用', { exact: true }).innerText(), '1.500001 USD');
+  assert.equal(await dialog().getByLabel('可用额度', { exact: true }).innerText(), '2.500003 USD');
+  await dialog().getByRole('heading', { name: '预算与预留', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(outDir, 'budget-owner-declaration.png') });
+  report.ownerFeeDeclaration = { run_id: declaredId, amount_micro_usd: 500000, passed: true };
   report.observations = observations;
   report.boundaries = [];
   const mainPage = page;
