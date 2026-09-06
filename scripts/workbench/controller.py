@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from runtime.traffic_monitor import TrafficMonitor
 from .provider import ProviderError, run_reply
 from .runs import Runs
+from .peer_reviews import PeerReviews
 from .planning import PlanningError
 from .retrospectives import RetrospectiveError
 from .cli_controller import CLIController
@@ -34,6 +35,7 @@ class ReplyController:
             raise ValueError("此数据目录已有运行中的控制服务") from None
         try:
             self.runs = Runs(store)
+            self.peer_reviews = PeerReviews(store)
             self.runs.recover()
             self.model_reconciliations = ModelReconciliations(store)
             self.state_lock = threading.RLock()
@@ -139,6 +141,19 @@ class ReplyController:
                 raise ValueError("模型控制器正在关闭，不能创建新的请求")
             self.settings.resolve()
             return self.runs.create(conversation_id, payload)
+
+    def enqueue_peer(self, conversation_id, payload):
+        with self.state_lock:
+            if isinstance(payload, dict) and isinstance(payload.get("request_id"), str):
+                with self.runs.store.connect() as db:
+                    existing = db.execute("SELECT 1 FROM runs WHERE conversation_id=? AND request_id=?",
+                                          (conversation_id, payload["request_id"])).fetchone()
+                if existing:
+                    return self.peer_reviews.create(conversation_id, payload)
+            if self.stop.is_set():
+                raise ValueError("模型控制器正在关闭，不能创建新的评议")
+            self.settings.resolve()
+            return self.peer_reviews.create(conversation_id, payload)
 
     def _execute(self, identity, config):
         try:

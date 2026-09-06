@@ -5,7 +5,7 @@ import json
 import uuid
 
 from .store import Store, _text
-from . import planning, retrospectives, model_reconciliations
+from . import planning, retrospectives, model_reconciliations, peer_reviews
 from .memories import Memories
 
 
@@ -39,6 +39,7 @@ class Runs:
 
             planning.initialize(db)
             retrospectives.initialize(db)
+            peer_reviews.initialize(db)
             model_reconciliations.initialize(db)
 
     @staticmethod
@@ -61,7 +62,7 @@ class Runs:
             db.execute("BEGIN IMMEDIATE")
             return self._create(db, conversation_id, payload)
 
-    def _create(self, db, conversation_id, payload, *, is_planning=False, is_retrospective=False):
+    def _create(self, db, conversation_id, payload, *, is_planning=False, is_retrospective=False, is_peer_review=False):
         if not isinstance(payload, dict) or set(payload) != {"agent_id", "source_message_id", "request_id"}:
             raise ValueError("Run 必须只含 agent_id、source_message_id 和 request_id")
         agent_id = _text(payload["agent_id"], "Agent ID")
@@ -72,17 +73,20 @@ class Runs:
         if previous:
             existing_kind = db.execute("SELECT 1 FROM planning_requests WHERE run_id=?", (previous["id"],)).fetchone() is not None
             existing_retro = db.execute("SELECT 1 FROM retrospective_requests WHERE run_id=?", (previous["id"],)).fetchone() is not None
-            if (existing_kind, existing_retro) != (is_planning, is_retrospective):
+            existing_peer = db.execute("SELECT 1 FROM peer_review_requests WHERE run_id=?", (previous["id"],)).fetchone() is not None
+            if (existing_kind, existing_retro, existing_peer) != (is_planning, is_retrospective, is_peer_review):
                 raise ValueError("request_id 已用于不同类型的 Run")
             if (previous["agent_id"], previous["source_message_id"]) != (agent_id, source):
                 raise ValueError("request_id 已用于不同 Run")
             return self._run(db, previous["id"])
         if not is_retrospective and model_reconciliations.unresolved(db,
                 {"conversation_id": conversation_id, "source_message_id": source, "agent_id": agent_id},
-                kind="planning" if is_planning else "reply"):
+                kind="peer_review" if is_peer_review else "planning" if is_planning else "reply"):
             raise ValueError("同一模型操作存在未核查的未知请求，不能启动替代请求")
         self._authorize(db, {"conversation_id": conversation_id, "agent_id": agent_id})
-        if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
+        if is_peer_review:
+            peer_reviews.source(db, conversation_id, source, agent_id)
+        elif not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
                           (source, conversation_id)).fetchone():
             raise ValueError("源消息必须是本会话中的 Owner 消息")
         if db.execute("SELECT count(*) FROM runs WHERE state IN ('queued','running')").fetchone()[0] >= 100:
@@ -102,8 +106,8 @@ class Runs:
             self.store._conversation(db, conversation_id)
             # Keep every active request discoverable; the global admission cap bounds this list.
             return [self._run(db, row[0]) for row in db.execute("""SELECT id FROM runs WHERE conversation_id=?
-                AND id NOT IN (SELECT run_id FROM planning_requests) AND id NOT IN (SELECT run_id FROM retrospective_requests) AND (state IN ('queued','running') OR id IN (SELECT id FROM runs WHERE conversation_id=?
-                    AND id NOT IN (SELECT run_id FROM planning_requests) AND id NOT IN (SELECT run_id FROM retrospective_requests) AND state NOT IN ('queued','running') ORDER BY updated_at DESC,id DESC LIMIT 100))
+                AND id NOT IN (SELECT run_id FROM planning_requests) AND id NOT IN (SELECT run_id FROM retrospective_requests) AND id NOT IN (SELECT run_id FROM peer_review_requests) AND (state IN ('queued','running') OR id IN (SELECT id FROM runs WHERE conversation_id=?
+                    AND id NOT IN (SELECT run_id FROM planning_requests) AND id NOT IN (SELECT run_id FROM retrospective_requests) AND id NOT IN (SELECT run_id FROM peer_review_requests) AND state NOT IN ('queued','running') ORDER BY updated_at DESC,id DESC LIMIT 100))
                 ORDER BY created_at DESC,id DESC""", (conversation_id, conversation_id))]
 
     def pending(self, limit=100):
@@ -134,6 +138,8 @@ class Runs:
             self._authorize(db, run)
             agent = self.store._agent(db.execute("SELECT * FROM agents WHERE id=?", (run["agent_id"],)).fetchone())
             instructions = db.execute("SELECT instructions FROM templates WHERE id=?", (agent["template_id"],)).fetchone()[0]
+            if peer := peer_reviews.snapshot(db, run, agent):
+                return peer
             sequence = db.execute("SELECT sequence FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
                                   (run["source_message_id"], run["conversation_id"])).fetchone()
             if sequence is None:
@@ -166,6 +172,7 @@ class Runs:
                 db.execute("""UPDATE runs SET state='completed',model=?,usage=?,error=NULL,
                     updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""", (model, usage, identity))
                 return self._run(db, identity)
+            peer_reviews.check(db, run)
             reply_id = str(uuid.uuid4())
             db.execute("INSERT INTO messages(id,conversation_id,sender_kind,sender_id,content,request_id) VALUES(?,?,'agent',?,?,?)",
                        (reply_id, run["conversation_id"], run["agent_id"], content, str(uuid.uuid4())))

@@ -265,6 +265,11 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.controller.runs.list(conversation_id))
                     if self.command == "POST":
                         return self.respond(202, self.server.controller.enqueue(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "peer-reviews":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.controller.peer_reviews.list(conversation_id))
+                    if self.command == "POST":
+                        return self.respond(202, self.server.controller.enqueue_peer(conversation_id, self.read_json()))
                 if len(parts) == 2 and parts[1] == "tasks":
                     if self.command == "GET":
                         return self.respond(200, self.server.tasks.list(conversation_id))
@@ -349,6 +354,10 @@ class Handler(BaseHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(artifact["data"])
                     return
+            if path.startswith("/api/workbench/peer-reviews/") and self.command == "GET":
+                identity = path[len("/api/workbench/peer-reviews/"):]
+                if identity and "/" not in identity:
+                    return self.respond(200, self.server.controller.peer_reviews.get(identity))
             prefix = "/api/workbench/runs/"
             proposal_prefix = "/api/workbench/collaboration-proposals/"
             if path.startswith(proposal_prefix) and self.command == "GET":

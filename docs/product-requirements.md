@@ -104,6 +104,15 @@ QA服务重启后原取消结果及历史、调用次数和项目/任务数量�
 
 ## F46 当前增量状态
 
-三类型unknown人工核查、同key断线/重启401恢复以及核查后明确新key已完成本地HTTP fixture浏览器验证；原3unknown不变，新增reply/planning/retrospective各1次调用，复盘仅生成待审批候选且批准记忆v0不改。storage损坏与规划/复盘原pending release503边界独立QA三项Pass、零POST，桌面及390px移动截图已核查；F46本地fixture验收通过，提交推送仍待主代理实际记录。真实供应商、CLI、双Docker和Tauri安装使用仍未验收，不标记全目标完成。
+三类型unknown人工核查、同key断线/重启401恢复以及核查后明确新key已完成本地HTTP fixture浏览器验证；原3unknown不变，新增reply/planning/retrospective各1次调用，复盘仅生成待审批候选且批准记忆v0不改。storage损坏与规划/复盘原pending release503边界独立QA三项Pass、零POST，桌面及390px移动截图已核查；F46本地fixture验收通过，本地提交已完成，立即推送403，远端未确认。真实供应商、CLI、双Docker和Tauri安装使用仍未验收，不标记全目标完成。
 
-最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46提交/推送尚待实际操作。
+最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46 已本地提交，立即推送遭 GitHub403，远端回读为空；详见下方实际交付记录。
+
+F46 实际交付记录：已直接读取外部 `H:\item\CorpPilot-test-evidence-20260906\f46-delivery-result.json`，提交 `18b5c481bd2cbb5d07cd21e953bf04f337673bb9` 成功后立即推送退出1，GitHub403：suiyue1990 无权写入 xiaoyangtx996/CorpPilot；远端回读退出0、`remote_head=null`。该记录报告提交后工作区干净，不能据此称远端交付完成。主代理已通过 git show 核实该提交为10文件、195行新增/20行删除。
+## F47 同群 Agent 评议后端 / F48 浏览器范围
+
+Owner在董事群或项目群选择A已完成Run发布的一条消息，明确授权不同的同群启用成员B，仅基于这条消息作一次评议。授权不默认包含源Owner目标、其他历史或A记忆；B自己的模板指令随授权冻结。完成后在原群发布B回复，保留来源Run与不可变请求回执。不会自动继续讨论、建群、派任务或启动CLI；Owner可再次明确授权下一次评议。
+
+F47交付独立创建/列表/详情API，复用Run状态、排队取消和模型unknown人工核查。普通Owner回复规则不放宽；首次创建、执行前和发布前均检查同群、启用、不同身份及真实completed来源关系。相同请求键只回原结果，跨类型或改内容必须拒绝；未核查unknown不能以新键替代。模型结果或核查声明不等于Owner批准任务或记忆。
+
+F47后端实施、独立QA/TechLead/Ponytail及API验收Pass；完整596项及8子用例通过（105.83s，session37270退出0），包含目标角色冻结和HTTP严格字段校验。A→B各一次本地HTTP模型调用、并发幂等及unknown核查后明确新key已测。F48消息选择、确认、持久化和恢复入口正在开发，尚未构建或测试。本阶段不代表真实供应商质量、CLI、双Docker或整体目标完成。

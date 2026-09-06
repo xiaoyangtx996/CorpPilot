@@ -532,6 +532,15 @@ F45 实际提交 `5b37cad73e97607f8f8f6709e779d060036a748d` 后立即推送退�
 - 独立typecheck、静态Ponytail审查Pass；主代理构建47 modules、index-DdLyA6xU.js。真实IAB1315×1272测试独立7896服务，三类型unknown列表与核查入口、首400→重启401新授权→同key201丢响应/GET503/reload保留pending→GET恢复通过。
 - 普通回复重新选择来源/member后确认新key；规划显式接受同Run另一声明冲突后重选coordinator/candidate；复盘从历史核查后重选source/artifact并确认。各自生成一个新completed；规划不建项目、复盘只产生待批准候选，v0不改。
 - 文档代理直接运行只读f46_verify.py：原三unknown逐字段未变、三声明唯一、新三Run各对应一次本地HTTP模型调用、旧Run零调用、无额外消息，SQLite及外键完整性通过。全部6Runs/4messages/1memory_candidate；状态注入种子不是供应商真实故障，真实供应商/CLI/Docker调用0。
-- 已直接核实f46-boundary-review.json，storage损坏及规划/复盘pending GET503三项Pass；writes=[]、非预期console/page错误均空，预期503信息2条单列。主代理已看1280×900桌面与390×844移动截图，移动dialog在视口内。F46本地fixture验收Pass。沿用F45后端回归，不虚构新的全量。F46尚未提交/推送，整体目标仍未完成。
+- 已直接核实f46-boundary-review.json，storage损坏及规划/复盘pending GET503三项Pass；writes=[]、非预期console/page错误均空，预期503信息2条单列。主代理已看1280×900桌面与390×844移动截图，移动dialog在视口内。F46本地fixture验收Pass。沿用F45后端回归，不虚构新的全量。F46 已本地提交，立即推送遭 GitHub403，远端回读为空；详见下方实际交付记录，整体目标仍未完成。
 
-最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46提交/推送尚待实际操作。
+最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46 已本地提交，立即推送遭 GitHub403，远端回读为空；详见下方实际交付记录。
+
+F46 实际交付记录：已直接读取外部 `H:\item\CorpPilot-test-evidence-20260906\f46-delivery-result.json`，提交 `18b5c481bd2cbb5d07cd21e953bf04f337673bb9` 成功后立即推送退出1，GitHub403：suiyue1990 无权写入 xiaoyangtx996/CorpPilot；远端回读退出0、`remote_head=null`。该记录报告提交后工作区干净，不能据此称远端交付完成。主代理已通过 git show 核实该提交为10文件、195行新增/20行删除。
+## F47：Owner授权同群Agent单次评议后端（已验证）
+
+- PM/TechLead需求技术门Pass；采用独立peer-reviews创建/列表/详情API，复用Runs/ReplyController队列，普通reply来源校验和列表语义保持。peer_review_requests冻结授权、源正文、来源Run和目标模板；不新增provider或调度框架。
+- 同群不同启用成员，来源须真实completed Run发布；快照和发布复查权限。一次授权仅一个目标调用，无自动续轮，允许Owner另行授权下一轮。精确幂等回放、跨kind冲突和F45独立unknown范围均为验收门。
+- task_execution_ui完成核心实施与测试，主代理集成严格HTTP用例并亲读五模块与测试；verify_history_scope独立QA/TechLead/Ponytail审查Pass。
+- 主代理定向25项通过（7.61s，当时尚未加入冻结角色单用例）；随后新增冻结角色测试单项通过（0.22s）。完整 pytest tests/ -q 为 **596 passed、8 subtests passed（105.83s）**，session37270退出0，包含冻结角色和HTTP严格字段用例。独立QA/TechLead/Ponytail审查Pass，四文件定向41项通过（9.88s），另复跑冻结角色1项通过（0.22s）；这是分次验证记录，不相加成42个不同用例。
+- 原生控制器及本地HTTP provider子进程A→B各调用一次、8同key只1peer、unknown声明后新key一次、返回前撤B不发布、重启精确回读均通过。F48正在开发，尚未构建/测试；真实供应商/CLI/Docker未验收。F47提交推送待主代理立即执行，不预填结果。

@@ -28,9 +28,9 @@ def unresolved(db, run, *, kind=None, retrospective=None):
             kind='retrospective'
             retrospective=(row['scope'],row['scope_id'],json.loads(row['payload'])['source_execution_id'])
         else:
-            kind='planning' if db.execute('SELECT 1 FROM planning_requests WHERE run_id=?',(run['id'],)).fetchone() else 'reply'
+            kind='peer_review' if db.execute('SELECT 1 FROM peer_review_requests WHERE run_id=?',(run['id'],)).fetchone() else 'planning' if db.execute('SELECT 1 FROM planning_requests WHERE run_id=?',(run['id'],)).fetchone() else 'reply'
     query="""SELECT 1 FROM runs r LEFT JOIN retrospective_requests t ON t.run_id=r.id
-        LEFT JOIN planning_requests p ON p.run_id=r.id WHERE r.state='unknown'
+        LEFT JOIN planning_requests p ON p.run_id=r.id LEFT JOIN peer_review_requests v ON v.run_id=r.id WHERE r.state='unknown'
         AND NOT EXISTS(SELECT 1 FROM model_run_reconciliations c WHERE c.run_id=r.id) """
     if kind=='retrospective':
         if retrospective is None:
@@ -39,6 +39,7 @@ def unresolved(db, run, *, kind=None, retrospective=None):
         args=retrospective
     else:
         query+='AND t.run_id IS NULL AND '+('p.run_id IS NOT NULL' if kind=='planning' else 'p.run_id IS NULL')
+        query+=' AND '+('v.run_id IS NOT NULL' if kind=='peer_review' else 'v.run_id IS NULL')
         query+=' AND r.conversation_id=? AND r.source_message_id=? AND r.agent_id=? LIMIT 1'
         args=(run['conversation_id'],run['source_message_id'],run['agent_id'])
     return db.execute(query,args).fetchone() is not None
@@ -73,8 +74,8 @@ class ModelReconciliations:
         with self.store.connect() as db:
             return [{**dict(row),'usage':json.loads(row['usage']) if row['usage'] else None} for row in db.execute("""
                 SELECT r.*,CASE WHEN t.run_id IS NOT NULL THEN 'retrospective'
-                WHEN p.run_id IS NOT NULL THEN 'planning' ELSE 'reply' END kind,t.scope,t.scope_id
-                FROM runs r LEFT JOIN retrospective_requests t ON t.run_id=r.id LEFT JOIN planning_requests p ON p.run_id=r.id
+                WHEN p.run_id IS NOT NULL THEN 'planning' WHEN v.run_id IS NOT NULL THEN 'peer_review' ELSE 'reply' END kind,t.scope,t.scope_id
+                FROM runs r LEFT JOIN retrospective_requests t ON t.run_id=r.id LEFT JOIN planning_requests p ON p.run_id=r.id LEFT JOIN peer_review_requests v ON v.run_id=r.id
                 WHERE r.state='unknown' AND NOT EXISTS(SELECT 1 FROM model_run_reconciliations c WHERE c.run_id=r.id)
                 ORDER BY r.created_at,r.id LIMIT ?""",(limit,))]
 

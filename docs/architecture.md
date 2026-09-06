@@ -1,4 +1,4 @@
-﻿# CorpPilot 架构说明
+# CorpPilot 架构说明
 
 ## 浏览器工作台增量（2026-09-06）
 
@@ -524,4 +524,17 @@ F45 实际提交 `5b37cad73e97607f8f8f6709e779d060036a748d` 后立即推送退�
 
 独立typecheck与静态Ponytail审查Pass；主代理构建47 modules、index-DdLyA6xU.js，并在IAB 1315×1272、独立7896 fixture验证三类型核查及各一次明确新调用。直接只读验证表明三seed完整Run未变、三声明唯一、三个新completed与三次本地HTTP模型调用一一对应，旧unknown调用0，无额外消息。附加QA三项已通过：损坏声明存储即使GET已有回执仍不清除或解锁；规划/复盘原pending遇GET503保持，恢复GET后须明确release；全过程零POST。完整证据和限制见F46验收记录；真实供应商、CLI及Docker均未调用。
 
-最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46提交/推送尚待实际操作。
+最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46 已本地提交，立即推送遭 GitHub403，远端回读为空；详见下方实际交付记录。
+
+F46 实际交付记录：已直接读取外部 `H:\item\CorpPilot-test-evidence-20260906\f46-delivery-result.json`，提交 `18b5c481bd2cbb5d07cd21e953bf04f337673bb9` 成功后立即推送退出1，GitHub403：suiyue1990 无权写入 xiaoyangtx996/CorpPilot；远端回读退出0、`remote_head=null`。该记录报告提交后工作区干净，不能据此称远端交付完成。主代理已通过 git show 核实该提交为10文件、195行新增/20行删除。
+## F47：Owner 授权的同群 Agent 单次评议（后端/API已验证）
+
+复用 Runs、ReplyController 和既有模型子进程、并发/RPM/活动队列上限，不建立新的调度器，不改 provider。新增 `peer_review_requests` 保存不可变授权 payload、source_run_id、source_snapshot 和 target_instructions；授权时冻结源消息正文与目标自身模板指令，Run及回执同事务创建。普通reply列表排除peer，避免旧界面把评议当普通回复重试。
+
+Owner Bearer 鉴权覆盖 `POST/GET /api/workbench/conversations/{id}/peer-reviews` 与 `GET /api/workbench/peer-reviews/{id}`。POST严格四字段 agent_id、source_message_id、request_id、confirm，confirm必须严格为true；返回Run字段与request_payload、source_run_id。读取历史不发起模型调用；取消与人工核查继续复用通用Run端点。
+
+只允许未归档board/project中的不同启用成员A与B。源消息须证明由同会话A的completed Run发布：source_run.reply_message_id与消息ID一致，Run的conversation_id/agent_id与消息相符。入队、模型快照与发布事务复查来源和双方当前权限；撤权后不得发布。冻结输入只含选定source本体和B自身指令，不默认共享原Owner目标、其他聊天历史或A的私有记忆。普通reply的Owner来源校验保持不变。
+
+同会话request_id跨reply/planning/retrospective/peer_review冲突拒绝；精确原请求回放优先返回原回执，不因配置关闭或后续撤权创建替代Run。F45为peer_review独立分类，unknown按类型、会话、源消息和目标Agent精确阻断新建及queued领取；已保存核查不改写原unknown，原请求不重发。每次Owner授权只产生一个目标Run，不自动续轮；允许Owner之后另行确认让C评议B。后端/API实现及独立审查已通过；F48前端正在开发，尚未构建或测试。
+主代理定向25项通过（7.61s，当时尚未加入冻结角色单用例）；随后新增冻结角色测试单项通过（0.22s）。完整 pytest tests/ -q 为 **596 passed、8 subtests passed（105.83s）**，session37270退出0，包含冻结角色和HTTP严格字段用例。独立QA/TechLead/Ponytail审查Pass，四文件定向41项通过（9.88s），另复跑冻结角色1项通过（0.22s）；这是分次验证记录，不相加成42个不同用例。
+原生控制器经实际本地HTTP provider子进程完成A回复→B评议，各一次调用，8并发同key仅1个peer Run；来源/目标撤权、未知核查新key和重启精确回读均验收。本增量不验证真实供应商、CLI或Docker，F47提交与推送待主代理实际执行。
