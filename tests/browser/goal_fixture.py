@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--checkpoint', action='store_true')
     parser.add_argument('--budget', action='store_true')
     parser.add_argument('--fees', action='store_true')
+    parser.add_argument('--context', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -156,6 +157,53 @@ def main():
             dict(task_id=identity, expected_version=1, previous_execution_id=None, reconciliation_note='') for identity in plan['task_ids'].values()]})
         budget = dict(plan=plan, batch=batch)
 
+    context = None
+    if args.context:
+        from workbench.runs import Runs
+        from workbench.context_receipts import ContextReceipts
+        from workbench.tasks import Tasks
+        from workbench.executions import Executions
+        from workbench.reviews import Reviews
+        from workbench.memories import Memories
+        from workbench import artifacts
+        contexts, runs = ContextReceipts(store), Runs(store)
+        latest = message
+        for i in range(101):
+            latest = store.send_message(source['id'], dict(content=f'F66_PRIVATE_INPUT_{i}', request_id=f'context-message-{i}'))
+        model = runs.create(source['id'], dict(agent_id=people[0]['id'], source_message_id=latest['id'], request_id='context-model'))
+        assert runs.claim(model['id'])
+        contexts.record_model(model['id'], runs.snapshot(model['id']), 'fixture-context-model')
+        runs.fail(model['id'], 'Fixture prepared snapshot; provider was not called')
+        legacy = runs.create(source['id'], dict(agent_id=people[0]['id'], source_message_id=latest['id'], request_id='context-legacy'))
+        runs.cancel(legacy['id'])
+        room = store.save_conversation(dict(type='project', title='F66 上下文项目', member_ids=[p['id'] for p in people]))
+        source_input = store.send_message(room['id'], dict(content='F66_PRIVATE_TASK_SOURCE', request_id='context-task-source'))
+        tasks, executions, memory = Tasks(store), Executions(store), Memories(store)
+        def task(title, key):
+            return tasks.create(room['id'], dict(agent_id=people[1]['id'], source_message_id=source_input['id'],
+                request_id=key, title=title, scope='F66_PRIVATE_SCOPE', acceptance='F66_PRIVATE_ACCEPTANCE'))
+        parent = task('F66 已批准来源', 'context-parent')
+        def create(task):
+            return executions.create(task['id'], dict(expected_version=task['requirement_version'], request_id='context-execution',
+                previous_execution_id=None, reconciliation_note=''))
+        upstream = create(parent); assert executions.claim(upstream['id'])
+        executions.report(upstream['id'],1,1,0,'Fixture inspected output',success=True,artifacts=[{'path':'context-proof.txt','data':b'F66_PRIVATE_ARTIFACT_BYTES'}])
+        Reviews(store).save(upstream['id'], dict(request_id='context-approve', expected_version=1, decision='approved',
+            note='Fixture Owner inspected result',artifact_ids=[a['id'] for a in artifacts.list_for(store,upstream['id'])]))
+        scopes = [('agent',people[1]['id']),('project',room['id'])]
+        for scope,identity in scopes:
+            candidate=memory.propose(scope,identity,dict(request_id='context-'+scope,expected_version=0,
+                source_execution_id=upstream['id'],content='F66_PRIVATE_MEMORY_'+scope))
+            memory.decide(candidate['id'],dict(request_id='context-approve-'+scope,decision='approved',note='Fixture Owner approval'))
+        child = task('F66 上下文消费者','context-child')
+        tasks.set_dependencies(child['id'],dict(expected_version=1,task_ids=[parent['id']]))
+        child=tasks.get(child['id']); execution=create(child); assert executions.claim(execution['id'])
+        contexts.record_cli(execution['id'],executions.snapshot(execution['id'],include_artifacts=True),'fixture-context-cli','local')
+        executions.report(execution['id'],execution['attempt'],execution['requirement_version'],1,'Fixture prepared snapshot; tool was not called')
+        for scope,identity in scopes:
+            memory.rollback(scope,identity,dict(request_id='context-rollback-'+scope,expected_version=1,target_version=0,note='Later memory changed'))
+        context=dict(model=runs.get(model['id']),legacy=runs.get(legacy['id']),execution=executions.get(execution['id']),room=room)
+
     class FixtureHandler(Handler):
         rejected = set()
 
@@ -250,6 +298,7 @@ def main():
     if checkpoint is not None: manifest['checkpoint'] = checkpoint
     if budget is not None: manifest['budget'] = budget
     if fee_model is not None: manifest['fee_model'] = fee_model
+    if context is not None: manifest['context'] = context
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():

@@ -3,6 +3,7 @@ import { api, type Agent, type Conversation, type Task, type TaskExecution, type
 import { TaskExecutions } from './TaskExecutions';
 import { ExecutionUsage } from './ExecutionUsage';
 import { FeeSettlement, feeMoney } from './FeeSettlement';
+import { ContextSummary } from './ContextSummary';
 
 type Page<T> = { items: T[]; total: number; has_more: boolean };
 type Activity = { agent_id: string; tasks: Page<Task>; executions: Page<TaskExecution & { task_title: string; conversation_id: string; artifact_count: number; review_decision: 'approved' | 'rejected' | null }>; model_runs: Page<ReplyRun & { kind: 'reply' | 'planning' | 'retrospective' | 'peer_review' }> };
@@ -20,6 +21,7 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
   const [detail, setDetail] = useState<{ task: Task; conversation: Conversation } | null>(null);
   const [fee, setFee] = useState<{ kind: 'model' | 'cli'; run_id: string } | null>(null);
   const [fees, setFees] = useState<FeeReceipt[] | null>(null), [feeError, setFeeError] = useState('');
+  const [context, setContext] = useState<{ kind: 'model' | 'cli'; run_id: string; conversation_id: string; modelKind?: 'reply' | 'planning' | 'retrospective' | 'peer_review' } | null>(null);
   async function load() {
     const request = ++version.current;
     setLoading(true); setError(''); setRuntimeError(''); setValue(null); setRuntime(null);
@@ -79,6 +81,7 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
           <p>退出码：{run.exit_code ?? '未观测'} · 已保存成果 {run.artifact_count} 个</p>
           <ExecutionUsage run={run} />
           <button onClick={() => setFee({ kind: 'cli', run_id: run.id })}>费用声明与更正</button>
+          <button onClick={() => setContext({ kind: 'cli', run_id: run.id, conversation_id: run.conversation_id })}>查看当次上下文</button>
           <p>当次 Owner 验收：{run.review_decision === 'approved' ? '已批准' : run.review_decision === 'rejected' ? '已拒绝' : '未批准'}</p>
           {run.summary && <p>{run.summary}</p>}
           <button disabled={busy} onClick={() => void open(run.conversation_id, run.task_id)}>查看该任务全部执行</button>
@@ -91,6 +94,7 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
           <p>模型：{run.model ?? '待回执'} · 输入/输出 token：{run.usage?.prompt_tokens ?? '未知'} / {run.usage?.completion_tokens ?? '未知'}</p>
           {run.error && <p className="error">{run.error}</p>}
           <button onClick={() => setFee({ kind: 'model', run_id: run.id })}>费用声明与更正</button>
+          <button onClick={() => setContext({ kind: 'model', run_id: run.id, conversation_id: run.conversation_id, modelKind: run.kind })}>查看当次上下文</button>
           <button disabled={busy} onClick={() => void open(run.conversation_id)}>打开所属会话</button>
         </article>)}
       </details>
@@ -102,5 +106,6 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
     <details><summary>此身份的费用声明（最近100个实例）</summary><p>每实例仅列最新声明，按声明时间排序；不是全部费用总额。刷新 Agent 活动获取当前记录。</p>{feeError && <p className="error" role="alert">{feeError}</p>}{fees?.map(row => <article className="task-card" key={`${row.kind}:${row.run_id}`}><p>{row.kind === 'model' ? '模型' : 'CLI'} · {row.run_id} · 修订 {row.revision} · USD {feeMoney(row.amount_micro_usd)}</p><button onClick={() => setFee({ kind: row.kind, run_id: row.run_id })}>费用声明与更正</button></article>)}{fees?.length === 0 && <p>暂无费用声明；这不表示费用为零。</p>}</details>
     {detail && <TaskExecutions {...detail} agents={agents} onClose={() => setDetail(null)} />}
     {fee && <FeeSettlement key={`${fee.kind}:${fee.run_id}`} {...fee} agent_id={agent.id} onClose={() => setFee(null)} />}
+    {context && <ContextSummary key={`${context.kind}:${context.run_id}`} {...context} agent_id={agent.id} onClose={() => setContext(null)} />}
   </section>;
 }

@@ -186,6 +186,19 @@ try {
   await activityPanel.getByText('尚无执行记录。', { exact: true }).waitFor();
   await activityPanel.locator('summary').filter({ hasText: '此身份的模型活动' }).click();
   await activityPanel.getByRole('heading', { name: '规划 · 已完成', exact: true }).waitFor();
+  await activityPanel.locator('article').filter({ hasText: receipt.planning_run_id }).getByRole('button', { name: '查看当次上下文', exact: true }).click();
+  const inputDialog = page.getByRole('dialog', { name: '查看当次上下文', exact: true });
+  await inputDialog.getByRole('region', { name: '已准备上下文摘要', exact: true }).waitFor();
+  await inputDialog.getByText('查看消息来源明细（1条）', { exact: true }).click();
+  await inputDialog.getByText(/授权共享摘要（消息 ID 仅关联原目标）/).waitFor();
+  await inputDialog.getByText('查看摘要哈希', { exact: true }).nth(1).click();
+  const briefHash = createHash('sha256').update('F53 EXPLICIT SHARED: produce three linked evidence files.').digest('hex');
+  await inputDialog.getByText(briefHash, { exact: true }).waitFor();
+  assert(!(await inputDialog.innerText()).includes('F53_PRIVATE_'));
+  await page.screenshot({ path: path.join(outDir, 'context-authorized-goal.png') });
+  await inputDialog.getByRole('button', { name: '关闭当次上下文', exact: true }).click();
+  report.contextObservation = { passed: true, source: 'authorized_shared_brief', snapshotHash: briefHash, noNewCalls: true };
+
   assert.equal(await activityPanel.getByText(`执行 ${finalId} · 第1次 · 当次需求 v1`, { exact: true }).count(), 0);
   const activityPath = `**/api/workbench/agents/${manifest.coordinator_id}/activity`;
   await page.route(activityPath, route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Activity fixture unavailable' }) }));

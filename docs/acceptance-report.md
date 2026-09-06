@@ -565,3 +565,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 全量844 passed、8 subtests passed，258.13s（session30035退出0），包含最终生产代码。之后只增加两项来源测试，最终定向32 passed17.98s单列，不扩大前述全量数量。独立只读审查Pass。覆盖普通100消息边界、授权共享摘要非原私聊正文、复盘合成输入、单消息评议、CLI已冻结记忆/成果、hash/正文隔离、不可变并发、失败不派发、GET不重建snapshot和真实备份恢复。
 
 原goal浏览器qad3e0通过、fixture正常退出；本轮无前端生产修改和新摘要UI，不把旧流程回归当作新界面验收。正常42旧表与备份逐行相同，唯一新表为空，health与静态字节一致，见f65-normal-readback.json。prepared只证明实际调用入口准备并保存摘要，不证明供应商收到或CLI启动；没有实际付费调用或真实Docker验收。全目标保持未完成。
+
+## F66 摘要浏览器验收
+
+正式上下文浏览器GAuRTD通过16项异常边界、401恢复、StrictMode/Escape和迟到响应隔离，零业务写入/零外部调用、fixture正常退出。实际记录的100条截断范围、CLI记忆v1（当前文档v2）及成果在UI与API一致；缺失为未知，坏回执不保留旧显示。独立只读审查通过。
+
+原goal ZyW04m通过，实际本地模型规划入口的授权共享摘要hash与UI一致，未展示原私聊正文；费用FnDlDI回归通过。55模块index-CzyzG-3T.js构建通过，根目视截图。正常数据未修改、服务75331无需重启、health与资源字节一致（f66-normal-readback.json）。后端生产未改，本轮无新Python全量声明。prepared仍不是供应商接收/工具执行证明；真实CLI、双Docker及整体目标仍待完成。

@@ -654,3 +654,7 @@ FeeSettlement复用F63 API，不新增后台服务或计费写入来源。按kin
 ## F65 当次上下文准备回执
 
 ContextReceipts在现有SQLite保存不可变元数据，模型与CLI控制器取得实际授权snapshot并验证准备条件后，先保存摘要再调用外部服务。失败不派发；GET只读持久记录，旧数据无回执为null。保存模板、实例/需求版本及实际内容的字符数/hash、消息来源、CLI已含记忆版本与成果元数据，不保存正文、完整prompt、凭据或宿主路径。prepared不代表请求已发出；hash对应授权snapshot，不是provider添加前缀后的HTTP字节。接口、来源与恢复边界见 [context-observation.md](context-observation.md)。
+
+## F66 摘要视图
+
+ContextSummary复用F65只读API和现有实例详情，严格校验kind/身份/版本、消息来源、记忆scope和成果元数据后渲染。按实例挂载，serial丢弃旧响应，刷新先清旧值；原生dialog/details提供关闭焦点和明细展开，不新增宿主层或依赖。它不执行snapshot、读取正文或产生业务写入。

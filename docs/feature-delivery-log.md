@@ -736,3 +736,13 @@ handoff_review负责context_receipts及最终25项定向测试；根负责控制
 原goal浏览器qad3e0通过、session10963退出0、fixture退出0。前端未改，沿用F64 index-CgVhIIqB.js；没有新的上下文UI验收。正常76129确认live且无活动后停止，实际f65-normal-backup数据库hash788c9b4a1cbc9b79ffc2a2a964c9853966c2f808a22efa236eaa494b43290f62；新75331同目录运行7892，原42表逐行不变，仅新增空context_receipts，完整性、外键、health200和JS字节读回通过（f65-normal-readback.json）。
 
 独立提交后立即推送，实际提交及远端结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f65-delivery-result.json。远端确认前不标记远端交付；摘要界面、工具活动观察、真实CLI/双Docker及全目标仍未完成。
+
+## F66 当次上下文摘要界面
+
+handoff_review负责ContextSummary与AgentActivity；根负责fixture、独立浏览器、原goal来源回归、集成与文档；verify_prompt_push只读源码/Ponytail Pass。默认折叠100消息明细，保留来源与截断提示，不增加依赖或调度逻辑。
+
+根正式npm run test:browser:context session37368退出0，corppilot-context-GAuRTD通过16边界、StrictMode/Escape、pageErrors空、fixture退出0。真实持久snapshot含100条截断消息、当前记忆已rollback到v2而回执仍v1、固定成果；观察零业务写入/零外部调用，前后实例和回执一致。根目视模型及CLI记忆/成果截图。这些fixture回执表示准备证据，不声称已调用真实工具。
+
+原goal浏览器ZyW04m通过、session67600退出0，新增实际本地provider规划入口授权shared_brief哈希与UI来源核对，观察无新增调用。费用浏览器FnDlDI回归通过。构建55模块index-CzyzG-3T.js通过。早期DNnNoK因测试exact文件名包含大小未匹配，改contains；qa9j3j与作者构建并行遇短时dist不存在，改为根独占构建后回归通过，未变产品降级策略。
+
+后端生产未改，未重跑Python全量；最近F65全量844+8、最终定向32为既有基线。正常75331持续运行无需重启，原42表与F65备份逐行一致、context_receipts仍空、完整性/外键/health及JS字节通过（f66-normal-readback.json）。独立提交后立即推送，精确提交及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f66-delivery-result.json；远端未确认前不标记远端交付。工具内部活动、真实CLI/双Docker及全目标仍未完成。
