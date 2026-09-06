@@ -595,3 +595,11 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 正式zsq9Qm及补充断言后的最终3uUcJT通过：25项非法回执/存储/401重授权/403退出成员/归档/迟到边界，真实Git绑定与丢响应后精确原请求读取、latest分离、CAS、同键重试、停用；同项目已改rev2，旧执行界面仍显示固定rev1。所有fixture退出0，观察没有创建执行工作区或调用模型/CLI，手机无溢出，StrictMode/Escape和根目视通过，独立审查Pass。初轮测试开发URL双斜杠错误已修正并复验。
 
 最终58模块index-CcNlQM1m.js构建通过，原goal bWVJqw和tools ixaMIQ回归通过；早先goal一次fixture Windows rename EPERM后正常结束，再次运行通过。后端生产未改，不新增Python全量声明，最近基线F69为945+8。正常93940数据和页面资源验证见f70-normal-readback.json，无需重启或迁移。配置面板现已接入，代码成果交接/合入、真实CLI/双Docker与整体目标仍未完成。
+
+## F71 代码补丁成果验收
+
+最终全量975 passed、8 subtests passed，458.80s（session87864退出0），独立QA/Ponytail终审Pass。真实Git生成的补丁在第三个独立基线副本应用后目标树一致；控制器15项集成覆盖两个受控后端、Owner完整审批与实际HTTP下载、授权依赖输入、备份恢复、已确认失败/停止未知/取消不交付部分成果、保存失败不重跑CLI或采集。首轮两项HTTP测试别名错误已修，定向及最终全量均通过。
+
+原goal浏览器4BDkWj通过、fixture退出0，前端未改且沿用F70最终构建。正常服务先备份后重启为74988，46张表逐行未变，完整性、外键、health及实际资源一致（f71-normal-readback.json）。无新数据库表、接口或UI；沿现有成果路径展示和审批。
+
+本功能完成固定补丁/清单的不可变保存与授权传递。测试中的补丁应用仅用于验证，并非产品合入能力；未实际调用集成Agent、付费CLI或双Docker。SQLite恢复只保留已存成果，不恢复完整仓库。上述实际执行和合入闭环仍需后续验收，整体目标保持未完成。

@@ -786,3 +786,15 @@ handoff_review负责RepositorySettings/RepositorySummary及App/AgentActivity接�
 原goal最终bWVJqw（session49621）及tools ixaMIQ（session53348）通过、fixture退出0，共用最终构建。早先goal WeSfE5遇Windows临时control文件rename EPERM、fixture正常退出；重跑通过，不把此前中断记为成功。后端生产未改，本轮不重复Python全量，F69的945+8为最近全量基线。正常93940持续运行无需重启，44旧表与F69备份逐行一致、两绑定表仍空、完整性/外键/health及JS字节通过（f70-normal-readback.json）。
 
 独立提交后立即推送；精确哈希和远端结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f70-delivery-result.json，远端未确认前不标记远端交付。真实CLI、双Docker、代码成果交接/集成及全目标仍未完成。
+
+## F71 固定代码补丁成果
+
+handoff_review负责code_changes及原生Git测试，复用artifacts文件锁；根负责两后端公共控制器接线、15项集成测试、正常数据备份重启、文档与Git；verify_prompt_push独立只读QA/Ponytail终审Pass，收尾再次确认产品与测试边界一致。复用既有成果存储、Owner审批、下载及依赖输入，不新增表、API或UI。采集净变化，不保留提交历史；工作预算180秒，首版路径碰撞/文件目录互换和体积超限均整体拒绝。
+
+最终全量975 passed、8 subtests passed，458.80s（session87864退出0），含冻结的最终生产代码和全部新测试。原生采集及旧成果38项通过；根首轮组合72 passed、2 failed，失败来自新增HTTP下载测试中模块别名遮蔽，修正测试导入后15项集成36.64s（session81111）通过，再全量通过。未为测试放宽产品约束。
+
+覆盖真实Git补丁应用到第三个独立基线副本后目标树一致、SHA1/SHA256、提交/索引/未暂存/新增/删除/忽略策略、原始二进制与已知凭据检查、恶意配置、路径/锁/限额、批量进程数量、失败/未知/取消、两受控后端、全清单审批、真实HTTP下载及401、授权依赖输入、真实备份恢复和保存失败只重试入库。后端runner受控，下游只核对实际冻结输入，未调用真实集成Agent或产品代码合并。
+
+原goal浏览器corppilot-browser-4BDkWj通过（session42439退出0、fixture退出0）。前端生产未改，复用F70构建index-CcNlQM1m.js，不将旧浏览器回归当作新增代码合入UI验收。正常93940零活动后停止，f71-normal-backup数据库638976字节/hash f984b47955dd5ef2a052caf93f7590d9a697490a37ee48fc76e4c8b527896a34；新74988在原目录7892运行。46表逐行相同且无新表，完整性/外键/health200及实际JS字节通过（f71-normal-readback.json）。
+
+独立提交后立即推送；精确提交及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f71-delivery-result.json，远端确认前不标记远端交付。已保存补丁可随SQLite备份恢复，但完整源库/基线对象/执行工作区不在备份中。真实付费CLI、双Docker、集成Agent实际评审与代码合入、全目标仍未完成。

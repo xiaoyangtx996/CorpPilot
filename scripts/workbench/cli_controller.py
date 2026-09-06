@@ -11,6 +11,8 @@ from .project_executions import ProjectExecutions
 from .project_launches import ProjectLaunches
 from .checkpoints import Checkpoints
 from .artifacts import capture
+from . import artifacts as artifact_store
+from .code_changes import capture_code
 from .reconciliations import Reconciliations, unresolved
 from . import resource_admission
 from .budgets import BudgetDenied, Budgets
@@ -77,7 +79,7 @@ class CLIController:
             }, ensure_ascii=False)
             if snapshot.get('repository'):
                 repository = snapshot['repository']
-                prompt += '\n代码位于 repository 子目录，源仓库不会被修改。代码改动交给指定集成人评审；不要推送或自动合并。' + json.dumps({
+                prompt += '\n代码位于 repository 子目录，源仓库不会被修改。代码改动会自动采集为补丁与清单供评审；不要在 artifacts 中使用系统保留的 corppilot-code 路径，不要推送或自动合并。' + json.dumps({
                     'path':'repository', 'commit':repository['snapshot']['commit'],
                     'branch':'corppilot/run-'+run['id'], 'project_revision':repository['revision'],
                     'integration_agent_id':repository['snapshot']['integration_agent_id'],
@@ -130,6 +132,14 @@ class CLIController:
             if result["success"] is True and result["exit_code"] == 0:
                 try:
                     items = capture(self.store.data_dir, run["id"], config["api_key"])
+                    if snapshot.get('repository'):
+                        if any(item['path'].split('/')[0].casefold() == 'corppilot-code' for item in items):
+                            raise ValueError('成果占用了系统代码成果路径')
+                        items += capture_code(self.store.data_dir, run['id'], snapshot['repository'], config['api_key'], cancel)
+                        if len(items) > artifact_store.MAX_FILES or sum(len(item['data']) for item in items) > artifact_store.MAX_TOTAL_BYTES:
+                            raise ValueError('代码与其他成果合计超过上限')
+                except PreparationUnknownError:
+                    raise
                 except Exception:
                     return {"exit_code": result["exit_code"], "summary": "CLI 已退出，但成果采集失败；请核查文件边界与大小，结果未提交评审",
                             "success": False, "not_started": False, 'usage': usage, 'tool_activities': tool_activities}
@@ -138,7 +148,7 @@ class CLIController:
         except InputPreparationError:
             return self._unstarted("前置成果或工作区准备失败，未启动 CLI")
         except PreparationUnknownError:
-            return {"exit_code": None, "summary": "Git 准备进程停止未确认；请核查本机准备进程及副作用，不能仅凭容器不存在确认停止；未重试",
+            return {"exit_code": None, "summary": "Git 代码准备或成果采集进程停止未确认；请核查本机进程及副作用，不能仅凭容器不存在确认停止；未重试",
                     "success": False, "not_started": False, 'usage': usage, 'tool_activities': tool_activities}
         except Exception:
             # Never infer that an arbitrary runner exception happened before spawning.

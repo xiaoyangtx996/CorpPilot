@@ -57,7 +57,7 @@ def initialize(db):
 
 
 @contextmanager
-def _locked(path, directory):
+def _locked(path, directory, maximum=MAX_FILE_BYTES):
     # Windows directory handles deny rename/delete while descendants are read.
     import ctypes
     import msvcrt
@@ -89,7 +89,7 @@ def _locked(path, directory):
         if directory:
             yield None
         else:
-            if (info.size_high << 32 | info.size_low) > MAX_FILE_BYTES:
+            if (info.size_high << 32 | info.size_low) > maximum:
                 raise ValueError(ERROR)
             fd = msvcrt.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY)
             handle = None  # fd owns the handle now.
