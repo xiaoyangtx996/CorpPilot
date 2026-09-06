@@ -96,6 +96,13 @@ def handoff_source(db, execution_id, dependency):
     return row[0] if row else None
 
 
+def checkpoint_source(db, execution_id, dependency):
+    if not execution_id or not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='checkpoint_dependency_pins'").fetchone():
+        return None
+    row = db.execute('SELECT upstream_execution_id FROM checkpoint_dependency_pins WHERE execution_id=? AND dependency_task_id=?', (execution_id, dependency)).fetchone()
+    return row[0] if row else None
+
+
 def ready_inputs(db, identity, version, execution_id=None):
     """Resolve current approvals or an explicit, immutable same-launch handoff."""
     if execution_id:
@@ -121,6 +128,11 @@ def ready_inputs(db, identity, version, execution_id=None):
                     WHERE task_id=t.id ORDER BY attempt DESC LIMIT 1)
                 LEFT JOIN execution_reviews r ON r.execution_id=e.id WHERE t.id=?""", (dependency,)).fetchone()
             authorized = handoff_source(db, execution_id, dependency)
+            pinned = checkpoint_source(db, execution_id, dependency)
+            if pinned and (row is None or row['id'] != pinned or row['decision'] != 'approved'):
+                raise DependencyBlocked('检查点固定前置执行已变化或尚未获 Owner 批准')
+            if pinned:
+                authorized = None
             if (row is None or row["id"] is None or row["requirement_version"] != row["current_version"]
                     or row["state"] != "awaiting_review"):
                 raise DependencyBlocked("前置任务的当前版本和最新执行尚未获得 Owner 批准")

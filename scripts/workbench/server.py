@@ -247,11 +247,23 @@ class Handler(BaseHTTPRequestHandler):
                 parts = path[len(prefix):].split("/")
                 if len(parts) == 1 and parts[0] and self.command == "GET":
                     return self.respond(200, self.server.controller.cli.project_executions.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == 'checkpoint' and self.command == 'GET':
+                    return self.respond(200, self.server.controller.cli.checkpoints.preview(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == 'checkpoint-recoveries':
+                    if self.command == 'GET':
+                        return self.respond(200, self.server.controller.cli.checkpoints.list(parts[0]))
+                    if self.command == 'POST':
+                        return self.respond(202, self.server.controller.cli.recover_checkpoint(parts[0], self.read_json()))
                 if len(parts) == 2 and parts[0] and parts[1] == "stop" and self.command == "POST":
                     payload = self.read_json()
                     if set(payload) != {"confirm"} or payload["confirm"] is not True:
                         raise ValueError("停止本批执行必须明确 confirm=true")
                     return self.respond(200, self.server.controller.cli.stop_project(parts[0]))
+            prefix = '/api/workbench/checkpoint-recoveries/'
+            if path.startswith(prefix) and self.command == 'GET':
+                identity = path[len(prefix):]
+                if identity and '/' not in identity:
+                    return self.respond(200, self.server.controller.cli.checkpoints.get(identity))
             if self.command == "GET" and path == "/api/workbench/templates":
                 return self.respond(200, store.templates())
             if path == "/api/workbench/agents":

@@ -663,3 +663,14 @@ handoff_review负责后端及最终新14项测试；根负责前端、浏览器�
 根最终全量748 passed、8 subtests passed，203.67s（session58652退出0）。包含新增CLI用量备份恢复用例，实际失败执行7/null/0回执通过backup/restore完整保留。正常库零活动停止67999，离线f58-normal-backup hash52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854；新68875运行7892，原36表逐行未变，唯一新表execution_usage为空、完整性/外键/health200及构建资源字节回读通过。
 
 本功能独立提交并立即推送，精确hash、推送退出码与远端回读保存在仓库外 `H:\item\CorpPilot-test-evidence-20260906\f58-delivery-result.json`。实际CLI/双Docker、金额限制和检查点恢复仍未完成；远端回读成功前不标记远端交付。
+## F59 检查点恢复服务/API增量
+
+handoff_review负责checkpoints/dependencies及新14项测试，根负责控制器/HTTP接线及3项集成测试；verify_prompt_push只读终审Pass。根复核固定输入、多层依赖、unknown核查后重试、事务内指纹校验、新批次停止与原goal隔离。F60再接浏览器操作，不称本轮完成检查点用户流程。
+
+子代理定向71 passed13.05s，追加多层依赖后新文件14 passed1.88s；根HTTP/真实backup/goal隔离3 passed2.08s。根初次两项测试误假定Origin应403、snapshot默认含成果，按既有400拒绝和include_artifacts=True契约修正后通过，未改变产品拒绝策略。
+
+原有浏览器全链session72239退出0，corppilot-browser-RLdPT8/browser-report.json通过、fixture退出0；前端未改，51模块index-CP-aAePY.js回归构建通过。这仅证明原流程兼容，不替代新增检查点UI验收。
+
+根全量765 passed、8 subtests passed，209.97s（session64694退出0）。正常68875确认live及零活动后停止，离线f59-normal-backup DB hash004d1143ad528bd70d61ec6e4a1cb93e2405110ad8fc0eb8f28e799c0b91a45e；新39515启动7892，原37表逐行未变，仅增加空checkpoint_recoveries/checkpoint_dependency_pins，integrity/外键/health200通过。
+
+独立提交并立即推送及远端回读结果保存在仓库外 `H:\item\CorpPilot-test-evidence-20260906\f59-delivery-result.json`；远端成功前不标记远端交付。费用约束、真实CLI/双Docker、检查点浏览器操作及整体目标仍未完成。

@@ -625,3 +625,8 @@ ReplyController 在发布消息或解析规划/复盘之前独立提交回执到
 本机与 Docker adapter 共用解析器：仅保留一个完整 `turn.completed` 的 input_tokens、output_tokens、cached_input_tokens；字段缺失为 null，多轮或损坏 JSONL 不推测合计。失败、取消或超时可以有已观测的单轮回执，不改变退出与成功判定，也不表示整个执行的完整账单。
 
 控制器在成果采集前独立保存 execution_usage，绑定 execution_id、attempt、requirement_version。数据库暂时写失败时保留已结束 Future 并重试回执写入，不重复启动 CLI；回执冲突拒绝。旧记录无回执返回 null，执行列表与 Agent 活动使用相同读取。此表只保存筛选 token 字段，不保存原始 CLI 输出、凭据或私有上下文；没有 Owner 写入回执接口。进程在回执持久化前崩溃仍可能丢失数据，重启不伪造用量。
+## F59 检查点恢复服务
+
+检查点以原项目批次为来源，固定原执行、需求版本、审批及成果元数据、依赖闭包；预览只读并返回SHA256指纹。Owner重新授权时在单个写事务中复算，创建独立批次、恢复回执及每个新执行的直接依赖绑定；相同请求幂等，不改原Goal或批次。复用成果仍须当前有效，固定上游替代或改版会阻塞领取/运行，不静默换绑；新重试节点成果须Owner重新批准。
+
+检查点回执、依赖绑定沿用SQLite不可变证据约束，既有无检查点普通执行兼容。接口与恢复边界见 [checkpoint-recovery.md](checkpoint-recovery.md)。F59仅服务/API增量，浏览器恢复操作尚待接入；不等于CLI进程快照或无损恢复。

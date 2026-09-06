@@ -520,3 +520,10 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 最终真实浏览器session10436退出0，corppilot-browser-p8qW5t/browser-report.json通过。受控runner产生7/null/0回执经API与两个UI入口核对；网络注入usage=null显示未知而非0，恢复后正确显示；观察不增加执行调用。原目标、17恢复边界、停止与资源准入继续通过，fixture退出0。根目视首轮cli-usage.png，最后生产UI未变；最终51模块index-CP-aAePY.js构建通过。前端独立只读审查Pass。
 
 正常67999零活动停止后离线备份，68875同目录启动；原36表逐行不变，仅增加空execution_usage，integrity=ok、外键空、health200、实际JS字节一致（f58-normal-readback.json）。本轮未运行真实付费CLI或真实容器，不能替代双Worker烟测。用量是单轮已观测token，不是完整账单或金额硬上限，整体目标未完成。
+## F59 检查点服务验收
+
+根全量765 passed、8 subtests passed，209.97s（session64694退出0）。新增后端14项及根集成3项覆盖固定输入/版本/原执行、同键并发和事务回滚、unknown核查、rejected重试、双retry新Owner审批、多层外部依赖变更、不可变记录、HTTP权限与配置、原goal停止隔离、关闭后重放、实际backup/restore后的原artifact字节及绑定。独立只读终审Pass。
+
+原浏览器全链session72239退出0，corppilot-browser-RLdPT8/browser-report.json通过，fixture实际退出0；没有新增检查点UI，不将旧浏览器回归作为该流程验收。F59仅后端/API增量，操作合同及边界见checkpoint-recovery.md。
+
+正常库零活动备份后重启39515；原37表逐行未变，仅新增两张空检查点表，integrity=ok、外键空、health200（外部f59-normal-readback.json）。未调用真实模型/CLI或容器；任务级恢复不保证进程内存/CLI会话恢复。完整目标保持未完成。

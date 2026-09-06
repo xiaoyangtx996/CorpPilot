@@ -9,6 +9,7 @@ from .cli_settings import CLISettings
 from .executions import Executions
 from .project_executions import ProjectExecutions
 from .project_launches import ProjectLaunches
+from .checkpoints import Checkpoints
 from .artifacts import capture
 from .reconciliations import Reconciliations, unresolved
 from . import resource_admission
@@ -22,6 +23,7 @@ class CLIController:
         self.settings = CLISettings(store)
         self.executions = Executions(store)
         self.project_executions = ProjectExecutions(store)
+        self.checkpoints = Checkpoints(store, self.project_executions)
         self.project_launches = ProjectLaunches(store)
         self.reconciliations = Reconciliations(store)
         with store.connect() as db:
@@ -247,6 +249,19 @@ class CLIController:
             raise ValueError("CLI 控制器正在关闭，不能创建执行")
         self.settings.resolve()
         return self.project_executions.create(collaboration_id, payload)
+
+    def recover_checkpoint(self, source_batch_id, payload):
+        with self.launch_lock:
+            if isinstance(payload, dict) and isinstance(payload.get('request_id'), str):
+                with self.store.connect() as db:
+                    existing = db.execute('SELECT 1 FROM checkpoint_recoveries WHERE source_batch_id=? AND request_id=?',
+                                          (source_batch_id, payload['request_id'])).fetchone()
+                if existing:
+                    return self.checkpoints.recover(source_batch_id, payload)
+            if self.closed:
+                raise ValueError('CLI 控制器正在关闭，不能恢复检查点')
+            self.settings.resolve()
+            return self.checkpoints.recover(source_batch_id, payload)
 
     def stop_project(self, identity):
         if self.closed:
