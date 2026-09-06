@@ -2,6 +2,7 @@
 from .store import _text
 from .tasks import Tasks
 from .runs import Runs
+from .executions import Executions
 
 
 def get(store, agent_id):
@@ -24,6 +25,7 @@ def get(store, agent_id):
                            (SELECT count(*) FROM execution_artifacts a WHERE a.execution_id=e.id) artifact_count,
                            (SELECT decision FROM execution_reviews v WHERE v.execution_id=e.id) review_decision''',
                            'e.updated_at DESC,e.id DESC')
+        executions['items'] = [{**row, 'usage': Executions._usage(db, row['id'])} for row in executions['items']]
         runs = group('FROM runs r WHERE r.agent_id=?', '''SELECT r.id,CASE
                      WHEN EXISTS(SELECT 1 FROM planning_requests p WHERE p.run_id=r.id) THEN 'planning'
                      WHEN EXISTS(SELECT 1 FROM retrospective_requests p WHERE p.run_id=r.id) THEN 'retrospective'

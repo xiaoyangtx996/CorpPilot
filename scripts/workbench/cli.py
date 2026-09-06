@@ -81,6 +81,20 @@ def parse_result(process: dict, api_key: str) -> dict:
     api_key = _text(api_key, "CLI API 凭据", 4096)
     result = {"success": False, "exit_code": process["exit_code"], "reason": process["reason"],
               "summary": "CLI 未产生已确认的完成结果", "usage": None}
+    events = []
+    try:
+        events = [json.loads(line) for line in process['stdout'].decode('utf-8').splitlines() if line.strip()]
+        completed = [event for event in events if isinstance(event, dict) and event.get('type') == 'turn.completed']
+        # Only one observed turn is understood here; never guess multi-turn aggregation.
+        if all(isinstance(event, dict) for event in events) and len(completed) == 1:
+            usage = completed[0].get('usage')
+            if isinstance(usage, dict):
+                result['usage'] = {key: usage.get(key) if type(usage.get(key)) is int and usage[key] >= 0 else None
+                                   for key in ('input_tokens', 'output_tokens', 'cached_input_tokens')}
+                if result['usage']['input_tokens'] is not None and result['usage']['cached_input_tokens'] is not None and result['usage']['cached_input_tokens'] > result['usage']['input_tokens']:
+                    result['usage']['cached_input_tokens'] = None
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, KeyError):
+        events = []
     if process["reason"] != "exited" or process["exit_code"] != 0:
         result["summary"] = {"cancelled": "CLI 已停止，请核查执行前已产生的副作用",
                              "timeout": "CLI 超时，请核查已产生的副作用",
@@ -90,7 +104,6 @@ def parse_result(process: dict, api_key: str) -> dict:
         return result
     result["reason"] = "protocol_error"
     try:
-        events = [json.loads(line) for line in process["stdout"].decode("utf-8").splitlines() if line.strip()]
         if any(not isinstance(event, dict) for event in events):
             return result
         completed = [event for event in events if event.get("type") == "turn.completed"]
@@ -104,9 +117,6 @@ def parse_result(process: dict, api_key: str) -> dict:
         # A completion event must follow the final message, not precede a broken trailing turn.
         if events[-1].get("type") != "turn.completed":
             return result
-        usage = completed[0].get("usage")
-        result["usage"] = {key: usage.get(key) if type(usage.get(key)) is int and usage[key] >= 0 else None
-                           for key in ("input_tokens", "output_tokens", "cached_input_tokens")} if isinstance(usage, dict) else None
         result.update(success=True, reason="exited", summary=messages[-1].strip().replace(api_key, "[凭据已隐藏]")[:2000])
     except (UnicodeDecodeError, json.JSONDecodeError, TypeError, KeyError):
         pass

@@ -45,13 +45,51 @@ class Executions:
             dependencies.initialize_inputs(db)
             memories.initialize(db)
             reconciliations.initialize(db)
+            db.execute('''CREATE TABLE IF NOT EXISTS execution_usage (
+                execution_id TEXT PRIMARY KEY REFERENCES task_executions(id),
+                attempt INTEGER NOT NULL, requirement_version INTEGER NOT NULL, usage TEXT NOT NULL)''')
+            for operation in ('UPDATE', 'DELETE'):
+                db.execute(f'''CREATE TRIGGER IF NOT EXISTS execution_usage_no_{operation.lower()}
+                    BEFORE {operation} ON execution_usage BEGIN SELECT RAISE(ABORT,'Execution usage is immutable'); END''')
+            db.execute('''CREATE TRIGGER IF NOT EXISTS execution_usage_no_replace BEFORE INSERT ON execution_usage
+                WHEN EXISTS(SELECT 1 FROM execution_usage WHERE execution_id=NEW.execution_id)
+                BEGIN SELECT RAISE(ABORT,'Execution usage is immutable'); END''')
 
     @staticmethod
     def _run(db, identity):
         row = db.execute("SELECT * FROM task_executions WHERE id=?", (identity,)).fetchone()
         if row is None:
             raise KeyError("任务执行不存在")
-        return dict(row)
+        return {**dict(row), 'usage': Executions._usage(db, identity)}
+
+    @staticmethod
+    def _usage(db, identity):
+        row = db.execute('SELECT usage FROM execution_usage WHERE execution_id=?', (identity,)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def record_usage(self, identity, attempt, version, usage):
+        with self.store.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self._record_usage(db, identity, attempt, version, usage)
+
+    def _record_usage(self, db, identity, attempt, version, usage):
+        if not isinstance(usage, dict) or set(usage) != {'input_tokens', 'output_tokens', 'cached_input_tokens'}:
+            raise ValueError('CLI 用量回执字段无效')
+        if any(value is not None and (type(value) is not int or value < 0) for value in usage.values()):
+            raise ValueError('CLI Token 须为非负整数或 null')
+        if usage['input_tokens'] is not None and usage['cached_input_tokens'] is not None and usage['cached_input_tokens'] > usage['input_tokens']:
+            raise ValueError('缓存 Token 不能超过输入 Token')
+        if any(type(value) is not int or value < 1 for value in (attempt, version)):
+            raise ValueError('执行用量绑定无效')
+        run = self._run(db, identity)
+        if (run['attempt'], run['requirement_version']) != (attempt, version):
+            raise ValueError('执行用量绑定不一致')
+        if run['usage'] is not None:
+            if run['usage'] != usage: raise ValueError('CLI 用量回执冲突')
+            return
+        if run['state'] not in ('running', 'stopping'):
+            raise ValueError('仅运行中的执行能保存首次用量')
+        db.execute('INSERT INTO execution_usage VALUES(?,?,?,?)', (identity, attempt, version, json.dumps(usage)))
 
     @staticmethod
     def _set(db, identity, state, summary, exit_code=None):
@@ -95,7 +133,7 @@ class Executions:
         if previous:
             if (previous["requirement_version"], previous["reconciliation_note"], previous["previous_execution_id"]) != (version, note, prior_id):
                 raise ValueError("request_id 已用于不同任务执行")
-            return dict(previous)
+            return self._run(db, previous['id'])
         task = self.tasks._task(db, task_id)
         if reconciliations.unresolved(db, task_id):
             raise ValueError("本任务存在未核实的执行，不能启动替代实例")
@@ -125,14 +163,14 @@ class Executions:
         with self.store.connect() as db:
             db.execute("BEGIN")
             self.tasks._task(db, task_id)
-            return [dict(row) for row in db.execute(
+            return [self._run(db, row['id']) for row in db.execute(
                 "SELECT * FROM task_executions WHERE task_id=? ORDER BY attempt DESC", (task_id,))]
 
     def pending(self, limit=100):
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("队列读取上限必须为1–100")
         with self.store.connect() as db:
-            return [dict(row) for row in db.execute(
+            return [self._run(db, row['id']) for row in db.execute(
                 "SELECT * FROM task_executions WHERE state='queued' ORDER BY created_at,id LIMIT ?", (limit,))]
 
     def claim(self, identity):
@@ -207,7 +245,7 @@ class Executions:
                 updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
                 WHERE state IN ('running','stopping')""").rowcount
 
-    def report(self, identity, attempt, requirement_version, exit_code, summary, *, success=False, not_started=False, artifacts=None):
+    def report(self, identity, attempt, requirement_version, exit_code, summary, *, success=False, not_started=False, artifacts=None, usage=None):
         """Internal runner callback: a numeric exit requires observed process-tree termination.
 
         None means termination/result is unverified. Never expose this as an Owner HTTP mutation.
@@ -222,6 +260,13 @@ class Executions:
         if type(success) is not bool or type(not_started) is not bool or (not_started and (success or exit_code is not None)):
             raise ValueError("执行结果标志无效")
         summary = _text(summary, "执行摘要", 2000)
+        if usage is not None:
+            with self.store.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
+                run = self._run(db, identity)
+                if (run['attempt'], run['requirement_version']) != (attempt, requirement_version) or run['state'] not in ('running', 'stopping'):
+                    return run
+                self._record_usage(db, identity, attempt, requirement_version, usage)
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             run = self._run(db, identity)

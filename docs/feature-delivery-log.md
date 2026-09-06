@@ -652,3 +652,14 @@ F55实际交付：05bdcc887bc245701c8d3bfa4cb6718caa97a0e2，11文件322新增/2
 定向命令 `.venv\Scripts\python.exe -m pytest tests/test_workbench_usage_receipts.py tests/test_workbench_provider.py tests/test_workbench_controller.py -q`：27 passed，19.80s（session79959退出0）。新增10例含真实本地HTTP/请求子进程，不调用付费模型；无前端修改，不冒称新的浏览器验收。
 
 根全量733 passed、8 subtests passed，199.07s（session52860退出0）。正常25767确认无活动后停止，离线f57-normal-backup成功，新67999启动，36表逐行相同、integrity/外键及health200通过。独立提交并立即推送、远端回读的精确哈希与结果保存在仓库外 `H:\item\CorpPilot-test-evidence-20260906\f57-delivery-result.json`；远端回读成功前不标记远端交付。
+## F58 CLI 单轮用量持久化与观察
+
+handoff_review负责后端及最终新14项测试；根负责前端、浏览器、备份回归和集成；verify_prompt_push只读前端QA/Ponytail Pass。根复核回执在成果采集前保存、写失败仅重试持久化、保留真实退出码、缓存数非法时未知、旧读取路径一致；不将多turn汇总或token估计称为金额硬限。
+
+子代理定向60 passed，13.12s；追加缓存边界后新文件13 passed，0.88s。首轮两项旧读取一致性测试发现pending未加usage，修正后通过，没有放宽旧断言。根浏览器session86117退出0，corppilot-browser-Uf2wyZ/browser-report.json通过：真实API7/null/0回执、两个UI入口、整体null注入及恢复、观察无新增模型/CLI/目标调用；原目标闭环、17恢复边界、停止和资源设置继续通过，fixture退出0。类型检查与51模块index-CP-aAePY.js构建通过。模型/runner为本地受控fixture，不替代真实CLI/Docker烟测。
+
+首轮根全量3 failed、744 passed、8 subtests passed，197.72s（session56965）：旧report直传结果不接受usage、两处核查队列缺usage。修复生产入口，原断言保持；report新增独立用量事务并保留旧attempt/迟到忽略语义，新旧指定38项6.48s通过。修后浏览器session10436退出0，corppilot-browser-p8qW5t/browser-report.json再次通过且fixture退出0。首次失败证据保留在外部f58-regression-attempts.json。
+
+根最终全量748 passed、8 subtests passed，203.67s（session58652退出0）。包含新增CLI用量备份恢复用例，实际失败执行7/null/0回执通过backup/restore完整保留。正常库零活动停止67999，离线f58-normal-backup hash52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854；新68875运行7892，原36表逐行未变，唯一新表execution_usage为空、完整性/外键/health200及构建资源字节回读通过。
+
+本功能独立提交并立即推送，精确hash、推送退出码与远端回读保存在仓库外 `H:\item\CorpPilot-test-evidence-20260906\f58-delivery-result.json`。实际CLI/双Docker、金额限制和检查点恢复仍未完成；远端回读成功前不标记远端交付。

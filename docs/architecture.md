@@ -620,3 +620,8 @@ restore写隔离标记后复制，完成验证再写restore-complete；部分恢
 模型 provider 在校验回复内容之前提取合法 model/prompt_tokens/completion_tokens 回执；截断、空正文、非法工具回复和不合格 choices 仍可携带已知用量。子进程仅返回筛选字段，不返回上游错误正文；模型名称反射完整 API key 时隐藏名称。无有效回执、网络失败和超时保持未知，缺失 token 不转换为 0。
 
 ReplyController 在发布消息或解析规划/复盘之前独立提交回执到原 runs.model/usage。后续发布失败或重启不会回滚已保存用量；首次写入仅接受 running，相同回执幂等，冲突回执及 finish 覆盖均拒绝。没有新增数据库或上下文权限，现有 Run/Agent 活动接口直接展示。进程在收到回执与持久化之间崩溃仍可能丢失用量，不承诺任意故障下完整账单。它是服务方报告的 token 证据，不是货币费用、完整账单或预算硬限制。
+## F58 CLI 单轮用量回执
+
+本机与 Docker adapter 共用解析器：仅保留一个完整 `turn.completed` 的 input_tokens、output_tokens、cached_input_tokens；字段缺失为 null，多轮或损坏 JSONL 不推测合计。失败、取消或超时可以有已观测的单轮回执，不改变退出与成功判定，也不表示整个执行的完整账单。
+
+控制器在成果采集前独立保存 execution_usage，绑定 execution_id、attempt、requirement_version。数据库暂时写失败时保留已结束 Future 并重试回执写入，不重复启动 CLI；回执冲突拒绝。旧记录无回执返回 null，执行列表与 Agent 活动使用相同读取。此表只保存筛选 token 字段，不保存原始 CLI 输出、凭据或私有上下文；没有 Owner 写入回执接口。进程在回执持久化前崩溃仍可能丢失数据，重启不伪造用量。

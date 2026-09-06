@@ -104,7 +104,8 @@ def main():
         directory = paths['work'] / 'artifacts'
         directory.mkdir(exist_ok=True)
         (directory / 'result.txt').write_text(f'F53 captured result {identity}; inputs={len(kwargs["input_artifacts"])}', encoding='utf-8')
-        return dict(exit_code=0, success=True, reason='exited', summary='Fixture result captured', workspace=str(paths['work']))
+        return dict(exit_code=0, success=True, reason='exited', summary='Fixture result captured', workspace=str(paths['work']),
+                    usage={'input_tokens': 7, 'output_tokens': None, 'cached_input_tokens': 0})
 
     cli_controller.run_codex = runner
 

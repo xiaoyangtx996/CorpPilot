@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type Agent, type Conversation, type Task, type TaskExecution, type ReplyRun, type ReplyRuntime } from './api';
 import { TaskExecutions } from './TaskExecutions';
+import { ExecutionUsage } from './ExecutionUsage';
 
 type Page<T> = { items: T[]; total: number; has_more: boolean };
 type Activity = { agent_id: string; tasks: Page<Task>; executions: Page<TaskExecution & { task_title: string; conversation_id: string; artifact_count: number; review_decision: 'approved' | 'rejected' | null }>; model_runs: Page<ReplyRun & { kind: 'reply' | 'planning' | 'retrospective' | 'peer_review' }> };
@@ -67,6 +68,7 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
           <h4>{run.task_title} · {labels[run.state] ?? run.state}</h4>
           <small>执行 {run.id} · 第{run.attempt}次 · 当次需求 v{run.requirement_version}</small>
           <p>退出码：{run.exit_code ?? '未观测'} · 已保存成果 {run.artifact_count} 个</p>
+          <ExecutionUsage run={run} />
           <p>当次 Owner 验收：{run.review_decision === 'approved' ? '已批准' : run.review_decision === 'rejected' ? '已拒绝' : '未批准'}</p>
           {run.summary && <p>{run.summary}</p>}
           <button disabled={busy} onClick={() => void open(run.conversation_id, run.task_id)}>查看该任务全部执行</button>

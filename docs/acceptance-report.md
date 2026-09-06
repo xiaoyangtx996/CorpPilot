@@ -513,3 +513,10 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 定向27项19.80s通过；新增10例验证真实本地HTTP请求子进程的截断/非法输出用量、发布失败后重启与Agent活动读回、未知token不记0、相同回执幂等、冲突回执不能发布或覆盖，以及成功/截断的合成密钥反射隐藏。根全量733 passed、8 subtests passed，199.07s（session52860退出0）。子代理首轮Return两项修正后只读复审Pass，未冒称独立执行测试。
 
 正常库离线备份SHA256为52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854，25767停止、新67999同数据目录运行；36表逐行未变，integrity=ok、外键空、health200（外部f57-normal-readback.json）。前端未变，本轮无新的浏览器验收或付费调用。CLI用量持久化、真实CLI/双Docker、金额预算和检查点恢复仍未完成。
+## F58 CLI 用量验收
+
+最终全量748 passed、8 subtests passed，203.67s（session58652退出0）。覆盖单turn失败回执、未知不记零、多turn不聚合、缓存范围、绑定/幂等/不可变、旧库初始化、成果采集与保存失败、写失败仅重试持久化、迟到/旧attempt不写，以及实际离线备份恢复。此前全量3项兼容失败已修生产入口，原断言不变；过程见外部f58-regression-attempts.json，不隐去失败轮次。
+
+最终真实浏览器session10436退出0，corppilot-browser-p8qW5t/browser-report.json通过。受控runner产生7/null/0回执经API与两个UI入口核对；网络注入usage=null显示未知而非0，恢复后正确显示；观察不增加执行调用。原目标、17恢复边界、停止与资源准入继续通过，fixture退出0。根目视首轮cli-usage.png，最后生产UI未变；最终51模块index-CP-aAePY.js构建通过。前端独立只读审查Pass。
+
+正常67999零活动停止后离线备份，68875同目录启动；原36表逐行不变，仅增加空execution_usage，integrity=ok、外键空、health200、实际JS字节一致（f58-normal-readback.json）。本轮未运行真实付费CLI或真实容器，不能替代双Worker烟测。用量是单轮已观测token，不是完整账单或金额硬上限，整体目标未完成。

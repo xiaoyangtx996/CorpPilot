@@ -60,10 +60,11 @@ class Reconciliations:
             return self._get(db, identity)
 
     def pending(self, limit=100):
+        from .executions import Executions
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValueError("limit 必须为 1 到 100 的整数")
         with self.store.connect() as db:
-            return [dict(row) for row in db.execute("""SELECT e.* FROM task_executions e
+            return [Executions._run(db, row['id']) for row in db.execute("""SELECT e.* FROM task_executions e
                 WHERE e.state='unknown' AND NOT EXISTS
                     (SELECT 1 FROM execution_reconciliations r WHERE r.execution_id=e.id)
                 ORDER BY e.created_at,e.id LIMIT ?""", (limit,))]
