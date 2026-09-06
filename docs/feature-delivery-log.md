@@ -924,3 +924,13 @@ skill_inputs_backend负责Store事务与新单元测试；根负责Owner HTTP GE
 正常6655确认live及三类活动0后明确停止，f81-normal-backup数据库696320字节，SHA256 e4e2cf2a1cfc780bc2b46b6c5f7d0b390345ad4290a6b2f3ad2feaefc239be25；重启55052沿原数据目录7892。f81-normal-readback.json确认51旧表逐行未变、只新增空agent_creation_requests，完整性/外键/health200与未变F80资源字节一致。无前端构建或全量Python新增声明。
 
 原goal浏览器ePU7r6通过（session30624退出0、fixture退出0），沿未变F80构建；精确commit、立即推送结果和远端分支回读保存于H:\item\CorpPilot-test-evidence-20260906\f81-delivery-result.json，远端确认前不标记已交付。浏览器创建pending/断线恢复、真实CLI/双Docker及最终整体验收仍未完成。
+
+## F82 身份创建浏览器恢复
+
+frontend_integration负责AgentEditor/App；skill_inputs_backend独立审查其未编写的前端与根浏览器测试；根负责故障注入、构建、原流程回归、正常数据回读、PM目视、文档和Git。创建前sessionStorage保存固定request_id与规范化配置；未知结果重开/刷新只GET，同键重试需显式点击。原回执不可替换，另GET当前身份再更新App，避免创建快照覆盖后续改名/停用。首次明确拒绝经再次GETnull方可结束；坏存储与401保留请求，无新依赖、无后端修改。
+
+正式npm run test:browser:agent-creation已建立并执行构建。最终独立运行yWCski通过（退出0、fixture退出0）：20项边界，16次受控创建POST尝试，0模型/CLI调用，pageErrors为空。覆盖回包丢失、刷新、同键原配置、错误回执/当前ID、固定原回执、首次与未知后拒绝、首次存储/回执存储失败、目录缺失、401与卸载迟到回包、当前停用UI、390px与开发StrictMode恢复/焦点。开发origin使用生产origin已真实创建的fixture请求做GET恢复，未绕过跨来源保护。
+
+首轮pAt1qW发现Escape焦点缺陷，固定入口ref并关闭dialog后还焦；O2Jpjs因测试失效事件名错误修正。PhnfQ1/FClOv7揭示开发proxy POST跨来源400，前者route断言异常后根写该专属fixture shutdown并确认PID52528已退出，后者正常退出；改为记录routeFailure与正常清理，最终沿真实pending做开发GET恢复。QA五项覆盖Return均已补强后重跑。原skills iHKuFR、原goal c6ESWu均通过（sessions49110/32067退出0）。
+
+62模块构建成功，index-DAdKGv8x.js 550.81kB/162.41kB gzip，保留超过500kB提示。正常55052无需重启，f82-normal-readback.json确认51原表逐行不变、创建请求表仍空、完整性/外键/health200与资源SHA256 9faa97e0205000a2c4cb1dddf24907a025cb2ecd38b483c2f930b427e1e7ab51通过。未新增Python全量声明。精确commit、立即推送结果和远端回读见H:\item\CorpPilot-test-evidence-20260906\f82-delivery-result.json，远端确认前不标记已交付。真实CLI、双Docker、当前文档总览同步和最终整体验收继续推进。

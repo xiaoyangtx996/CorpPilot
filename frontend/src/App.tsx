@@ -28,6 +28,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editor, setEditor] = useState<Agent | null | undefined>(undefined);
+  const [agentSaveNotice, setAgentSaveNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [navigation, setNavigation] = useState(false);
   const [inspector, setInspector] = useState(false);
@@ -134,7 +135,8 @@ export default function App() {
     finally { setLoading(false); }
   }
   useEffect(() => { void load(); }, []);
-  function saved(person: Agent) {
+  function saved(person: Agent, notice = '') {
+    setAgentSaveNotice(notice);
     setAgents(current => current.some(item => item.id === person.id) ? current.map(item => item.id === person.id ? person : item) : [...current, person]);
     setSelected(person.id); setEditor(undefined);
   }
@@ -152,7 +154,7 @@ export default function App() {
         <label className="check"><input type="checkbox" checked={showArchived} onChange={event => setShowArchived(event.target.checked)} />显示已归档</label>
         <div className="conversation-list">{conversations.filter(item => showArchived || !item.archived).map(item => <button key={item.id} className={`conversation-item ${item.id === conversationId ? 'selected' : ''}`} onClick={() => chooseConversation(item)}><strong>{item.title}</strong><small>{item.archived ? '已归档' : item.type === 'dm' ? '私聊' : item.type === 'board' ? '董事会' : '项目群'} · {item.last_message?.content ?? '暂无消息'}</small></button>)}{!conversations.some(item => showArchived || !item.archived) && <p className="muted">暂无会话，选择 Agent 开始私聊。</p>}</div>
       </section>
-      <section className="agent-list"><header><h2>Agent <span className="count">{agents.length}</span></h2><button className="text-button" disabled={!templates.length} onClick={() => setEditor(null)}>新建</button></header>
+      <section className="agent-list">{agentSaveNotice && <p role="status">{agentSaveNotice}</p>}<header><h2>Agent <span className="count">{agents.length}</span></h2><button className="text-button" onClick={() => setEditor(null)}>新建</button></header>
         <label className="search"><span className="sr-only">搜索 Agent</span><input placeholder="搜索 Agent" value={query} onChange={e => setQuery(e.target.value)} /></label>
         <div className="people">{agents.filter(person => person.name.toLowerCase().includes(query.toLowerCase())).map(person => <button key={person.id} className={`person ${person.id === selected ? 'selected' : ''}`} onClick={() => void openDm(person)}>
           <span className="avatar">{person.name.charAt(0)}</span><span><strong>{person.name}</strong><small>{person.enabled ? '可用' : '已停用'}</small></span>

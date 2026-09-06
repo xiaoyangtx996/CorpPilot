@@ -685,3 +685,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 可选request_id实现同key单次创建，原创建快照独立于当前身份修改；不同配置同key拒绝，PATCH不接受key。Owner精确GET可恢复原请求映射，未知key返回null；旧客户端无key行为兼容，专用浏览器恢复尚未接入。
 
 根87项定向通过（31项26.66s与56项3.52s），独立源码/Ponytail及测试覆盖审查Pass。真实并发HTTP、同key重放、失败事务回滚、改名停用后原快照、GET401/零写、重启及实际备份恢复均有证据。正常离线备份后仅新增空创建请求表，51原表未变，完整性/外键/health200和原F80资源一致（f81-normal-readback.json）。原goal浏览器ePU7r6通过、fixture正常退出，沿原F80构建；未新增前端构建或Python全量声明。浏览器创建恢复、真实CLI/双Docker和远端交付及最终整体验收仍待完成。
+
+## F82 身份创建恢复界面验收
+
+浏览器创建请求在发送前持久化固定key/配置，未知结果只读核对或显式同键重试；原创建回执与当前身份分开验证，已改名/停用以当前GET为准。sessionStorage支持同标签页刷新恢复，不宣称关闭整个浏览器后仍保存未确认请求。存储损坏保留原值，首次明确拒绝经再次核对可结束，401/卸载迟到响应不会清除pending。
+
+最终yWCski通过20项边界、390px及真实开发StrictMode恢复/焦点，16次受控POST、0模型CLI调用、无pageErrors、fixture退出0。源码独立审查通过，测试覆盖Return补齐后运行通过；初次焦点缺陷与测试事件名、开发来源限制的修正见台账。原goal c6ESWu与skills iHKuFR通过。正常数据/空创建表、完整性/外键/health和最新资源回读通过（f82-normal-readback.json），无迁移或重启。构建保留体积提示，Python最终全量、真实CLI/双Docker、远端交付和最终目标验收仍未完成。
