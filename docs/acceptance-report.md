@@ -645,3 +645,13 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 最终60模块 `index-DTJrlm7S.js` 构建通过，532.27kB/156.99kB gzip，保留Vite单chunk超过500kB提示。原goal浏览器 `corppilot-browser-WCzd6w` 回归通过（session12997退出0、fixture退出0）。后端生产未改，不重复声明Python全量；最近基线仍F75的1078 passed、8 subtests passed。
 
 正常5931无需重启或迁移，47旧表逐行不变、两集成表仍空，完整性/外键、health200和实际最终JS字节一致（f76-normal-readback.json）。专用浏览器代码集成现可使用，真实CLI、双Docker、远端交付与全目标最终验收仍未完成。
+
+## F77 绑定 Skill 实际输入验收
+
+固定内置coding和demo-generator正文按实际身份选择，在认领时保存每次运行的正文、字节数和SHA256；模型四种请求与CLI输入消费固定快照。未知新标签拒绝，历史未变标签可保留改名；解绑阻止后续准备输入，查看旧快照不重新读取当前目录。Owner只读接口有授权检查，尚无专用目录选择与快照浏览器入口。
+
+根定向100 passed、33.25s；真实本机HTTP验证四类模型system正文与上下文哈希，受控CLI验证两后端实际输入。全量首次1112 passed、1 failed、8 subtests passed，634.01s，唯一失败是旧测试精确字段集合缺少新增skills。保留精确集合及原隔离断言，增加skills为空检查后，三个相关模块43 passed、9.06s，包括实际离线备份恢复。未改生产逻辑，独立源码/Ponytail及测试契约复核Pass；不把首次全量记为全绿。
+
+原goal浏览器corppilot-browser-GqZMKk通过、fixture退出0，沿未变F76构建，无新前端编译声明。正常数据离线备份后重启为35607，49旧表逐行相同，仅新增空skill_input_snapshots；数据库完整性、外键、health200和原前端资源一致（f77-normal-readback.json）。没有调用付费模型或真实Docker。
+
+专用Skill界面、普通聊天使用批准记忆、身份创建未知响应幂等以及最终整体验收仍待完成。真实CLI、双Docker和远端推送权限仍有阻塞；提交与立即推送实录见仓库外f77-delivery-result.json，整体目标未完成。

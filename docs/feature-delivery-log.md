@@ -866,3 +866,17 @@ frontend_integration负责CodeIntegration、TaskBoard项目入口与CodeReview�
 原goal最终WCzd6w回归通过（session12997退出0、fixture退出0），无后端生产变化，不重复Python全量，最近F75的1078+8保持为基线。正常5931继续服务，无迁移或重启；f76-normal-readback.json确认47旧表逐行一致、两集成表空、完整性/外键/health200与最终JS SHA256 81db1d56bde48ed8eb90eba9b0329968c3198231dc7c892d8795b8a1090bcb12一致。Vite532.27kB/156.99kB gzip提示超过500kB，未隐藏。
 
 独立提交后立即推送；精确commit、推送结果及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f76-delivery-result.json，远端回读成功前不标记远端交付。当前完成浏览器独立代码集成，真实CLI、双Docker及全目标最终验收继续保留未完成状态。
+
+## F77 身份 Skill 的实际固定输入
+
+逐项目标审计确认技能此前只有标签、未进入Workbench执行输入。skill_inputs_backend负责固定内置目录、安全读取和不可变快照模块及26项测试；根负责Store变更校验、模型四分支/CLI认领与输入接线、Owner只读API、9项实际输入/权限/HTTP测试及文档和Git；verify_prompt_push技术方案及源码/Ponytail审查Pass。复用原skills文档、SQLite、文件锁、上下文摘要和调度，未迁入旧JSON发布平台或增加依赖。
+
+根最终定向100 passed、33.25s（session97526退出0）。4种模型请求均经真实本机HTTP验证实际system输入含本身份绑定正文和hash，其他身份Skill不串入；两种CLI适配器收到固定正文，执行器受控。覆盖空快照、未知标签失败且不占预算/RPM、解绑阻止输入、历史GET只读与401。首轮97过2失败为CLI外层JSON的转义断言，根改为解析实际外层role字段后核对完整内容，未放宽生产逻辑；新增模块独立命令收集路径也已修正。
+
+随后强化实际离线备份/恢复读取原快照，单项1 passed、1.16s；该强化在全量启动之后加入，单独保留证据。原goal浏览器GqZMKk通过（session21529退出0、fixture退出0），沿未变F76构建index-DTJrlm7S.js，无新增前端编译声明。正常5931确认live且三类零活动后停止，f77-normal-backup为679936字节、SHA256 76164c5067709593201d6d19b3aa2e55feafc5ad771706946eafbe5e579553af；重启35607，49原表逐行不变，仅新增空skill_input_snapshots，完整性/外键/health及原JS字节一致（f77-normal-readback.json）。
+
+目录选择和快照专用前端、普通聊天使用批准记忆、创建身份未知响应幂等仍待后续增量；真实CLI、双Docker及远端403仍未解除。f77-readiness.json保留本轮只读环境和禁用配置核查，不含凭据，不将codex --version成功视为真实执行验收。
+
+全量首次运行1112 passed、1 failed、8 subtests passed，634.01s（session71065退出1）。唯一失败为旧输入传递测试精确字段集合缺少新增skills；补入该正式字段并新增未绑定身份skills == []断言，原直接依赖、禁止传递输入和轻量读取检查保持不变。修正后输入传递、新模块和实际输入交付三个模块43 passed、9.06s，包含强化后的实际备份恢复；生产代码未再次变化。独立QA复核Pass，可提交；不将初轮全量称为全绿，最终全目标仍需整体验收。
+
+独立提交后立即推送；精确commit、推送结果及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f77-delivery-result.json，远端回读成功前不标记远端交付。

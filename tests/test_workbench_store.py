@@ -33,7 +33,7 @@ def test_custom_identity_validation_and_concurrent_writes(tmp_path):
     template = store.templates()[0]["id"]
     def create(i):
         return store.save_agent({"name": f"成员 {i}", "template_id": template,
-                                 "skills": ["review"], "tools": ["read", "write"]})
+                                 "skills": ["coding"], "tools": ["read", "write"]})
     with ThreadPoolExecutor(max_workers=4) as pool:
         created = list(pool.map(create, range(8)))
     assert len({agent["id"] for agent in created}) == 8

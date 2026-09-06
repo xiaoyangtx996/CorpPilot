@@ -99,14 +99,16 @@ def test_frozen_catalog_order_and_size_bound(tmp_path):
     ids=[payload['candidate_ids'][0],payload['agent_id']]
     run=api.create(cid,dict(payload,candidate_ids=ids))
     assert [row['id'] for row in run['candidate_snapshot']]==ids
-    store.save_agent({'name':'Renamed','skills':['new']},ids[0])
+    store.save_agent({'name':'Renamed','skills':['coding']},ids[0])
     assert api.get(run['id'])['candidate_snapshot']==run['candidate_snapshot']
     api.runs.claim(run['id'])
     assert 'Renamed' not in api.runs.snapshot(run['id'])['instructions']
-    # Three legal, individually bounded public skill lists exceed the catalog byte cap.
+    # Legacy label-only records can still exceed the catalog byte cap; new edits validate loaded IDs.
     big=[]
     for i in range(3):
-        agent=store.save_agent(dict(name=f'Large{i}',template_id=store.templates()[0]['id'],skills=[f'{n}'+ '中'*195 for n in range(64)]))
+        agent=store.save_agent(dict(name=f'Large{i}',template_id=store.templates()[0]['id']))
+        with store.connect() as db:
+            db.execute('UPDATE agents SET skills=? WHERE id=?',(json.dumps([f'{n}'+ '中'*195 for n in range(64)]),agent['id']))
         big.append(agent['id'])
     before=api.list(cid)
     with pytest.raises(ValueError,match='64KiB'):

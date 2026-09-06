@@ -7,7 +7,7 @@ import uuid
 from .store import Store, _text
 from . import planning, retrospectives, model_reconciliations, peer_reviews
 from .memories import Memories
-from . import budgets
+from . import budgets, skill_inputs
 
 
 class Runs:
@@ -43,6 +43,7 @@ class Runs:
             peer_reviews.initialize(db)
             model_reconciliations.initialize(db)
             budgets.initialize(db)
+            skill_inputs.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -129,8 +130,9 @@ class Runs:
                 return False
             try:
                 self._authorize(db, run)
+                skill_inputs.freeze(db, 'model', run)
             except (ValueError, PermissionError, KeyError):
-                db.execute("UPDATE runs SET state='failed',error='会话或身份授权已变化，未启动模型请求',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (identity,))
+                db.execute("UPDATE runs SET state='failed',error='会话、身份授权或绑定 Skill 不可用，未启动模型请求',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (identity,))
                 return False
             budgets.reserve(db, 'model', run)
             return db.execute("""UPDATE runs SET state='running',
@@ -146,22 +148,27 @@ class Runs:
             self._authorize(db, run)
             agent = self.store._agent(db.execute("SELECT * FROM agents WHERE id=?", (run["agent_id"],)).fetchone())
             instructions = db.execute("SELECT instructions FROM templates WHERE id=?", (agent["template_id"],)).fetchone()[0]
+            frozen = skill_inputs.snapshot(db, 'model', run)
+            if not {s['id'] for s in frozen['skills']} <= set(agent['skills']):
+                raise PermissionError('本次绑定 Skill 已撤销，未准备模型输入')
+            def with_skills(value):
+                return {**value, 'skills': frozen['skills'], 'instructions': skill_inputs.augment(value['instructions'], frozen)}
             if peer := peer_reviews.snapshot(db, run, agent):
-                return peer
+                return with_skills(peer)
             sequence = db.execute("SELECT sequence FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
                                   (run["source_message_id"], run["conversation_id"])).fetchone()
             if sequence is None:
                 raise ValueError("源消息必须是本会话中的 Owner 消息")
             if retrospective := retrospectives.snapshot(db, run, agent, instructions, self.memories):
-                return retrospective
+                return with_skills(retrospective)
             if proposal := planning.snapshot(db, run, agent, instructions):
-                return proposal
+                return with_skills(proposal)
             # ponytail: bound context to 100 messages; add token budgeting if large inputs require it.
             rows = list(db.execute("""SELECT * FROM messages WHERE conversation_id=? AND sequence<=?
                 ORDER BY sequence DESC LIMIT 101""", (run["conversation_id"], sequence[0])))
-            return {"agent": agent, "instructions": instructions,
+            return with_skills({"agent": agent, "instructions": instructions,
                     "messages": [dict(row) for row in reversed(rows[:100])],
-                    "context_truncated": len(rows) > 100, "source_sequence": sequence[0]}
+                    "context_truncated": len(rows) > 100, "source_sequence": sequence[0]})
 
     def finish(self, identity, content, model, prompt_tokens, completion_tokens):
         content = _text(content, "模型回复", 16000)

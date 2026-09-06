@@ -171,6 +171,11 @@ class Store:
         with self.connect() as db:
             if not db.execute("SELECT 1 FROM templates WHERE id=?", (template,)).fetchone():
                 raise ValueError("角色模板不存在")
+            if 'skills' in payload or not agent_id:
+                previous = db.execute('SELECT skills FROM agents WHERE id=?', (agent_id,)).fetchone() if agent_id else None
+                if previous is None or json.loads(previous[0]) != skills:
+                    from .skill_inputs import load_selected
+                    load_selected(skills)
             fields = (template, name, model, json.dumps(skills), json.dumps(tools), int(values["enabled"]))
             if agent_id:
                 # Patch only requested fields; concurrent edits must not restore stale values.

@@ -100,6 +100,8 @@ D1–D6 各自实现、对应测试、Ponytail审查后单独 commit 并立即 p
 
 ## 本轮证据与未完成项
 
+F77的内置Skill使用包内只读 `skills/coding.md`、`skills/demo-generator.md`。后续sidecar打包须像角色模板一样保留这两个资源及后端可解析的目录布局，不把原JSON catalog作为第二权威。实际Run正文和内容版本保存在运行数据SQLite中，升级包内Skill只影响新认领Run，不能重写旧输入快照；备份恢复包含原快照，历史接口缺记录保持null。本轮未为此新增Tauri专用代码。
+
 F69增加项目固定仓库输入，后续桌面文件选择器只把Owner明确选择的源目录交给现有后端API，前端不自行执行Git或读取源码。服务/sidecar须具备可用原生Git并保持受控环境与file协议限制；执行副本位于既有data_dir下，容器只挂载当次work/repository，不额外挂载源库。当前服务接受普通本机仓库，不支持linked worktree和网络路径。SQLite备份含绑定，不含外部源库或执行checkout；迁移机器不能仅恢复数据库就声称代码已恢复。关闭时还须核查宿主Git准备进程，容器不存在不足以确认整个执行停止。没有因此提前增加Tauri接口或第二套业务后端。
 
 当前可执行入口仍为 frontend 的 npm run build 和仓库 .venv/Scripts/python.exe -m pytest tests/；从 scripts 目录执行 ..\.venv\Scripts\python.exe -m workbench.server --port 7892。未建立的 tauri build、冻结打包、安装测试均不能作为本轮已通过命令。

@@ -19,7 +19,7 @@ from .settings import Settings
 from .controller import ReplyController
 from .tasks import Tasks, TaskVersionConflict
 from .cli_settings import CLISettings
-from . import artifacts, activity
+from . import artifacts, activity, skill_inputs
 from .reviews import Reviews
 from .memories import Memories
 from .collaboration import Collaboration
@@ -157,6 +157,17 @@ class Handler(BaseHTTPRequestHandler):
             query = parse_qs(url.query, keep_blank_values=True)
             if query and not (self.command == "GET" and path.endswith("/messages")):
                 raise ValueError("不支持的查询参数")
+            if self.command == 'GET' and path == '/api/workbench/skills':
+                return self.respond(200, skill_inputs.catalog())
+            if self.command == 'GET':
+                for prefix, kind, service in (('/api/workbench/runs/', 'model', self.server.controller.runs),
+                                             ('/api/workbench/executions/', 'cli', self.server.controller.cli.executions)):
+                    if path.startswith(prefix):
+                        parts = path[len(prefix):].split('/')
+                        if len(parts) == 2 and parts[0] and parts[1] == 'skills':
+                            with store.connect() as db:
+                                db.execute('BEGIN')
+                                return self.respond(200, skill_inputs.get(db, kind, service._run(db, parts[0])))
             if self.command == "GET" and (path == "/" or path.startswith("/assets/")):
                 relative = "index.html" if path == "/" else path.lstrip("/")
                 target = (self.server.frontend_dir / relative).resolve()

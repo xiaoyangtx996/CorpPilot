@@ -13,6 +13,7 @@ from . import reconciliations
 from . import budgets
 from . import repo_sources
 from . import code_reviews
+from . import skill_inputs
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -49,6 +50,7 @@ class Executions:
             memories.initialize(db)
             reconciliations.initialize(db)
             budgets.initialize(db)
+            skill_inputs.initialize(db)
             repo_sources.initialize(db)
             code_reviews.initialize(db)
             db.execute('''CREATE TABLE IF NOT EXISTS execution_usage (
@@ -202,6 +204,11 @@ class Executions:
                 inputs = dependencies.ready_inputs(db, run["task_id"], run["requirement_version"], identity)
             except dependencies.DependencyBlocked:
                 return False
+            try:
+                skill_inputs.freeze(db, 'cli', run)
+            except (ValueError, PermissionError, KeyError):
+                self._set(db, identity, 'failed', '绑定 Skill 不可用，此次排队未执行')
+                return False
             budgets.reserve(db, 'cli', run)
             db.executemany("INSERT INTO execution_inputs VALUES(?,?,?)",
                            [(identity, item["dependency_task_id"], item["upstream_execution_id"]) for item in inputs])
@@ -219,11 +226,15 @@ class Executions:
             task = self._authorize(db, run)
             agent = self.store._agent(db.execute("SELECT * FROM agents WHERE id=?", (run["agent_id"],)).fetchone())
             instructions = db.execute("SELECT instructions FROM templates WHERE id=?", (agent["template_id"],)).fetchone()[0]
+            frozen = skill_inputs.snapshot(db, 'cli', run)
+            if not {s['id'] for s in frozen['skills']} <= set(agent['skills']):
+                raise PermissionError('本次绑定 Skill 已撤销，未准备 CLI 输入')
+            instructions = skill_inputs.augment(instructions, frozen)
             source = db.execute("SELECT * FROM messages WHERE id=?", (task["source_message_id"],)).fetchone()
             # Only explicit task requirements and their source, never all private conversations.
             bindings = dependencies.bound_inputs(db, identity)
             result = {"task": task, "agent": agent, "instructions": instructions, "source_message": dict(source),
-                      "dependency_inputs": bindings}
+                      "dependency_inputs": bindings, "skills": frozen['skills']}
             if include_artifacts:
                 result["input_artifacts"] = artifact_store.input_snapshots(db, bindings, downstream_execution_id=identity)
                 result["memories"] = memories.snapshot(db, run, task["conversation_id"])

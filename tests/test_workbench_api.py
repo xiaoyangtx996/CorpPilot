@@ -52,7 +52,7 @@ def test_identity_api_and_restart(tmp_path):
         assert status == 200 and templates
         _, initial = request(port, "GET", "/api/workbench/agents")
         status, agent = request(port, "POST", "/api/workbench/agents", {
-            "name": "小林", "template_id": templates[0]["id"], "skills": ["review"], "tools": ["read"],
+            "name": "小林", "template_id": templates[0]["id"], "skills": ["coding"], "tools": ["read"],
         }, headers={"Origin": f"http://127.0.0.1:{port}"})
         assert status == 201
         path = "/api/workbench/agents/" + agent["id"]
