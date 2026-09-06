@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type Agent, type Template, type Conversation, type Message, type CollaborationPlan } from './api';
+import { AgentActivity } from './AgentActivity';
 import { AgentEditor } from './AgentEditor';
 import { ConversationEditor, ConversationMessages, type Draft } from './ConversationEditor';
 import { ModelSettings } from './ModelSettings';
@@ -165,7 +166,7 @@ export default function App() {
       {conversation && <section><label>查看会话成员<select aria-label="查看会话成员" value={conversation.member_ids.includes(selected) ? selected : ''} onChange={event => setSelected(event.target.value)}><option value="" disabled>选择 Agent</option>{agents.filter(person => conversation.member_ids.includes(person.id)).map(person => <option value={person.id} key={person.id}>{person.name}{person.enabled ? '' : ' · 已停用'}</option>)}</select></label></section>}
       {agent ? <><section><div className="identity-heading"><span className="avatar">{agent.name.charAt(0)}</span><div><h2>{agent.name}</h2><small>{agent.enabled ? '可用' : '已停用'}</small></div></div><p className="muted">身份可用不代表执行实例正在运行。</p></section>
         <section><h3>身份配置</h3><dl><dt>角色</dt><dd>{template?.name}</dd><dt>模型路由</dt><dd>{agent.model}</dd><dt>技能</dt><dd>{agent.skills.join('、') || '未配置'}</dd><dt>工具范围</dt><dd>{agent.tools.join(' / ') || '无'}</dd></dl><button onClick={() => setEditor(agent)}>编辑配置</button> <button disabled={busy} onClick={() => void toggle()}>{agent.enabled ? '停用 Agent' : '重新启用'}</button></section>
-        <section><h3>持久记忆</h3><button onClick={() => { setInspector(false); setMemory({ scope: 'agent', identity: agent.id, title: agent.name, conversationId: conversationId }); }}>个人记忆</button></section><section><h3>任务需求</h3><p className="muted">在会话消息下方的“本会话任务”查看任务、负责人和需求版本。</p><h3>成果</h3><p className="muted">在任务的“执行记录与控制”中展开“成果与 Owner 评审”，查看下载与验收决定。</p></section>
+        <section><h3>持久记忆</h3><button onClick={() => { setInspector(false); setMemory({ scope: 'agent', identity: agent.id, title: agent.name, conversationId: conversationId }); }}>个人记忆</button></section><AgentActivity key={agent.id} agent={agent} agents={agents} onOpenConversation={row => { changedConversation(row); chooseConversation(row); setInspector(false); }} />
         <section><details><summary>角色定义</summary><p className="source">{template?.source}</p><pre>{template?.instructions}</pre></details></section></> : <p className="muted">请选择 Agent</p>}
     </aside>
     {editor !== undefined && <AgentEditor agent={editor} templates={templates} onClose={() => setEditor(undefined)} onSaved={saved} />}

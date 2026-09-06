@@ -19,7 +19,7 @@ from .settings import Settings
 from .controller import ReplyController
 from .tasks import Tasks, TaskVersionConflict
 from .cli_settings import CLISettings
-from . import artifacts
+from . import artifacts, activity
 from .reviews import Reviews
 from .memories import Memories
 from .collaboration import Collaboration
@@ -260,6 +260,10 @@ class Handler(BaseHTTPRequestHandler):
                 if self.command == "POST":
                     return self.respond(201, store.save_agent(self.read_json()))
             prefix = "/api/workbench/agents/"
+            if path.startswith(prefix) and self.command == "GET":
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 2 and parts[0] and parts[1] == "activity":
+                    return self.respond(200, activity.get(store, parts[0]))
             if path.startswith(prefix) and path[len(prefix):] and "/" not in path[len(prefix):]:
                 agent_id = path[len(prefix):]
                 if self.command == "GET":

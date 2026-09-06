@@ -601,3 +601,11 @@ Windows通过GlobalMemoryStatusEx和os.cpu_count只读探测，无额外进程�
 无论准入开关状态，每次claim成功后都保存启动时预约，报告成功落库后才释放；修改设置不缩旧预约，报告写失败继续占用。资源不足或探测失败只阻止新启动，原queued记录及实例标识不变，后续tick重新核对；不杀死活动执行、不新建替代Run。沿用unknown全局阻塞、依赖授权及最大并发。重启先把原活动执行恢复为unknown，需原核查门后才能再次启动。
 
 GET /api/workbench/cli-runtime新增resource_admission，含enabled、available_memory_mb、cpu_count、reserved_memory_mb、reserved_cpus、message；enabled=null表示配置无法读取。状态读取也实时探测，不启动程序。此能力只控制本机CLI启动数量，不涵盖Docker虚拟机可用容量、实时CPU负载或货币预算；Docker实际限制继续由容器参数执行，真实双Worker验收另列。
+
+## F55 Owner的Agent活动视角
+
+GET /api/workbench/agents/{id}/activity在一个SQLite只读事务中返回当前负责的tasks、实际归属于该身份的executions及model_runs，各组{items,total,has_more}按updated_at/id降序固定最近50条。任务取当前负责人，执行取持久execution.agent_id和当次需求标题，改派不迁移历史归属。保留原状态、成果数量和当次Owner决定；模型按reply/planning/retrospective/peer_review分类，原usage/error不推导成金额。
+
+接口沿用Owner鉴权，停用身份和归档会话的历史仍可观察。不调用snapshot、模型或调度，不创建表、不读取记忆正文及输入快照。任务目标与验收来自已存在任务记录，观察不会扩大Agent实际上下文。聚合返回仅供Owner客户端，不能当作worker授权资料。
+
+右侧Agent视角展示三类列表并提供手动刷新，读取失败清旧列表且不伪报空。切身份重新挂载，异步结果按读取版本丢弃；打开所属会话或原任务全部执行须重新核对关联，再复用现有控制与审批。全局CLI队列提示明确为全局，非该身份独有阻塞。列表不是完整工具调用明细或模型输入，费用尚未核算。

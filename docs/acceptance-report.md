@@ -486,3 +486,13 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 正常库在零活动下SQLite备份，f54-normal-backup.json记录hash。旧49304确认live并停止后新73418启动7892，36原表逐行同备份，完整性及外键通过，新bundle可读、/health200（此前误用/api/workbench/health得401，不是服务失败）。证据f54-normal-readback.json。没有改变正常数据的准入开关或配置；Owner可自行启用。
 
 本增量可验收；默认关闭兼容旧配置，资源准入不代表费用硬门、宿主实时CPU负载或Docker VM容量控制。真实CLI、双Docker和全目标验收仍未完成，推送以实际远端回读为准。
+
+## F55 Agent活动观察验收
+
+后端6项验证当前任务改派与历史执行者不混淆、停用/归档可读、原需求标题、四类模型活动及原usage/error、最近50/total/has_more稳定顺序、实际成果数和批准/拒绝、未鉴权401/缺身份404。观察API前后数据库dump相同，输入快照、源私聊正文和记忆不加入聚合回执；不走snapshot或调度。子代理定向22 passed16.98s，根完整 **702 passed、8 subtests passed，182.98s（session87496）**。
+
+最终浏览器session33540退出0，corppilot-browser-gENdqw/browser-report.json记录2个当前任务和2个实际执行均归对应身份、最终C当次批准、协调人无执行但有planning、原任务控制窗口可打开、503后不显示假空并可刷新恢复。观察段模型/CLI/goal请求计数不增；测试未将所有HTTP方法统一计数，不称全浏览器流程零写入。沿用的目标授权/交接/验收、17恢复边界、停止与资源配置均通过；fixture真实退出0。首轮sEt2aB因未刷新旧快照即断言新批准失败，后续按显式刷新语义修正测试，未降低产品要求。
+
+类型检查和50模块生产构建index-Do5Jt2SN.js通过；独立只读前端审查Pass。根目视agent-activity.png，活动面板可在右侧滚动查看，身份切换不触发模型。各类仅最近50条，不冒称完整历史、完整工具调用或模型输入；token保留真实用量，费用尚未核算。
+
+正常库零活动时备份SHA-256为84df2fc2cd8f5a6d43bcf04521096441768ec814079fac412dbaca8952ff2bd6；原73418确认live后停止，新94528运行7892，36张原表逐行未变、integrity=ok、外键空、/health200及新bundle读回。测试未写正常应用库。真实CLI/双Docker、货币预算、检查点恢复及全目标验收仍未完成。
