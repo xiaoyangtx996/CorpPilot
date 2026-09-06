@@ -9,6 +9,7 @@ import uuid
 
 from .store import _text
 from . import artifacts
+from .tool_activities import parse_tools
 
 
 class InputPreparationError(ValueError):
@@ -80,7 +81,8 @@ def execution_environment(paths: dict[str, Path], api_key: str) -> dict[str, str
 def parse_result(process: dict, api_key: str) -> dict:
     api_key = _text(api_key, "CLI API 凭据", 4096)
     result = {"success": False, "exit_code": process["exit_code"], "reason": process["reason"],
-              "summary": "CLI 未产生已确认的完成结果", "usage": None}
+              "summary": "CLI 未产生已确认的完成结果", "usage": None,
+              "tool_activities": parse_tools(process)}
     events = []
     try:
         events = [json.loads(line) for line in process['stdout'].decode('utf-8').splitlines() if line.strip()]

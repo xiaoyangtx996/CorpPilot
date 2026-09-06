@@ -53,6 +53,9 @@ def test_controller_materializes_exact_snapshot_and_publishes_only_new_outputs(t
         assert result['success'] and len(calls) == 1
         assert result['artifacts'] == [{'path': 'new-result.txt', 'data': b'consumer output'}]
         assert artifacts.get(store, selected['id'])['data'] == b'output'
+        # Observation persistence belongs to the controller, not the execution callback.
+        observed = result.pop('tool_activities')
+        assert controller.tool_activities.get(run['id'])['payload'] == observed
         saved = executions.report(run['id'], run['attempt'], run['requirement_version'], **result)
         assert saved['state'] == 'awaiting_review'
         assert [a['path'] for a in artifacts.list_for(store, run['id'])] == ['new-result.txt']

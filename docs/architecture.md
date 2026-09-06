@@ -658,3 +658,7 @@ ContextReceipts在现有SQLite保存不可变元数据，模型与CLI控制器�
 ## F66 摘要视图
 
 ContextSummary复用F65只读API和现有实例详情，严格校验kind/身份/版本、消息来源、记忆scope和成果元数据后渲染。按实例挂载，serial丢弃旧响应，刷新先清旧值；原生dialog/details提供关闭焦点和明细展开，不新增宿主层或依赖。它不执行snapshot、读取正文或产生业务写入。
+
+## F67 工具观察账本
+
+local/Docker复用parse_tools处理返回的有界stdout，在现有SQLite保存不可变tool_activities；不另建流服务，不改变原停止或成果验收权威。控制器在采集成果前持久化，保存失败保留同一Future仅重试写入。Owner GET只查账本，历史缺失不重建；仅保存顺序、枚举、状态及白名单内容的hash/长度。完整协议及限制见 [tool-activities.md](tool-activities.md)。

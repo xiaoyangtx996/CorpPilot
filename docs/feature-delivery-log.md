@@ -746,3 +746,13 @@ handoff_review负责ContextSummary与AgentActivity；根负责fixture、独立�
 原goal浏览器ZyW04m通过、session67600退出0，新增实际本地provider规划入口授权shared_brief哈希与UI来源核对，观察无新增调用。费用浏览器FnDlDI回归通过。构建55模块index-CzyzG-3T.js通过。早期DNnNoK因测试exact文件名包含大小未匹配，改contains；qa9j3j与作者构建并行遇短时dist不存在，改为根独占构建后回归通过，未变产品降级策略。
 
 后端生产未改，未重跑Python全量；最近F65全量844+8、最终定向32为既有基线。正常75331持续运行无需重启，原42表与F65备份逐行一致、context_receipts仍空、完整性/外键/health及JS字节通过（f66-normal-readback.json）。独立提交后立即推送，精确提交及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f66-delivery-result.json；远端未确认前不标记远端交付。工具内部活动、真实CLI/双Docker及全目标仍未完成。
+
+## F67 工具活动观察后端
+
+handoff_review实现单一tool_activities模块及36项测试；根负责两后端解析/控制器/API接线、10项集成测试、正常数据备份迁移、文档和Git；verify_prompt_push独立只读QA/Ponytail终审Pass。沿现有进程返回stdout解析五类实际协议事件，不新增服务或依赖。事件只保存顺序、状态、枚举和内容hash/长度，坏行保留其他有效元数据；不是实时日志或副作用证明。详见tool-activities.md。
+
+最终全量892 passed、8 subtests passed，245.39s，session15135退出0。首轮session27976收集856项，1 failed、855 passed、8 subtests：旧input_transfer测试直接将控制器结果传给Executions.report，多出tool_activities字段。生产_reconcile本已剥离该字段；仅修测试先核对持久回执再pop，保留原输入/成果/状态断言，独立复核Pass。其后相关54 passed13.15s（session29010），最终全量包含作者36项及根10项；不将首轮结果伪称通过。
+
+原goal浏览器NeOL3W通过，session10027退出0、fixture退出0；55模块构建和原index-CzyzG-3T.js一致。未新增UI，不将原浏览器回归当作工具弹窗验收。正常75331无活动后停止，f67-normal-backup数据库hash2da965140bc707fd5ebf1d980953114876d27818189bc4ffe5f81a5056dd88bd；新81102在同目录7892运行，43旧表逐行相同，仅新增空tool_activities，完整性/外键/health200/JS字节通过（f67-normal-readback.json）。
+
+独立提交后立即推送；精确commit及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f67-delivery-result.json。远端确认前不标为远端交付。工具活动UI、真实CLI/双Docker及全目标仍未完成，测试中的受控runner不替代这些验收。

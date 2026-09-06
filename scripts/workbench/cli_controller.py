@@ -16,6 +16,7 @@ from . import resource_admission
 from .budgets import BudgetDenied, Budgets
 from .store import _text
 from .context_receipts import ContextReceipts
+from .tool_activities import ToolActivities
 
 
 class CLIController:
@@ -27,6 +28,7 @@ class CLIController:
         self.executions = Executions(store)
         self.budgets = Budgets(store)
         self.contexts = ContextReceipts(store)
+        self.tool_activities = ToolActivities(store)
         self.project_executions = ProjectExecutions(store)
         self.checkpoints = Checkpoints(store, self.project_executions)
         self.project_launches = ProjectLaunches(store)
@@ -79,6 +81,7 @@ class CLIController:
         except Exception:
             return self._unstarted("无法取得有效授权任务上下文，未启动")
         usage = None
+        tool_activities = None
         try:
             docker = config.get("backend", "local") == "docker"
             runner = run_docker if docker else run_codex
@@ -96,12 +99,19 @@ class CLIController:
                                api_key=config["api_key"], timeout_seconds=config["timeout_seconds"], cancel=cancel,
                                input_artifacts=snapshot["input_artifacts"], **options)
             usage = result.get('usage')
+            tool_activities = result.get('tool_activities')
+            if tool_activities is not None:
+                try:
+                    self.tool_activities.record(run['id'], run['attempt'], run['requirement_version'], tool_activities)
+                except Exception:
+                    return {'exit_code': result['exit_code'], 'summary': 'CLI 工具活动写入暂未成功；未采集成果，等待保存回执后核查',
+                            'success': False, 'not_started': False, 'usage': usage, 'tool_activities': tool_activities}
             if usage is not None:
                 try:
                     self.executions.record_usage(run['id'], run['attempt'], run['requirement_version'], usage)
                 except Exception:
                     return {'exit_code': result['exit_code'], 'summary': 'CLI 用量写入暂未成功；未采集成果，等待保存回执后核查',
-                            'success': False, 'not_started': False, 'usage': usage}
+                            'success': False, 'not_started': False, 'usage': usage, 'tool_activities': tool_activities}
             if result["reason"] == "cancelled" and result.get("workspace") is None:
                 return self._unstarted("启动前已请求停止")
             items = None
@@ -110,15 +120,15 @@ class CLIController:
                     items = capture(self.store.data_dir, run["id"], config["api_key"])
                 except Exception:
                     return {"exit_code": result["exit_code"], "summary": "CLI 已退出，但成果采集失败；请核查文件边界与大小，结果未提交评审",
-                            "success": False, "not_started": False, 'usage': usage}
+                            "success": False, "not_started": False, 'usage': usage, 'tool_activities': tool_activities}
             return {"exit_code": result["exit_code"], "summary": result["summary"],
-                    "success": result["success"] is True, "not_started": False, "artifacts": items, 'usage': usage}
+                    "success": result["success"] is True, "not_started": False, "artifacts": items, 'usage': usage, 'tool_activities': tool_activities}
         except InputPreparationError:
             return self._unstarted("前置成果或工作区准备失败，未启动 CLI")
         except Exception:
             # Never infer that an arbitrary runner exception happened before spawning.
             return {"exit_code": None, "summary": "CLI 执行异常，实例与结果待核实；未重试",
-                    "success": False, "not_started": False, 'usage': usage}
+                    "success": False, "not_started": False, 'usage': usage, 'tool_activities': tool_activities}
 
     def _reconcile(self):
         failed_write = False
@@ -131,6 +141,9 @@ class CLIController:
                               "success": False, "not_started": False}
                 try:
                     report = dict(result)
+                    tool_activities = report.pop('tool_activities', None)
+                    if tool_activities is not None:
+                        self.tool_activities.record(identity, run['attempt'], run['requirement_version'], tool_activities)
                     usage = report.pop('usage', None)
                     if usage is not None:
                         self.executions.record_usage(identity, run['attempt'], run['requirement_version'], usage)
