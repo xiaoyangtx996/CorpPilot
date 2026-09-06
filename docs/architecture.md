@@ -686,3 +686,7 @@ code_review_requests以来源执行和专用任务分别唯一，先保存固定
 ## F73 评审浏览器接线
 
 CodeReview复用F72三接口，校验规范JSON的SHA256指纹、完整来源及初始执行映射；pending按source execution隔离，serial阻止卸载后的异步回写。不同请求冲突保留原pending，显式接受时重读校验已有授权；同请求错配仍拒绝。ExecutionReview提供入口，TaskExecutions复用自身处理评审任务并禁止再次嵌套代码评审入口，useId隔离弹窗标题。不增加后端表或协议，浏览器仅通过既有API取得授权、状态和成果。
+
+## F75 Owner代码集成服务
+
+CodeIntegrations保存固定授权、原生操作状态及Owner未知核查声明。预览复用F72来源验证，并固定最新专用评审执行及其完整批准成果；F74原生核心生成独立分支。CLIController沿原线程池/锁/tick处理，授权先落库再提交，最多一个原生集成并与CLI共享总槽位及资源预约；不启动第二个调度器，也不要求模型凭据。重启不重跑，失败的结果保存只重传同一Future，提交异常的持有权持续到池关闭。接口及真实代码备份限制见 [代码集成服务](code-workspaces.md#f75-owner授权代码集成)。

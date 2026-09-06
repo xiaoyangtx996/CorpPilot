@@ -160,9 +160,37 @@ Owner 先核对并批准来源执行的完整成果，再读取评审预览并�
 
 目的目录必须不存在且不能与源仓库重叠；失败留下的目录不自动复用。Git 使用原有隔离环境、受控进程树及共同180秒工作预算，取消或超限失败，进程停止未确认仍抛出 `PreparationUnknownError`，不得声称已经回滚或自动重试。验证过程可能留下未引用的校验提交，不保留 Worker 原有提交历史。
 
-这是内部原生服务能力，尚未连接 Owner 集成审批账本、HTTP 或浏览器入口；调用方仍须验证来源批准、集成人评审、权限与请求幂等。它不自动导出到源仓库、推送或合并 main，现有浏览器评审报告也不会触发它。新 checkout 不在 F56 数据备份白名单内；恢复已保存补丁后仍需要原固定基线对象。
+F74是内部原生服务能力，Owner授权与HTTP由下述F75接入，浏览器确认入口仍待接入。它不自动导出到源仓库、推送或合并 main，现有浏览器评审报告也不会自行触发集成。新 checkout 不在 F56 数据备份白名单内；恢复已保存补丁后仍需要原固定基线对象。
 
 验证入口：`.venv\Scripts\python.exe -m pytest tests/test_workbench_code_integration.py tests/test_workbench_code_integration_delivery.py -q`。使用本机 Git 与临时仓库，成果链测试的 CLI 适配器受控，不能替代真实付费 CLI、双 Docker 或最终浏览器集成验收。
+
+## F75 Owner授权代码集成
+
+Owner选择1–16个同项目、原仓库版本、基线和集成人的来源执行，先读取预览，再明确确认。来源须仍为当前需求的最新已批准成果；每个来源对应的F72专用评审任务，其最新实际执行也须成功并获得Owner全清单批准。评审重试后的新报告必须重新批准，旧批准不能替代它。预览核验保存的完整成果字节和hash，不运行Git或模型；报告有内容不等于建议质量已经由系统判定。
+
+以下路径以 `/api/workbench` 为前缀，均要求Owner认证：
+
+| 方法与路径 | 用途 |
+| --- | --- |
+| `POST /conversations/{project}/code-integration-preview` | 只读 `{source_execution_ids}`；返回snapshot、latest_integration_id、blockers和fingerprint |
+| `POST /conversations/{project}/code-integrations` | 明确确认并认领操作，返回202与原授权及当前状态 |
+| `GET /conversations/{project}/code-integrations` | 最近100条，按实际插入顺序倒序；不代表完整历史 |
+| `GET /conversations/{project}/code-integrations/requests/{request_id}` | 按原请求精确回读；未创建为null |
+| `GET /code-integrations/{id}` | 原授权、当前状态、结果及人工核查声明 |
+| `POST /code-integrations/{id}/stop` | `{}`；请求停止，不能承诺产物被回滚 |
+| `POST /code-integrations/{id}/reconciliation` | 未知状态的Owner核查声明，不作为机器退出证据 |
+
+确认请求严格包含 `{request_id, source_execution_ids, fingerprint, previous_integration_id, reconciliation_note, confirm: true}`。首次previous为null、说明为空；后续必须引用该项目最新操作并说明已核查的影响。未知前次操作还须先声明进程停止且影响已核查。请求ID相同且内容相同只回读原操作；不同内容拒绝，不能借断线、配置或权限变化再次派发。
+
+授权、输入身份/hash、原生分支和目的相对路径先在SQLite保存，再提交到现有CLIController线程池。目的固定为 `code-integrations/{id}/repository`，分支为 `corppilot/integration-{id}`，HTTP不接受任意宿主目的路径。原生Git无模型凭据或费用预留依赖；最多一个集成运行，与CLI共享并发槽位及本地Worker资源预约配置。忙、资源不足、存在未核查的CLI/集成实例或恢复副本仍隔离时拒绝新请求，不另设等待后自动执行的队列。
+
+`running/stopping` 最终进入 `completed/failed/cancelled/unknown`。执行前、运行期间及成功保存前重新核对固定来源和权限；原生集成结果已经形成但授权失效时保存为failed并保留实际结果供Owner核查。停止晚于原生完成可以得到completed，回执明确没有回滚。结果落库失败时保留同一Future，只重试保存原回调，不再次运行Git。线程提交异常可能已入队，控制器持续持有该操作直到线程池关闭，不能提前提交“进程已停止”声明。
+
+服务重启将未完成操作标为unknown，绝不根据目录存在或分支存在猜测成功，也不自动重跑。人工核查请求为 `{request_id, process_stopped: true, effects_checked: true, note}`；回执标为 `source: owner_declared`，原unknown状态仍保留。解除未知阻塞后，此前已授权的CLI排队任务可能继续；新集成仍须另行明确授权，旧集成不重跑也不变成成功。控制器仍持有时拒绝声明。
+
+新增 `code_integrations` 和 `code_integration_reconciliations` 随SQLite备份保存；固定授权、终态和核查声明不可覆盖。恢复后的历史成功回执不证明新机器仍有对应checkout，代码目录仍不在备份内。本阶段提供可调用Owner服务能力，专用浏览器操作在后续接入；不作为真实付费CLI、双Docker或完整产品验收。
+
+定向验证：`.venv\Scripts\python.exe -m pytest tests/test_workbench_code_integrations.py tests/test_workbench_code_integrations_delivery.py -q`。
 
 ## 原生仓库准备验证入口
 

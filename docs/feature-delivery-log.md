@@ -838,3 +838,19 @@ handoff_review负责原生模块及28项测试；根负责F69检查器最小comm
 正常服务无新接线，无需重启、迁移或构建。f74-normal-readback.json确认46旧表逐行相同、评审授权表仍空、完整性/外键通过、health200及原F73前端资源字节一致。本轮未重复浏览器与全量Python；最近全量基线仍F72的1003+8，不冒充本轮全量。
 
 独立提交后立即推送；精确commit、推送结果及远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f74-delivery-result.json，远端确认前不标记远端交付。Owner集成审批/幂等与浏览器入口、真实付费CLI和双Docker仍未完成，整体目标继续推进。
+
+## F75 Owner代码集成服务与恢复
+
+handoff_review负责固定授权账本及32项模块测试；根负责原CLIController线程池接线、Owner HTTP、9项实际成果/Git/恢复测试、正常数据备份迁移与Git；verify_prompt_push独立源码/Ponytail审查Pass。新服务可独立验收，浏览器接线单独推进。只增加code_integrations及code_integration_reconciliations，不伪装为付费CLI任务，不新建调度线程或等待后自动执行队列。
+
+根修正前定向41 passed、78.78s（session72320退出0）；首轮8项实际接口/生命周期60.04s通过后，加验最新评审重试批准、新预览失效和未知核查后的明确新请求。覆盖实际并发HTTP同key仅一次原生Git、完整成果/最新报告Owner批准、源库推进与脏文件保留、写结果失败同Future重传、停止不长期持锁、submit已入队后抛错持续持有至shutdown、撤权后保留原生结果但标failed、重启unknown不重跑、备份恢复原回执但无checkout、恢复隔离和资源拒绝、与CLI共享槽位。作者32项6.92s通过不替代根验证，源与评审CLI为受控适配器，未调用真实付费模型或Docker。
+
+审查修正纯空白review.md、同毫秒latest的UUID排序不可靠（改插入顺序）、终态保存原回调以支持撤权降failed后的精确重传。根确保集成保存失败仍核对原CLI活动，避免延迟其他任务停止；文档明确人工声明解除未知阻塞后，原已授权CLI队列可能继续，新集成仍需另行确认，旧集成不重跑、不变成功。
+
+原goal浏览器corppilot-browser-ETuVGe通过（session82984退出0、fixture退出0），沿用未修改F73构建index-yz8gomkr.js；本次没有集成专用UI验收。正常31979确认live且零活动后停止，f75-normal-backup数据库655360字节，SHA256为3dc17bcb6148478058567284f0c5aefb30599cb764688ca7578d64af9e174a8f；先以44473载入新表，最终取消修正后再次确认live/零活动并重启为5931，仍在原目录7892。47旧表逐行不变，仅新增两张空集成表，完整性/外键/health200与实际JS字节通过（f75-normal-readback.json）。
+
+根补充暂停inputs读取期间的停止回归，先复现failed而非cancelled；修为先发取消信号、准备异常按信号归类。新回归与原生执行中停止两项11.88s通过，独立终审Pass。首轮全量35872因该已证实问题由根主动终止（退出1），不是观察超时，也不计为通过；最终重新运行全量。
+
+最终全量1078 passed、8 subtests passed，602.79s（session36683退出0），包含冻结后的全部生产修改、32项新模块与10项实际接口/生命周期测试。没有跳过失败用例或放宽断言；源码及文档终审Pass。此前浏览器回归不涉及新增集成停止接口，仍作为原主流程回归证据，专用UI另行验收。
+
+精确commit、立即推送结果及远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f75-delivery-result.json，远端确认前不标记远端交付。专用浏览器确认与核查入口、真实CLI和双Docker仍待完成，整体目标未完成。

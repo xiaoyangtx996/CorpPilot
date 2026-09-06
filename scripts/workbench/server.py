@@ -316,6 +316,18 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, store.agent(agent_id))
                 if self.command == "PATCH":
                     return self.respond(200, store.save_agent(self.read_json(), agent_id))
+            prefix = '/api/workbench/code-integrations/'
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split('/')
+                integrations = self.server.controller.cli.code_integrations
+                if len(parts) == 1 and parts[0] and self.command == 'GET':
+                    return self.respond(200, integrations.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == 'stop' and self.command == 'POST':
+                    if self.read_json() != {}:
+                        raise ValueError('代码集成停止请求必须为空对象')
+                    return self.respond(200, self.server.controller.cli.stop_code_integration(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == 'reconciliation' and self.command == 'POST':
+                    return self.respond(201, self.server.controller.cli.reconcile_code_integration(parts[0], self.read_json()))
             prefix = "/api/workbench/conversations"
             if path == prefix:
                 if self.command == "GET":
@@ -325,6 +337,15 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith(prefix + "/"):
                 parts = path[len(prefix) + 1:].split("/")
                 conversation_id = parts[0]
+                if len(parts) == 2 and parts[1] == 'code-integration-preview' and self.command == 'POST':
+                    return self.respond(200, self.server.controller.cli.code_integrations.preview(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == 'code-integrations':
+                    if self.command == 'GET':
+                        return self.respond(200, self.server.controller.cli.code_integrations.list(conversation_id))
+                    if self.command == 'POST':
+                        return self.respond(202, self.server.controller.cli.enqueue_code_integration(conversation_id, self.read_json()))
+                if len(parts) == 4 and parts[1:3] == ['code-integrations', 'requests'] and self.command == 'GET':
+                    return self.respond(200, self.server.controller.cli.code_integrations.request(conversation_id, unquote(parts[3])))
                 if len(parts) == 2 and parts[1] == 'repository':
                     if self.command == 'GET':
                         return self.respond(200, self.server.controller.cli.repositories.get(conversation_id))

@@ -1,6 +1,7 @@
 """CLI queue owned and polled under the parent controller's lifetime lock."""
 from concurrent.futures import Future, ThreadPoolExecutor
 import json
+import os
 import threading
 
 from .cli import run_codex, InputPreparationError
@@ -21,7 +22,9 @@ from .context_receipts import ContextReceipts
 from .tool_activities import ToolActivities
 from .repo_sources import RepositorySources
 from .code_reviews import CodeReviews, for_task as code_review_for_task
-from .git_checkout import PreparationUnknownError
+from .git_checkout import PreparationUnknownError, _safe_path
+from .code_integration import integrate_code
+from .code_integrations import CodeIntegrations
 
 
 class CLIController:
@@ -39,6 +42,7 @@ class CLIController:
         self.checkpoints = Checkpoints(store, self.project_executions)
         self.project_launches = ProjectLaunches(store)
         self.code_reviews = CodeReviews(store)
+        self.code_integrations = CodeIntegrations(store)
         self.reconciliations = Reconciliations(store)
         with store.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS execution_backends (
@@ -53,8 +57,11 @@ class CLIController:
                 (SELECT 1 FROM execution_backends WHERE execution_id=NEW.execution_id)
                 BEGIN SELECT RAISE(ABORT, 'Execution backend is immutable'); END""")
         self.executions.recover()
+        self.code_integrations.recover()
         self.pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="task-cli")
         self.active = {}
+        self.integration_active = {}
+        self.integration_uncertain = set()
         self.reservations = {}
         self.error = ""
         self.closed = False
@@ -197,6 +204,48 @@ class CLIController:
         if failed_write:
             raise RuntimeError("CLI 状态尚未落库")
 
+    def _integrate(self, identity, cancel):
+        try:
+            inputs = self.code_integrations.inputs(identity)
+            if cancel.is_set():
+                return dict(state='cancelled', result=None, summary='启动前已请求停止集成')
+            # The authorized operation owns this new, fixed directory. Never reuse it.
+            _safe_path(inputs['destination']).parent.mkdir(parents=True, exist_ok=False)
+        except Exception:
+            if cancel.is_set():
+                return dict(state='cancelled', result=None, summary='输入准备期间已请求停止，未调用 Git 集成')
+            return dict(state='failed', result=None, summary='固定代码集成输入或目录准备失败，未调用 Git 集成')
+        try:
+            result = integrate_code(**inputs, cancel=cancel)
+            return dict(state='completed', result=result, summary='独立集成分支与实际文件已核验；没有修改源仓库或推送')
+        except PreparationUnknownError:
+            return dict(state='unknown', result=None, summary='Git 集成进程停止未确认；须核查本机进程及新目录，未自动重试')
+        except ValueError:
+            return dict(state='cancelled' if cancel.is_set() else 'failed', result=None,
+                        summary='代码集成已停止或校验失败；新目录可能已有改动，未回滚或自动重试')
+        except Exception:
+            return dict(state='unknown', result=None, summary='代码集成异常，进程及新目录结果待核实；未自动重试')
+
+    def _reconcile_integrations(self):
+        for identity, (_, cancel, future) in list(self.integration_active.items()):
+            if future.done():
+                try:
+                    result = future.result()
+                except Exception:
+                    result = dict(state='unknown', result=None, summary='集成线程结果未知，须核查本机进程及新目录')
+                self.code_integrations.finish(identity, **result)
+                # A submit exception may leave an unobserved work item in the pool.
+                # Ownership remains until shutdown, even after storing unknown.
+                if identity in self.integration_uncertain:
+                    continue
+                del self.integration_active[identity]
+                self.reservations.pop('integration:' + identity, None)
+            else:
+                try:
+                    self.code_integrations.authorize(identity)
+                except Exception:
+                    cancel.set()
+
     def tick(self):
         # The same lock serializes admission against close and concurrent ticks.
         with self.launch_lock:
@@ -206,12 +255,15 @@ class CLIController:
         if self.closed:
             return
         try:
-            self._reconcile()
+            try:
+                self._reconcile_integrations()
+            finally:
+                self._reconcile()
             self.error = ""
             with self.store.connect() as db:
                 unknown = unresolved(db)
-            if unknown:
-                self.error = "存在未核实的 CLI 实例或结果，执行队列暂停；请核查后再恢复"
+            if unknown or self.code_integrations.unresolved():
+                self.error = "存在未核实的 CLI 或代码集成实例及结果，执行队列暂停；请核查后再恢复"
                 return
             pending = self.executions.pending()
             if not pending:
@@ -222,7 +274,7 @@ class CLIController:
                 self.error = "CLI 配置或凭据未就绪，队列等待配置"
                 return
             for run in pending:
-                if len(self.active) >= config["max_concurrency"]:
+                if len(self.active) + len(self.integration_active) >= config["max_concurrency"]:
                     break
                 request = resource_admission.requirements(config)
                 resources = resource_admission.snapshot(config, self.reservations)
@@ -287,6 +339,53 @@ class CLIController:
                 raise ValueError('CLI 控制器正在关闭，不能启动代码评审')
             self.settings.resolve()
             return self.code_reviews.create(source_execution_id, payload)
+
+    def enqueue_code_integration(self, project_id, payload):
+        with self.launch_lock:
+            if isinstance(payload, dict) and isinstance(payload.get('request_id'), str):
+                if self.code_integrations.request(project_id, payload['request_id'].strip()) is not None:
+                    return self.code_integrations.create(project_id, payload)
+            if self.closed or os.path.lexists(self.store.data_dir / 'restore-quarantine.json'):
+                raise ValueError('控制器正在关闭或恢复副本仍隔离，不能开始代码集成')
+            with self.store.connect() as db:
+                unknown = unresolved(db)
+            if unknown or self.code_integrations.unresolved():
+                raise ValueError('存在未核查的 CLI 或代码集成操作，不能开始新的集成')
+            config = self.settings.get()  # Native Git needs no CLI/model credentials.
+            if self.integration_active or len(self.active) >= config['max_concurrency']:
+                raise ValueError('执行槽位忙，请等待当前操作结束后重新核对集成预览')
+            request = resource_admission.requirements(config | {'backend': 'local'})
+            denied = resource_admission.denial(resource_admission.snapshot(config, self.reservations), config, request)
+            if denied:
+                raise ValueError('代码集成资源准入受限：' + denied)
+            record = self.code_integrations.create(project_id, payload)
+            identity = record['id']
+            cancel, future = threading.Event(), Future()
+            self.integration_active[identity] = (record, cancel, future)
+            self.reservations['integration:' + identity] = request
+            try:
+                submitted = self.pool.submit(self._integrate, identity, cancel)
+                self.integration_active[identity] = (record, cancel, submitted)
+            except Exception:
+                cancel.set()
+                self.integration_uncertain.add(identity)
+                future.set_result(dict(state='unknown', result=None,
+                    summary='集成线程提交异常，可能已开始；控制器释放前不能确认停止，未自动重试'))
+            return self.code_integrations.get(identity)
+
+    def stop_code_integration(self, identity):
+        with self.launch_lock:
+            if self.closed:
+                raise ValueError('控制器正在关闭')
+            if identity in self.integration_active:
+                self.integration_active[identity][1].set()
+            return self.code_integrations.stop(identity)
+
+    def reconcile_code_integration(self, identity, payload):
+        with self.launch_lock:
+            if self.closed or identity in self.integration_active:
+                raise ValueError('控制器正在关闭或仍持有此操作，不能确认进程停止')
+            return self.code_integrations.reconcile(identity, payload)
 
     def launch_project(self, source_conversation_id, payload):
         with self.launch_lock:
@@ -403,9 +502,19 @@ class CLIController:
                 self.executions.cancel(identity)
             except Exception:
                 self.error = "停止请求写入失败，仍已通知本地进程退出"
+        for identity, (_, cancel, _) in list(self.integration_active.items()):
+            cancel.set()
+            try:
+                self.code_integrations.stop(identity)
+            except Exception:
+                self.error = '集成停止请求写入失败，仍已通知进程退出'
         self.pool.shutdown(wait=True)
         try:
             with self.launch_lock:
-                self._reconcile()
+                self.integration_uncertain.clear()
+                try:
+                    self._reconcile_integrations()
+                finally:
+                    self._reconcile()
         except Exception:
             self.error = "停止时结果写入失败，下次启动将标记未知"
