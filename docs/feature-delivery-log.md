@@ -776,3 +776,13 @@ handoff_review负责git_checkout及32项真实临时Git测试、code-workspaces�
 原goal浏览器t7f7G0通过（session7595退出0、fixture退出0），未改前端生产，复用F68最终构建index-9mVRW7fo.js，未声称已有仓库配置UI。正常81102零活动后停止，f69-normal-backup数据库614400字节/hash45bc579449662f98b8aef69dc7b28482d9b1b2fb20d60800745a32e129e1ce01；新93940在原数据目录7892运行。44旧表逐行不变，两新表空，完整性/外键/health200/实际JS字节一致，见f69-normal-readback.json。
 
 独立提交后立即推送；精确commit及远端分支结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f69-delivery-result.json，远端回读成功前不标记远端交付。Git准备unknown不等于容器unknown，不能仅凭容器不存在放行；F65摘要未含新增仓库提示，使用独立绑定GET。真实付费CLI、双Docker、仓库配置UI、代码成果收集/集成及全目标仍未完成。
+
+## F70 项目仓库配置与执行绑定界面
+
+handoff_review负责RepositorySettings/RepositorySummary及App/AgentActivity接线，根负责真实Git fixture、浏览器测试、PM目视、构建、文档与Git；verify_prompt_push独立只读QA/Ponytail终审Pass。只复用F69 API，完整pending按项目冻结，精确原请求与最新绑定分开显示，严格路径/版本/身份/回执校验；原生dialog/details和serial隔离，无新依赖或后端写入权威。根发现成员退出403原先无法结束请求，作者修为首拒后精确null+latest核对才能释放。PM要求最新配置带入表单，确认重置而pending不变，已验收。
+
+正式npm run test:browser:repository构建58模块index-CcNlQM1m.js并通过zsq9Qm（session94454退出0）。根再补同项目最新rev2而旧run仍显示rev1、观察不创建execution-workspaces的实际断言，direct node最终3uUcJT（session54280）通过：25异常/授权/迟到边界，5条原生Git写入恢复链，390px无溢出，StrictMode/Escape，pageErrors空、0模型/CLI调用、fixture退出0。根目视最终手机表单和固定旧绑定。首次28v1EF已过25边界/mobile，最后开发地址多拼/导致授权replaceState失败，只修测试URL尾斜杠；未放宽产品行为。
+
+原goal最终bWVJqw（session49621）及tools ixaMIQ（session53348）通过、fixture退出0，共用最终构建。早先goal WeSfE5遇Windows临时control文件rename EPERM、fixture正常退出；重跑通过，不把此前中断记为成功。后端生产未改，本轮不重复Python全量，F69的945+8为最近全量基线。正常93940持续运行无需重启，44旧表与F69备份逐行一致、两绑定表仍空、完整性/外键/health及JS字节通过（f70-normal-readback.json）。
+
+独立提交后立即推送；精确哈希和远端结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f70-delivery-result.json，远端未确认前不标记远端交付。真实CLI、双Docker、代码成果交接/集成及全目标仍未完成。

@@ -16,7 +16,8 @@
     "test:browser:budget": "npm run build && node tests/budget-browser.mjs",
     "test:browser:fees": "npm run build && node tests/fee-browser.mjs",
     "test:browser:context": "npm run build && node tests/context-browser.mjs",
-    "test:browser:tools": "npm run build && node tests/tool-activities-browser.mjs"
+    "test:browser:tools": "npm run build && node tests/tool-activities-browser.mjs",
+    "test:browser:repository": "npm run build && node tests/repository-browser.mjs"
   },
   "dependencies": {
     "react": "19.2.8",

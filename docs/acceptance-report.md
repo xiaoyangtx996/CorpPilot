@@ -589,3 +589,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 最终全量945 passed、8 subtests passed，303.53s（session32706退出0），独立QA/Ponytail终审Pass。本机真实Git测试证明两个副本的对象/分支独立、旧SHA固定、源库状态不变、生成身份能提交和恶意配置未执行；21项集成覆盖Owner真实HTTP、版本和权限冻结、两后端接线、准备失败/未知/取消不发起外部CLI及备份恢复。首轮两项测试用了非法执行ID，修正测试数据后定向与最终全量均通过，未放宽产品边界。
 
 原goal浏览器t7f7G0通过、fixture退出0，复用未变F68前端构建。正常数据已离线备份并迁移，44旧表逐行一致、两新表空、完整性/外键/health及JS字节核对通过（f69-normal-readback.json），服务93940继续在7892运行。测试中的CLI调用受控、Docker命令被禁止，不代表真实付费CLI或实际容器已验收。当前无仓库配置面板或代码成果合入闭环，备份不含代码副本；全目标仍未完成。
+
+## F70 仓库配置与绑定观察验收
+
+正式zsq9Qm及补充断言后的最终3uUcJT通过：25项非法回执/存储/401重授权/403退出成员/归档/迟到边界，真实Git绑定与丢响应后精确原请求读取、latest分离、CAS、同键重试、停用；同项目已改rev2，旧执行界面仍显示固定rev1。所有fixture退出0，观察没有创建执行工作区或调用模型/CLI，手机无溢出，StrictMode/Escape和根目视通过，独立审查Pass。初轮测试开发URL双斜杠错误已修正并复验。
+
+最终58模块index-CcNlQM1m.js构建通过，原goal bWVJqw和tools ixaMIQ回归通过；早先goal一次fixture Windows rename EPERM后正常结束，再次运行通过。后端生产未改，不新增Python全量声明，最近基线F69为945+8。正常93940数据和页面资源验证见f70-normal-readback.json，无需重启或迁移。配置面板现已接入，代码成果交接/合入、真实CLI/双Docker与整体目标仍未完成。

@@ -9,6 +9,8 @@ import json
 import os
 from pathlib import Path
 import socket
+import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -32,6 +34,7 @@ def main():
     parser.add_argument('--fees', action='store_true')
     parser.add_argument('--context', action='store_true')
     parser.add_argument('--tools', action='store_true')
+    parser.add_argument('--repository', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -240,10 +243,45 @@ def main():
             executions.report(run['id'],1,1,1,'Controlled JSONL fixture; no tool or provider was invoked')
             tool_samples[key] = executions.get(run['id'])
 
+    repository_sample = None
+    if args.repository:
+        from workbench.tasks import Tasks
+        from workbench.executions import Executions
+        from workbench.repo_sources import RepositorySources
+        repository_path = home / 'git-source'; repository_path.mkdir()
+        env = {k:v for k,v in os.environ.items() if not k.upper().startswith('GIT_')}
+        env.update(GIT_CONFIG_NOSYSTEM='1',GIT_CONFIG_GLOBAL=os.devnull,GIT_CONFIG_SYSTEM=os.devnull,
+            GIT_AUTHOR_NAME='Fixture',GIT_AUTHOR_EMAIL='fixture@example.test',GIT_COMMITTER_NAME='Fixture',GIT_COMMITTER_EMAIL='fixture@example.test')
+        def git(*argv):
+            result = subprocess.run([shutil.which('git'),'-c','core.hooksPath='+os.devnull,'-c','core.fsmonitor=false',*argv],
+                cwd=repository_path,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=20)
+            if result.returncode:raise RuntimeError('Repository fixture Git failed')
+            return result.stdout.decode().strip()
+        git('init','-q'); (repository_path/'code.txt').write_text('F70 fixed source\n',encoding='utf-8')
+        git('add','code.txt'); git('commit','-qm','Browser source'); commit=git('rev-parse','HEAD')
+        room=store.save_conversation(dict(type='project',title='F70 已绑定代码项目',member_ids=[p['id'] for p in people]))
+        other_room=store.save_conversation(dict(type='project',title='F70 新代码项目',member_ids=[p['id'] for p in people]))
+        owner_message=store.send_message(room['id'],dict(content='Repository fixture tasks',request_id='repository-source'))
+        tasks=Tasks(store); executions=Executions(store); repositories=RepositorySources(store)
+        def ended(key):
+            task=tasks.create(room['id'],dict(agent_id=people[0]['id'],source_message_id=owner_message['id'],request_id=key,
+                title='F70 '+key,scope='Inspect fixed binding',acceptance='No new worker'))
+            run=executions.create(task['id'],dict(expected_version=1,request_id=key,previous_execution_id=None,reconciliation_note=''))
+            executions.cancel(run['id']); return executions.get(run['id'])
+        old_run=ended('before-binding')
+        saved=repositories.save(room['id'],dict(request_id='fixture-first',expected_revision=0,source_path=str(repository_path),
+            commit=commit,integration_agent_id=people[1]['id'],confirm=True))
+        bound_run=ended('fixed-binding')
+        repository_sample=dict(room=room,other_room=other_room,source_path=str(repository_path),commit=commit,
+            initial_binding=saved,old_run=old_run,bound_run=bound_run)
+
     class FixtureHandler(Handler):
         rejected = set()
 
         def do_POST(self):
+            if self.path.endswith('/repository'):
+                raw = self.rfile.read(int(self.headers['Content-Length'])); self.rfile = io.BytesIO(raw)
+                event('repository_post',payload=json.loads(raw),path=self.path)
             if '/budget-settlements/' in self.path:
                 raw = self.rfile.read(int(self.headers['Content-Length']))
                 self.rfile = io.BytesIO(raw)
@@ -272,6 +310,16 @@ def main():
             return Handler.do_PATCH(self)
 
         def respond(self, status, value):
+            if '/repository' in self.path:
+                if self.command == 'GET' and control().get('repository_get503'):
+                    return Handler.respond(self,503,{'error':'Repository readback unavailable'})
+                if self.command == 'POST' and status == 201:
+                    event('repository_accepted',receipt=value)
+                    if control().get('drop_repository'):
+                        self.close_connection=True
+                        try:self.connection.shutdown(socket.SHUT_RDWR)
+                        except OSError:pass
+                        return
             if '/budget-settlements/' in self.path:
                 if self.command == 'GET' and control().get('fee_get503'):
                     return Handler.respond(self, 503, {'error': 'Fee readback unavailable'})
@@ -336,6 +384,7 @@ def main():
     if fee_model is not None: manifest['fee_model'] = fee_model
     if context is not None: manifest['context'] = context
     if tool_samples is not None: manifest['tools'] = tool_samples
+    if repository_sample is not None: manifest['repository'] = repository_sample
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():

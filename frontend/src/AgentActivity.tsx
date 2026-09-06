@@ -5,6 +5,7 @@ import { ExecutionUsage } from './ExecutionUsage';
 import { FeeSettlement, feeMoney } from './FeeSettlement';
 import { ContextSummary } from './ContextSummary';
 import { ToolActivities } from './ToolActivities';
+import { RepositorySummary } from './RepositorySummary';
 
 type Page<T> = { items: T[]; total: number; has_more: boolean };
 type Activity = { agent_id: string; tasks: Page<Task>; executions: Page<TaskExecution & { task_title: string; conversation_id: string; artifact_count: number; review_decision: 'approved' | 'rejected' | null }>; model_runs: Page<ReplyRun & { kind: 'reply' | 'planning' | 'retrospective' | 'peer_review' }> };
@@ -24,6 +25,7 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
   const [fees, setFees] = useState<FeeReceipt[] | null>(null), [feeError, setFeeError] = useState('');
   const [context, setContext] = useState<{ kind: 'model' | 'cli'; run_id: string; conversation_id: string; modelKind?: 'reply' | 'planning' | 'retrospective' | 'peer_review' } | null>(null);
   const [toolExecution, setToolExecution] = useState<string | null>(null);
+  const [repositoryExecution, setRepositoryExecution] = useState<{ executionId: string; conversationId: string } | null>(null);
   async function load() {
     const request = ++version.current;
     setLoading(true); setError(''); setRuntimeError(''); setValue(null); setRuntime(null);
@@ -85,6 +87,7 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
           <button onClick={() => setFee({ kind: 'cli', run_id: run.id })}>费用声明与更正</button>
           <button onClick={() => setContext({ kind: 'cli', run_id: run.id, conversation_id: run.conversation_id })}>查看当次上下文</button>
           <button onClick={() => setToolExecution(run.id)}>查看工具活动</button>
+          <button onClick={() => setRepositoryExecution({ executionId: run.id, conversationId: run.conversation_id })}>查看当次代码仓库</button>
           <p>当次 Owner 验收：{run.review_decision === 'approved' ? '已批准' : run.review_decision === 'rejected' ? '已拒绝' : '未批准'}</p>
           {run.summary && <p>{run.summary}</p>}
           <button disabled={busy} onClick={() => void open(run.conversation_id, run.task_id)}>查看该任务全部执行</button>
@@ -111,5 +114,6 @@ export function AgentActivity({ agent, agents, onOpenConversation }: { agent: Ag
     {fee && <FeeSettlement key={`${fee.kind}:${fee.run_id}`} {...fee} agent_id={agent.id} onClose={() => setFee(null)} />}
     {context && <ContextSummary key={`${context.kind}:${context.run_id}`} {...context} agent_id={agent.id} onClose={() => setContext(null)} />}
     {toolExecution && <ToolActivities key={toolExecution} executionId={toolExecution} agentId={agent.id} onClose={() => setToolExecution(null)} />}
+    {repositoryExecution && <RepositorySummary key={repositoryExecution.executionId} {...repositoryExecution} agentId={agent.id} onClose={() => setRepositoryExecution(null)} />}
   </section>;
 }

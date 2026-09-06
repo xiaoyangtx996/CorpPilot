@@ -669,4 +669,8 @@ ToolActivities复用F67接口与实际execution详情，严格验证绑定及完
 
 ## F69 固定代码输入
 
-RepositorySources复用现有SQLite增加不可变项目版本与执行绑定。Owner指定本机普通仓库、完整提交和项目集成人，先授权后原生Git只读检查，再事务CAS保存；入队同事务冻结，运行不跟随新配置。local/Docker共用prepare_workspace，在当前work/repository创建自含对象、独立分支和生成提交身份，不增加共享源挂载、后台服务或依赖。Git准备退出未知保留unknown；已知失败或准备后取消不启动CLI。API、树限制和恢复范围见 [code-workspaces.md](code-workspaces.md)。当前仅后端接线，代码差异收集/批准合入及仓库配置UI另行交付；F65上下文摘要未扩充，仓库依据用独立绑定GET。
+RepositorySources复用现有SQLite增加不可变项目版本与执行绑定。Owner指定本机普通仓库、完整提交和项目集成人，先授权后原生Git只读检查，再事务CAS保存；入队同事务冻结，运行不跟随新配置。local/Docker共用prepare_workspace，在当前work/repository创建自含对象、独立分支和生成提交身份，不增加共享源挂载、后台服务或依赖。Git准备退出未知保留unknown；已知失败或准备后取消不启动CLI。API、树限制和恢复范围见 [code-workspaces.md](code-workspaces.md)。F69阶段仅后端接线，仓库配置UI已由F70接入，代码差异收集/批准合入仍未实现；F65上下文摘要未扩充，仓库依据用独立绑定GET。
+
+## F70 仓库配置与执行观察
+
+RepositorySettings复用F69接口，以项目ID隔离完整pending请求及已返回回执。精确请求GET独立匹配版本/来源/集成人；最新配置不能替代原请求证明，拒绝恢复须原键不存在和当前配置成功。路径规范在提交前确定，POST后回执再与独立GET完整比对。RepositorySummary复用同一严格绑定校验，另核对实际执行身份/版本及活动所属项目，拒绝执行绑定停用版本。两组件使用原生dialog/details与serial卸载隔离，无新依赖、宿主API或后端权威存储；代码成果交接仍待实现。
