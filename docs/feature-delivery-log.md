@@ -880,3 +880,15 @@ frontend_integration负责CodeIntegration、TaskBoard项目入口与CodeReview�
 全量首次运行1112 passed、1 failed、8 subtests passed，634.01s（session71065退出1）。唯一失败为旧输入传递测试精确字段集合缺少新增skills；补入该正式字段并新增未绑定身份skills == []断言，原直接依赖、禁止传递输入和轻量读取检查保持不变。修正后输入传递、新模块和实际输入交付三个模块43 passed、9.06s，包含强化后的实际备份恢复；生产代码未再次变化。独立QA复核Pass，可提交；不将初轮全量称为全绿，最终全目标仍需整体验收。
 
 独立提交后立即推送；精确commit、推送结果及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f77-delivery-result.json，远端回读成功前不标记远端交付。
+
+## F78 Skill 配置与固定历史浏览器入口
+
+frontend_integration负责AgentEditor、ContextSummary及新Skills三文件；skill_inputs_backend负责隔离browser fixture的--skills分支；根负责正式浏览器脚本、构建、PM目视、原流程回归、文档与Git；verify_prompt_push独立源码/Ponytail与最终测试审查Pass。复用F77只读API、原生checkbox/details与既有身份保存，不新增后端生产代码、表或依赖。
+
+正式npm run test:browser:skills已建立并执行构建及测试；最终test-only corppilot-skills-ROSapp通过（session62809退出0、fixture退出0），20项边界包括真实保存重新读取、历史未知标签改名/明确移除、目录503保留草稿、scope/attempt/version/hash/bytes/source拒绝、401重新授权、关闭切身份后迟到响应、上下文503仍能独立读Skill、旧绑定版本/CLI/无快照/空选择分辨、历史不读当前目录且不写入。3次用户明确PATCH，0次模型/CLI调用，pageErrors为空；390px长正文/hash无溢出，StrictMode Escape返回入口焦点，根目视桌面与手机截图。
+
+初轮NTWmu5失败为测试重载后未重新选中原身份，第二轮f66gYQ业务已过但测试切手机视口未开启Agent视角；修正实际导航步骤，未修改生产或放宽内容断言。8zC3pV通过后补验401/迟到/独立上下文错误，最终ROSapp全过。原context YFH0gy、原goal yYiOpQ（session27113）均通过，fixture正常退出。后端生产未变，不新增Python全量声明，F77初轮全量失败与定向修正记录继续保留。
+
+61模块index-C_2NvbWv.js构建成功，538.22kB/158.82kB gzip，保留Vite超过500kB提示。正常服务无需重启；f78-normal-readback.json确认49原表逐行不变、新Skill表仍空、完整性/外键/health200与实际资源SHA256 10db287212cd95c2f6a982af4a762566c44653be661cd5ce2a16736806bcf278一致。Browser plugin未提供，按frontend-testing-debugging使用现有Playwright。
+
+独立提交后立即推送；精确commit、结果及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f78-delivery-result.json，远端未确认前不标记远端交付。普通聊天批准记忆、身份创建未知响应幂等、真实CLI和双Docker与最终全目标验收仍未完成。

@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--budget', action='store_true')
     parser.add_argument('--fees', action='store_true')
     parser.add_argument('--context', action='store_true')
+    parser.add_argument('--skills', action='store_true')
     parser.add_argument('--tools', action='store_true')
     parser.add_argument('--repository', action='store_true')
     parser.add_argument('--code-review', action='store_true')
@@ -173,7 +174,7 @@ def main():
         budget = dict(plan=plan, batch=batch)
 
     context = None
-    if args.context:
+    if args.context or args.skills:
         from workbench.runs import Runs
         from workbench.context_receipts import ContextReceipts
         from workbench.tasks import Tasks
@@ -185,6 +186,9 @@ def main():
         latest = message
         for i in range(101):
             latest = store.send_message(source['id'], dict(content=f'F66_PRIVATE_INPUT_{i}', request_id=f'context-message-{i}'))
+        if args.skills:
+            store.save_agent({'skills': ['coding']}, people[0]['id'])
+            store.save_agent({'skills': ['demo-generator']}, people[1]['id'])
         model = runs.create(source['id'], dict(agent_id=people[0]['id'], source_message_id=latest['id'], request_id='context-model'))
         assert runs.claim(model['id'])
         contexts.record_model(model['id'], runs.snapshot(model['id']), 'fixture-context-model')
@@ -218,6 +222,16 @@ def main():
         for scope,identity in scopes:
             memory.rollback(scope,identity,dict(request_id='context-rollback-'+scope,expected_version=1,target_version=0,note='Later memory changed'))
         context=dict(model=runs.get(model['id']),legacy=runs.get(legacy['id']),execution=executions.get(execution['id']),room=room)
+        if args.skills:
+            store.save_agent({'skills': []}, people[0]['id'])
+            empty = runs.create(source['id'], dict(agent_id=people[0]['id'], source_message_id=latest['id'], request_id='skills-empty'))
+            assert runs.claim(empty['id'])
+            runs.fail(empty['id'], 'Fixture froze empty skill selection; provider was not called')
+            context['empty'] = runs.get(empty['id'])
+            store.save_agent({'skills': ['demo-generator']}, people[0]['id'])
+            # Historical migration fixture only: the product API rejects new unknown bindings.
+            with store.connect() as db:
+                db.execute('UPDATE agents SET skills=? WHERE id=?', (json.dumps(['legacy-unknown']), people[2]['id']))
 
     tool_samples = None
     if args.tools:

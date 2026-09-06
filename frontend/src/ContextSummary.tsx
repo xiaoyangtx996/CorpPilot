@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
+import { SkillInputs } from './Skills';
 
 type Digest = { chars: number; sha256: string };
 type Message = Digest & { id: string | null; sequence: number | null; sender_kind: 'owner' | 'agent'; sender_id: string | null; content_source: 'conversation_message' | 'authorized_shared_brief' | 'retrospective_snapshot' };
@@ -85,11 +86,12 @@ export function ContextSummary({ onClose, ...target }: Target & { onClose: () =>
     <button disabled={busy} onClick={() => void load()}>刷新当次上下文</button>
     {busy && <p role="status">读取当次上下文中…</p>}{error && <p className="error" role="alert">{error}</p>}
     {loaded && !row && <p role="status">没有保存当次上下文回执，实际输入未知。</p>}
+    <SkillInputs kind={target.kind} run_id={target.run_id} agent_id={target.agent_id} />
     {row && <section aria-label="已准备上下文摘要">
       <p>已准备（prepared）：只证明入口保存了摘要，不证明供应商已接收、CLI 已启动或工具已执行。</p>
       <dl><dt>准备时间</dt><dd>{row.prepared_at}</dd><dt>Agent</dt><dd>{row.agent_id}</dd><dt>实例尝试 / 需求版本</dt><dd>第{row.attempt}次 / v{row.requirement_version}</dd><dt>当次模板</dt><dd>{row.template_id}</dd><dt>当次选用模型</dt><dd>{row.model}</dd></dl>
       <TextDigest title="当次指令" value={row.instructions} />
-      <p className="muted">字符数与 SHA-256 对应当次授权输入原文，不是最终 HTTP 字节或完整 CLI 提示词的哈希；未保存正文与凭据，也不表示已加载身份的 Skill 标签。</p>
+      <p className="muted">字符数与 SHA-256 对应当次授权输入原文，不是最终 HTTP 字节或完整 CLI 提示词的哈希；此摘要不展示指令正文与凭据。技能正文与版本请另查当次技能输入回执。</p>
       {row.kind === 'model' ? <section aria-label="消息来源摘要"><h3>消息来源摘要</h3><p>调用类别：{({ reply: '普通回复', planning: '协作规划', retrospective: '记忆复盘', peer_review: '成员评议' })[row.run_kind]} · 已记录 {row.messages.length} 条 / 上限100条</p><p>源序号：{row.source_sequence === 0 ? '合成输入，无会话源序号' : row.source_sequence} · {row.context_truncated ? '上下文已截断，只包含当时范围内最近100条' : '当次消息范围未截断'}</p><details><summary>查看消息来源明细（{row.messages.length}条）</summary>{row.messages.map((item, index) => <MessageRow key={index} row={item} />)}</details></section> : <>
         <section><h3>固定任务输入</h3><p>后端 {row.backend} · 任务 {row.task.id} · 当次需求 v{row.task.requirement_version}</p><TextDigest title="标题" value={row.task.title} /><TextDigest title="任务范围" value={row.task.scope} /><TextDigest title="验收要求" value={row.task.acceptance} /><MessageRow row={row.source_message} /></section>
         <section aria-label="当次记忆摘要"><h3>当次记忆摘要</h3>{!row.memories.length && <p>该次输入未加入非空版本记忆，不代表当前没有可用记忆。</p>}{row.memories.map(memory => <article className="task-card" key={memory.scope}><p>{memory.scope === 'agent' ? '个人记忆' : '项目记忆'} · {memory.scope_id} · v{memory.version}</p><TextDigest title="记忆" value={memory} /></article>)}</section>

@@ -655,3 +655,11 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 原goal浏览器corppilot-browser-GqZMKk通过、fixture退出0，沿未变F76构建，无新前端编译声明。正常数据离线备份后重启为35607，49旧表逐行相同，仅新增空skill_input_snapshots；数据库完整性、外键、health200和原前端资源一致（f77-normal-readback.json）。没有调用付费模型或真实Docker。
 
 专用Skill界面、普通聊天使用批准记忆、身份创建未知响应幂等以及最终整体验收仍待完成。真实CLI、双Docker和远端推送权限仍有阻塞；提交与立即推送实录见仓库外f77-delivery-result.json，整体目标未完成。
+
+## F78 Skill 浏览器验收
+
+身份编辑可选内置技能、查看原文与字节/hash；未变旧标签可保留改名，改变列表后必须明确移除无效项。运行“查看当次上下文”内独立展开“查看当次技能输入”，以固定运行关联及SHA256验证原文；当前绑定变化不改变旧记录，未保存与明确空选择区别展示。
+
+最终专用ROSapp通过20项边界、390px布局及StrictMode焦点，3次明确身份PATCH、0次模型/CLI调用、pageErrors为空、fixture退出0。错误关联/hash/字节/来源、目录503、401、迟到响应和上下文错误独立查看均通过。早期测试导航失败及修正详见功能台账，未计为通过。原上下文YFH0gy与原goal yYiOpQ回归通过，独立源码/Ponytail与最终测试审查Pass，根目视手机与桌面。
+
+61模块构建成功，保留超过500kB体积提示；正常数据库49旧表未变、新Skill表空、完整性/外键/health和实际资源字节通过（f78-normal-readback.json）。未修改后端生产代码、未迁移或重启，未新增Python全量声明。真实CLI、双Docker、普通聊天记忆、创建身份幂等与远端交付和最终验收仍未完成。
