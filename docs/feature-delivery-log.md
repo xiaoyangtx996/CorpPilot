@@ -914,3 +914,13 @@ frontend_integration负责MemoryInputs及ContextSummary两文件；skill_inputs_
 62模块index-MM3KuyaH.js构建成功，543.61kB/160.12kB gzip，保留Vite超过500kB提示。正常6655无需重启或迁移，f80-normal-readback.json确认50旧表不变、新模型记忆表仍空、完整性/外键/health200和实际JS SHA256 f1898005651b310aa19770f1421c92fd639ca83496bb30a8175ac9c9f66fbf89一致。未新增Python全量声明，F79定向与F77全量边界保留。
 
 独立提交后立即推送；精确commit、推送结果及远端回读见H:\item\CorpPilot-test-evidence-20260906\f80-delivery-result.json，远端确认前不标记已交付。身份创建未知响应幂等、真实CLI/双Docker和最终全目标验收继续推进。
+
+## F81 身份创建幂等服务
+
+skill_inputs_backend负责Store事务与新单元测试；根负责Owner HTTP GET、真实并发HTTP/重启/备份恢复交付测试、正常数据迁移、文档与Git；frontend_integration独立审查后端源码和测试覆盖Pass，并仅规划后续UI恢复。仅增加agent_creation_requests及不可变trigger，沿现身份规范化/Skill检查，无新依赖或通用请求层。创建回执与Agent同事务回读，避免锁释放后另一请求编辑污染原快照；重复key在当前目录验证前返回固定原值。
+
+根HTTP交付/Store/API/Skill31 passed、26.66s（session64008退出0），新模块/会话/任务/规划56 passed、3.52s，共87项。覆盖8并发真实HTTP与16并发本地请求只新增1身份、规范化六字段、异配置冲突、PATCH拒key、旧无key兼容、改名停用/重启/Skill文件不可读仍回放原创建、回执写入失败回滚身份、Owner GET401/零写/null、实际离线备份恢复。作者26项1.10s不重复累加。前端尚未发送新key，不将服务能力称为已完成浏览器断线恢复。
+
+正常6655确认live及三类活动0后明确停止，f81-normal-backup数据库696320字节，SHA256 e4e2cf2a1cfc780bc2b46b6c5f7d0b390345ad4290a6b2f3ad2feaefc239be25；重启55052沿原数据目录7892。f81-normal-readback.json确认51旧表逐行未变、只新增空agent_creation_requests，完整性/外键/health200与未变F80资源字节一致。无前端构建或全量Python新增声明。
+
+原goal浏览器ePU7r6通过（session30624退出0、fixture退出0），沿未变F80构建；精确commit、立即推送结果和远端分支回读保存于H:\item\CorpPilot-test-evidence-20260906\f81-delivery-result.json，远端确认前不标记已交付。浏览器创建pending/断线恢复、真实CLI/双Docker及最终整体验收仍未完成。

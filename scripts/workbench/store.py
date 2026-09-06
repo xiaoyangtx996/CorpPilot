@@ -83,6 +83,17 @@ class Store:
             """)
             db.executescript("""
                 BEGIN IMMEDIATE;
+                CREATE TABLE IF NOT EXISTS agent_creation_requests (
+                    request_id TEXT PRIMARY KEY, agent_id TEXT NOT NULL REFERENCES agents(id),
+                    payload TEXT NOT NULL, response TEXT NOT NULL
+                );
+                CREATE TRIGGER IF NOT EXISTS agent_creation_no_update BEFORE UPDATE ON agent_creation_requests
+                    BEGIN SELECT RAISE(ABORT,'Agent creation requests are immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS agent_creation_no_delete BEFORE DELETE ON agent_creation_requests
+                    BEGIN SELECT RAISE(ABORT,'Agent creation requests are immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS agent_creation_no_replace BEFORE INSERT ON agent_creation_requests
+                    WHEN EXISTS(SELECT 1 FROM agent_creation_requests WHERE request_id=NEW.request_id)
+                    BEGIN SELECT RAISE(ABORT,'Agent creation requests are immutable'); END;
                 CREATE TABLE IF NOT EXISTS conversations (
                     id TEXT PRIMARY KEY, type TEXT NOT NULL CHECK(type IN ('dm','board','project')),
                     title TEXT NOT NULL, archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0,1)),
@@ -152,23 +163,39 @@ class Store:
         if not isinstance(payload, dict):
             raise ValueError("Agent 配置必须是对象")
         allowed = {"name", "template_id", "model", "skills", "tools", "enabled"}
+        if agent_id is None:
+            allowed.add('request_id')
         if set(payload) - allowed:
             raise ValueError("包含不支持的 Agent 配置字段")
-        current = self.agent(agent_id) if agent_id else {
-            "model": "default", "skills": [], "tools": ["read"], "enabled": True,
-        }
-        values = {**current, **payload}
-        name = _text(values.get("name"), "名字", 80)
-        template = _text(values.get("template_id"), "角色模板")
-        model = _text(values.get("model"), "模型")
-        skills = _strings(values.get("skills"), "技能")
-        tools = _strings(values.get("tools"), "工具权限")
-        if not set(tools) <= TOOL_SCOPES:
-            raise ValueError("未知工具权限")
-        if type(values.get("enabled")) is not bool:
-            raise ValueError("启用状态必须为布尔值")
-        identity = agent_id or str(uuid.uuid4())
+        request_id = _text(payload['request_id'], '创建请求 ID', 120) if 'request_id' in payload else None
         with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if agent_id is not None:
+                row = db.execute('SELECT * FROM agents WHERE id=?', (agent_id,)).fetchone()
+                if row is None:
+                    raise KeyError('Agent 不存在')
+                current = self._agent(row)
+            else:
+                current = {"model": "default", "skills": [], "tools": ["read"], "enabled": True}
+            values = {**current, **payload}
+            name = _text(values.get("name"), "名字", 80)
+            template = _text(values.get("template_id"), "角色模板")
+            model = _text(values.get("model"), "模型")
+            skills = _strings(values.get("skills"), "技能")
+            tools = _strings(values.get("tools"), "工具权限")
+            if not set(tools) <= TOOL_SCOPES:
+                raise ValueError("未知工具权限")
+            if type(values.get("enabled")) is not bool:
+                raise ValueError("启用状态必须为布尔值")
+            normalized_payload = dict(name=name, template_id=template, model=model, skills=skills, tools=tools, enabled=values['enabled'])
+            encoded = json.dumps(normalized_payload, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False)
+            if request_id is not None:
+                previous = db.execute('SELECT payload,response FROM agent_creation_requests WHERE request_id=?', (request_id,)).fetchone()
+                if previous is not None:
+                    if previous['payload'] != encoded:
+                        raise ValueError('request_id 已用于不同的身份创建请求')
+                    return json.loads(previous['response'])
+            identity = agent_id if agent_id is not None else str(uuid.uuid4())
             if not db.execute("SELECT 1 FROM templates WHERE id=?", (template,)).fetchone():
                 raise ValueError("角色模板不存在")
             if 'skills' in payload or not agent_id:
@@ -188,7 +215,19 @@ class Store:
             else:
                 db.execute("INSERT INTO agents(template_id,name,model,skills,tools,enabled,id) VALUES(?,?,?,?,?,?,?)",
                            (*fields, identity))
-        return self.agent(identity)
+            response = self._agent(db.execute('SELECT * FROM agents WHERE id=?', (identity,)).fetchone())
+            if request_id is not None:
+                db.execute('INSERT INTO agent_creation_requests VALUES(?,?,?,?)',
+                           (request_id, identity, encoded, json.dumps(response, ensure_ascii=False, sort_keys=True, allow_nan=False)))
+            return response
+
+    def agent_request(self, request_id: str) -> dict | None:
+        request_id = _text(request_id, '创建请求 ID', 120)
+        with self.connect() as db:
+            row = db.execute('SELECT * FROM agent_creation_requests WHERE request_id=?', (request_id,)).fetchone()
+            if row is None:
+                return None
+            return {'request_id': row['request_id'], 'payload': json.loads(row['payload']), 'agent': json.loads(row['response'])}
 
     @staticmethod
     def _conversation(db, identity, actor_id=None):

@@ -318,6 +318,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(200, self.server.controller.cli.checkpoints.get(identity))
             if self.command == "GET" and path == "/api/workbench/templates":
                 return self.respond(200, store.templates())
+            if self.command == 'GET' and path.startswith('/api/workbench/agent-requests/'):
+                key = path[len('/api/workbench/agent-requests/'):]
+                if key and '/' not in key:
+                    return self.respond(200, store.agent_request(unquote(key)))
             if path == "/api/workbench/agents":
                 if self.command == "GET":
                     return self.respond(200, store.agents())

@@ -679,3 +679,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 最终gUx13A通过24项边界、390px布局及真实开发StrictMode焦点；0写入、0模型CLI调用、pageErrors为空、fixture退出0。等长篡改hash、旧版缺失、迟到正文、项目精确正文、中文/非BMP与HTML不执行均有实测。QA三项测试证据Return已补强后重跑通过，前端源码独立审查Pass；夹具由根复核，责任独立范围见台账。
 
 原context pvzZIR和原goal最终PD0eMQ通过。原goal一次Windows测试control rename EPERM已保留，改测试原子替换有界重试后通过，未修改后端生产。62模块构建成功，保留体积提示；正常50旧表/空模型记忆表、完整性/外键/health和最终资源一致（f80-normal-readback.json）。身份创建幂等、真实CLI、双Docker、远端交付与最终全量验收仍未完成。
+
+## F81 身份创建幂等接口验收
+
+可选request_id实现同key单次创建，原创建快照独立于当前身份修改；不同配置同key拒绝，PATCH不接受key。Owner精确GET可恢复原请求映射，未知key返回null；旧客户端无key行为兼容，专用浏览器恢复尚未接入。
+
+根87项定向通过（31项26.66s与56项3.52s），独立源码/Ponytail及测试覆盖审查Pass。真实并发HTTP、同key重放、失败事务回滚、改名停用后原快照、GET401/零写、重启及实际备份恢复均有证据。正常离线备份后仅新增空创建请求表，51原表未变，完整性/外键/health200和原F80资源一致（f81-normal-readback.json）。原goal浏览器ePU7r6通过、fixture正常退出，沿原F80构建；未新增前端构建或Python全量声明。浏览器创建恢复、真实CLI/双Docker和远端交付及最终整体验收仍待完成。
