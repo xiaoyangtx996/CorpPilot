@@ -635,3 +635,13 @@ F54实际交付：本地提交ff15347b48ee5abf62307991dcd03af3eb49fd53，12文�
 - 根浏览器session33540退出0，corppilot-browser-gENdqw/browser-report.json记录身份切换、实际2任务/2执行、最终C批准、协调人planning、打开任务全部执行、503清旧状态并恢复。该观察段无新增模型/CLI/goal请求计数，不宣称所有HTTP写入计数均已检查。原目标链、17边界与资源设置回归继续Pass，fixture退出0。
 - 首轮sEt2aB未手动刷新已选身份的旧快照便断言最终批准，失败记录保留；测试修正为按产品手动刷新后通过。50模块index-Do5Jt2SN.js构建/typecheck通过，根已目视活动截图。
 - 正常服务73418确认live后停止退出1，94528同数据路径启动7892；36表逐行同备份、完整性/外键通过、health200、新bundle可读。f55-normal-backup/readback.json记录证据。F55单独提交并立即推送，实际结果外部f55-delivery-result.json；全目标仍未完成。
+
+F55实际交付：05bdcc887bc245701c8d3bfa4cb6718caa97a0e2，11文件322新增/2删除，立即推送退出1、GitHub403；远端回读退出0但无分支，工作区干净。f55-delivery-result.json保留结果。
+
+## F56 离线工作台备份与恢复（本地验收Pass）
+
+- handoff_review实现backup/verify/restore及14项检查，根实现共享锁、恢复调度门、离线解除和恢复测试；根审核备份，子代理只读审核恢复/Ponytail Pass。根审发现部分复制也可能被解除，增加完成证据并测试失败保留隔离。后续恢复审查同时核对复制完成与允许调度两道条件。
+- 根全量722 passed、8 subtests passed，188.81s（session47434），全部最终产品代码包含。其后强化原恢复测试的CLI/goal调度入口不调用断言，6项3.44s通过；另新增批准记忆/来源/版本恢复及回滚1项0.35s通过，不冒称新增单例包含在前述全量。子代理备份14项2.09s单列。
+- 实际CLI backup/verify/restore全部退出0，fixture恢复后真实HTTP核对47身份、3会话、4消息、6任务、3模型Run、6执行、3成果、1评审；3成果下载hash一致，隔离期间模型/CLI active0，测试服务已关闭。离线解除命令退出0并保留audit，没有启动恢复服务执行任务。模型排队解除后只执行原Run一次由独立本地HTTP单测证明。
+- 正常94528确认live且零活动后停止，实际新命令创建f56-normal-backup（DB hash52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854）；25767同数据路径启动，36表逐行未变、integrity/外键通过、health200，无恢复隔离标记。前端无产品代码改动，未重复宣称新浏览器构建。
+- F56独立提交并立即推送，实际结果外部f56-delivery-result.json。此功能不是完整工具工作区或检查点恢复；真实CLI/Docker、费用硬预算和全目标仍未完成。

@@ -609,3 +609,9 @@ GET /api/workbench/agents/{id}/activity在一个SQLite只读事务中返回当�
 接口沿用Owner鉴权，停用身份和归档会话的历史仍可观察。不调用snapshot、模型或调度，不创建表、不读取记忆正文及输入快照。任务目标与验收来自已存在任务记录，观察不会扩大Agent实际上下文。聚合返回仅供Owner客户端，不能当作worker授权资料。
 
 右侧Agent视角展示三类列表并提供手动刷新，读取失败清旧列表且不伪报空。切身份重新挂载，异步结果按读取版本丢弃；打开所属会话或原任务全部执行须重新核对关联，再复用现有控制与审批。全局CLI队列提示明确为全局，非该身份独有阻塞。列表不是完整工具调用明细或模型输入，费用尚未核算。
+
+## F56 离线备份与恢复隔离
+
+操作入口见[备份与恢复](backup-recovery.md)。backup/verify/restore使用固定目录清单、流式hash、数据库完整性/外键/schema校验及现有控制器互斥锁；锁实现提取到directory_lock供服务和维护命令复用。不会复制工具HOME/工作文件/Owner令牌，仅保存DB、审计日志及Docker核查记录。
+
+restore写隔离标记后复制，完成验证再写restore-complete；部分恢复不能解除。ReplyController在goals、CLI、模型调度之前检查隔离标记存在，坏JSON/坏链接也不放行。初始化仍沿用running/stopping恢复unknown，读接口和已有核查入口可用。recovery命令要求原实例停止/外部影响核对的明确确认、两目录离线、完整证据匹配和无未核查unknown，先fsync审计再解除；不自动启动或改写历史结果。这是记录恢复，不是进程检查点、完整checkout或Docker迁移。

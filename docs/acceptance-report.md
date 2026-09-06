@@ -496,3 +496,15 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 类型检查和50模块生产构建index-Do5Jt2SN.js通过；独立只读前端审查Pass。根目视agent-activity.png，活动面板可在右侧滚动查看，身份切换不触发模型。各类仅最近50条，不冒称完整历史、完整工具调用或模型输入；token保留真实用量，费用尚未核算。
 
 正常库零活动时备份SHA-256为84df2fc2cd8f5a6d43bcf04521096441768ec814079fac412dbaca8952ff2bd6；原73418确认live后停止，新94528运行7892，36张原表逐行未变、integrity=ok、外键空、/health200及新bundle读回。测试未写正常应用库。真实CLI/双Docker、货币预算、检查点恢复及全目标验收仍未完成。
+
+## F56 离线备份恢复验收
+
+根完整测试722 passed、8 subtests passed，188.81s（session47434退出0）。备份14项覆盖锁/现有目标拒绝、凭据目录排除、成果BLOB/原Docker身份证据、损坏清单/路径/额外文件/未来schema/坏DB拒绝、链接拒绝及复制中断无完成标记。恢复6项覆盖有真实本地provider的原queued隔离零调用、原/新目录在线不能解除、坏marker、无完成证据及未核查unknown不能解除；离线双确认后重启原模型请求仅调用一次。全量之后增强CLI/goal tick不调用及CLI queued保持断言，最后6项3.44s通过，产品代码未变。
+
+追加test_workbench_backup_memory.py单例0.35s通过：真实审批记忆及来源/版本备份恢复后相同，恢复副本可回滚至v0形成v2，原副本批准记忆不变。该单例在全量之后新增，分别记录，不将其算作前述722项。
+
+实际命令以停止的gENdqw fixture/state为源，f56-cli-backup清单DB483328字节、SHA256 7f2b17e222b438c9435594305bb566e42adcc3d6b8afcda44169ef20e877dd16，backup/verify/restore均退出0。恢复副本启动真实WorkbenchServer后47身份/3会话/4消息/6任务/3Run/6执行/3成果/1评审保留，3成果经授权HTTP下载并校验字节/hash；隔离状态模型与CLI活动0。服务线程实际停止，f56-restored-http-result.json保留。随后真实recovery CLI退出0、生成restore-release-f4d62b01-020e-4ea5-b966-a6b331d9c56c.json，未启动后续服务；该操作仅针对已确认停止且无真实外部副作用的测试副本。
+
+正常数据零活动停服务后使用同一backup命令成功，f56-normal-backup/manifest.json记录DB hash52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854；重启新25767，36表逐行一致、integrity=ok、外键空、health200、无恢复隔离标记，见f56-normal-readback.json。没有用恢复副本替换正常库。
+
+备份包含工作台记录和Docker核查证据，不含完整工作区、CLI HOME/凭据、进程检查点；日志不恢复RPM内存窗口。目录锁不证明外部进程/容器退出，解除确认是Owner声明；原副本不得再次同时启动。完整目标仍未完成。

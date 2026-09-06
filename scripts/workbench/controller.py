@@ -14,26 +14,14 @@ from .retrospectives import RetrospectiveError
 from .cli_controller import CLIController
 from .model_reconciliations import ModelReconciliations
 from .goal_executions import GoalExecutions
+from .directory_lock import acquire
 
 
 class ReplyController:
     def __init__(self, store, settings):
         self.settings = settings
-        self.lock_file = open(store.data_dir / "controller.lock", "a+b")
-        try:
-            if os.name == "nt":
-                import msvcrt
-                if self.lock_file.tell() == 0:
-                    self.lock_file.write(b"0")
-                    self.lock_file.flush()
-                self.lock_file.seek(0)
-                msvcrt.locking(self.lock_file.fileno(), msvcrt.LK_NBLCK, 1)
-            else:
-                import fcntl
-                fcntl.flock(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            self.lock_file.close()
-            raise ValueError("此数据目录已有运行中的控制服务") from None
+        self.lock_file = acquire(store.data_dir)
+        self.restore_gate = store.data_dir / 'restore-quarantine.json'
         try:
             self.runs = Runs(store)
             self.peer_reviews = PeerReviews(store)
@@ -64,6 +52,10 @@ class ReplyController:
     def _dispatch(self):
         while not self.stop.wait(0.2):
             try:
+                if os.path.lexists(self.restore_gate):
+                    self.error = '恢复副本处于隔离状态；先核对原实例与外部结果，再使用离线恢复解除命令'
+                    self.cli.error = self.error
+                    continue
                 self.goals.tick()
                 self.cli.tick()
                 self._reconcile()
