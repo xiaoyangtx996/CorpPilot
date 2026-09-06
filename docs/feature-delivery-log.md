@@ -824,3 +824,17 @@ handoff_review负责CodeReview、ExecutionReview与TaskExecutions三个前端文
 最终59模块index-yz8gomkr.js构建通过，505.35kB/148.84kB gzip；Vite提示单chunk超过500kB，无编译失败，未调高阈值隐藏提示。原goal最终corppilot-browser-V2PCk8通过（session39077退出0、fixture退出0），此前0OVwY7也通过。后端生产未改，未重复Python全量；最近F72全量1003+8为既有基线。正常31979持续live，无需重启，46旧表与F72备份逐行一致、新评审表仍空，完整性/外键/health200和实际最终JS字节一致（f73-normal-readback.json）。
 
 独立提交后立即推送；精确commit及远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f73-delivery-result.json，远端未确认前不标记远端交付。实际代码合入、真实付费CLI、双Docker及全目标仍未完成。Browser skill未提供，本轮按frontend-testing-debugging使用项目Playwright，测试用模拟适配器与真实Git的边界分别保留。
+
+## F74 独立分支代码集成核心
+
+handoff_review负责原生模块及28项测试；根负责F69检查器最小command回调、5项成果链/中断测试、定向回归、文档和Git；verify_prompt_push独立源码/Ponytail终审Pass。PM按可独立验收的原生后端能力压缩本轮设计/实现/审查阶段，不将内部函数称为已完成Owner产品流程。复用F69树检查、F71清单及文件锁，无新依赖、表或调度器。
+
+根最终新模块28 passed、80.04s（session27091退出0）；成果集成、原仓库/采集/成果链和代码评审6模块95 passed、151.34s（session68479退出0），共123项。作者独立28项81.89s通过，根早期F69/F71 47项57.69s通过，不将重复执行累加为测试数量。覆盖真实二进制与SHA256、多补丁组合、冲突、每patch独立验真、原始检出字节、来源推进和本地脏文件不变、保存成果及真实备份恢复、ref写入后取消/unknown保留目录且不自动重试。
+
+审查发现树内attributes会转换原始字节，修为新副本持久info/attributes覆盖并直接核验实际Git blob hash。作者早期测试helper.strip截断binary尾部和fixture.git add转码均修在测试；根首轮3项2过1失败来自备份fixture缺Runs完整初始化，按真实服务初始化修正后最终全部通过，未放宽产品校验。
+
+暂存前根强化跨责任范围3项断言：必须在创建目的目录前拒绝，排除后续重复patch冲突造成假阳性；这3项再次通过（7.40s），生产代码未再变化。
+
+正常服务无新接线，无需重启、迁移或构建。f74-normal-readback.json确认46旧表逐行相同、评审授权表仍空、完整性/外键通过、health200及原F73前端资源字节一致。本轮未重复浏览器与全量Python；最近全量基线仍F72的1003+8，不冒充本轮全量。
+
+独立提交后立即推送；精确commit、推送结果及远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f74-delivery-result.json，远端确认前不标记远端交付。Owner集成审批/幂等与浏览器入口、真实付费CLI和双Docker仍未完成，整体目标继续推进。

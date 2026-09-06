@@ -98,17 +98,18 @@ def _filename(raw):
     return path
 
 
-def _inspect(path, commit, executable, env):
+def _inspect(path, commit, executable, env, command=None):
+    command = command or _git
     if not isinstance(commit, str) or not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', commit):
         raise ValueError(ERROR)
     prefix = ['--git-dir', str(path / '.git'), '--work-tree', str(path)]
-    observed = _git(executable, env, path, [*prefix, 'rev-parse', '--verify', commit + '^{commit}']).decode().strip()
+    observed = command(executable, env, path, [*prefix, 'rev-parse', '--verify', commit + '^{commit}']).decode().strip()
     if observed != commit:
         raise ValueError(ERROR)
-    tree = _git(executable, env, path, [*prefix, 'rev-parse', '--verify', commit + '^{tree}']).decode().strip()
+    tree = command(executable, env, path, [*prefix, 'rev-parse', '--verify', commit + '^{tree}']).decode().strip()
     if not re.fullmatch('[0-9a-f]{' + str(len(commit)) + '}', tree):
         raise ValueError(ERROR)
-    raw = _git(executable, env, path, [*prefix, 'ls-tree', '-r', '-l', '-z', commit], maximum=16 * 1024 * 1024)
+    raw = command(executable, env, path, [*prefix, 'ls-tree', '-r', '-l', '-z', commit], maximum=16 * 1024 * 1024)
     files, total, names = 0, 0, {}
     for record in raw.split(b'\0'):
         if not record: continue

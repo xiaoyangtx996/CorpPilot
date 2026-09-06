@@ -148,7 +148,23 @@ Owner 先核对并批准来源执行的完整成果，再读取评审预览并�
 
 浏览器验证命令在frontend目录运行 `npm run test:browser:code-review`；真实Git采集与受控适配器调用分别记录，不把受控报告称为真实模型验收。
 
-## 原生仓库准备验证
+## F74 独立代码集成核心
+
+内部 `code_integration.integrate_code(source_path, base_commit, destination, branch, changes, *, cancel=None)` 接收固定基线和保存的补丁/清单，生成新的自含 checkout 与一个以基线为唯一父节点的集成提交。`changes` 是按集成顺序排列的 `{patch: bytes, manifest: dict}` 列表。源仓库的当前 HEAD、索引和未提交改动不参与结果，也不被修改。
+
+每份补丁先独立应用到基线，核对目标树及清单中的全部变化路径、状态、模式、字节数和 SHA256；再从基线按顺序组合。冲突明确失败，不做三方回退或自动解决。最终核对提交、父节点、分支、目标树及 checkout；回执含实际提交和树、文件数量/大小、来源执行 ID 与补丁 hash。
+
+一次接受1–16个不同来源执行，要求同一项目、集成人、正整数仓库版本和基线。补丁及清单各至多4MiB，全部输入合计至多16MiB；目标树沿用10000文件、单文件32MiB、总量256MiB上限。较大的改动也可能先触及180秒预算，超限明确失败，不截断成果。
+
+新副本在 `.git/info/attributes` 持久禁用换行、编码、ident和过滤器转换，使树内 `.gitattributes` 不会悄悄改变F71原始字节。检出后使用文件锁读取每个普通文件，并核对完整Git blob hash及大小；不只凭干净status判断成功。这项本地属性策略随该checkout保留，不更改源库属性。源库检查沿F69边界，不承诺同一Windows用户恶意并发改写下的OS级隔离。
+
+目的目录必须不存在且不能与源仓库重叠；失败留下的目录不自动复用。Git 使用原有隔离环境、受控进程树及共同180秒工作预算，取消或超限失败，进程停止未确认仍抛出 `PreparationUnknownError`，不得声称已经回滚或自动重试。验证过程可能留下未引用的校验提交，不保留 Worker 原有提交历史。
+
+这是内部原生服务能力，尚未连接 Owner 集成审批账本、HTTP 或浏览器入口；调用方仍须验证来源批准、集成人评审、权限与请求幂等。它不自动导出到源仓库、推送或合并 main，现有浏览器评审报告也不会触发它。新 checkout 不在 F56 数据备份白名单内；恢复已保存补丁后仍需要原固定基线对象。
+
+验证入口：`.venv\Scripts\python.exe -m pytest tests/test_workbench_code_integration.py tests/test_workbench_code_integration_delivery.py -q`。使用本机 Git 与临时仓库，成果链测试的 CLI 适配器受控，不能替代真实付费 CLI、双 Docker 或最终浏览器集成验收。
+
+## 原生仓库准备验证入口
 
 原生模块测试入口：
 
