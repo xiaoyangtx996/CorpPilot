@@ -8,8 +8,9 @@ from .store import _text
 
 
 def validate(payload):
-    if not isinstance(payload,dict) or set(payload)!={'plan','confirm_execution'} or payload['confirm_execution'] is not True:
-        raise ValueError('启动请求必须只含完整 plan 和 confirm_execution=true')
+    if (not isinstance(payload,dict) or set(payload) not in ({'plan','confirm_execution'}, {'plan','confirm_execution','confirm_handoff'})
+            or payload['confirm_execution'] is not True or 'confirm_handoff' in payload and type(payload['confirm_handoff']) is not bool):
+        raise ValueError('启动请求须含完整 plan、confirm_execution=true，可选 confirm_handoff 必须为布尔值')
     Collaboration._validate(payload['plan'])
     encoded=json.dumps(payload,sort_keys=True,ensure_ascii=False,allow_nan=False,separators=(',',':'))
     if len(encoded.encode('utf-8'))>65536:
@@ -56,6 +57,12 @@ class ProjectLaunches:
             receipt={'id':identity,'source_conversation_id':source_conversation_id,'request_id':request,'request_payload':payload,
                      'collaboration':collaboration,'batch':batch,'created_at':created}
             db.execute('INSERT INTO project_launches VALUES(?,?,?,?,?,?)',(identity,source_conversation_id,request,encoded,json.dumps(receipt,ensure_ascii=False),created))
+            if payload.get('confirm_handoff') is True:
+                bindings = {item['task_id']: item['execution_id'] for item in batch['tasks']}
+                task_ids = collaboration['task_ids']
+                db.executemany('INSERT INTO execution_handoff_permissions VALUES(?,?,?,?)', [
+                    (bindings[task_ids[item['key']]], task_ids[parent], bindings[task_ids[parent]], identity)
+                    for item in payload['plan']['tasks'] for parent in item['depends_on']])
             return receipt
 
     def get(self,identity):

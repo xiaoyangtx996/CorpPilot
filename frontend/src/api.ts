@@ -15,7 +15,7 @@ export type ReplyRuntime = { error: string; active_requests: number; running: bo
 export type TaskFields = { title: string; scope: string; acceptance: string; agent_id: string };
 export type Task = TaskFields & { id: string; conversation_id: string; source_message_id: string; request_id: string; requirement_version: number; created_at: string; updated_at: string };
 export type TaskRevision = TaskFields & { task_id: string; requirement_version: number; created_at: string; dependency_task_ids: string[] };
-export type TaskDependencyStatus = { task_id: string; requirement_version: number; task_ids: string[]; ready: boolean; blocked_reason: string | null };
+export type TaskDependencyStatus = { task_id: string; requirement_version: number; task_ids: string[]; ready: boolean; blocked_reason: string | null; handoff_authorized?: boolean };
 export type TaskDraft = TaskFields & { id?: string; source_message_id: string; source_content: string; request_id: string; expected_version?: number; pending?: boolean; conflict?: boolean };
 
 export class ApiError extends Error {
@@ -108,5 +108,5 @@ export type RetrospectiveRun = ReplyRun & { scope: 'agent' | 'project'; scope_id
 
 export type PeerReviewRequest = { agent_id: string; source_message_id: string; request_id: string; confirm: true };
 export type PeerReviewRun = ReplyRun & { request_payload: PeerReviewRequest; source_run_id: string };
-export type ProjectLaunchRequest = { plan: CollaborationPlan; confirm_execution: true };
+export type ProjectLaunchRequest = { plan: CollaborationPlan; confirm_execution: true; confirm_handoff?: boolean };
 export type ProjectLaunchReceipt = { id: string; source_conversation_id: string; request_id: string; request_payload: ProjectLaunchRequest; collaboration: CollaborationReceipt; batch: ProjectExecutionReceipt; created_at: string };

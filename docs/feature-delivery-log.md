@@ -579,3 +579,13 @@ F49实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f
 
 
 F50主代理最终复核：1launch/1batch/3executions、3unique受控runner、2产物hash及B消费A唯一输入均通过；主代理IAB历史与绑定状态、桌面/手机截图已核对。正常服务43954健康200，33原表逐行同备份；fixture41860确认live后Ctrl-C退出1、7896无监听。主流程两条404未记录URL、只读重走未复现，保留原始日志；不得声称原console全零或真实CLI/模型/Docker通过。部分子代理额度耗尽，主代理接手追加测试、重启及最终验收，无冒称子代理追加审查。F50提交/即时推送尚待下面实际操作记录。
+
+
+F50实际交付：已核实外部f50-delivery-result.json，本地提交 `f52a1fb7c87f11a90af17005ebfcdb21848df1c0`，7文件186新增/26删除，立即推送退出128：GitHub403，suiyue1990无写权限。远端回读退出0、remote_head=null，提交后工作区干净；远端交付仍未完成。
+
+## F51：固定首批成果自动交接（本地fixture验收Pass）
+
+- 明确批准完整计划时可选自动交接；默认旧Owner门保持。不可变permission边与launch同事务，固定task/version/execution，复用队列、输入快照及产物校验，不伪造审核。拒绝、改版、替代尝试等使后继不执行/不能验收；重试不继承。
+- 根实施及集成；handoff_review负责独立PM/TechLead/Ponytail/QA审查。分派实现碰线程数量上限后根接手。独审复现memory/retro单字段KeyError后修复并复验，旧schema不隐式授权；后续工作改为同时检查真实调用数据形状，不以新helper测试代替原调用回归。
+- 全量636项及8子用例115.36s通过；独立24项2.78s、定向61项6.11s单列不相加。浏览器自动A→B→C、最终唯一Owner验收、独立9边界和最后只读文案回归Pass，最终构建index-BvE6_RC6.js。详细证据及原404记录见acceptance-report.md的F51段。
+- 1launch/1batch/3exec/3artifact/2permission/2input/1最终review，真实CLI/model/Docker0。正常37580健康、34原表无变化，测试52349已停止，7896无监听。整体目标仍未完成；F51独立提交并即时推送待实际记录。

@@ -122,7 +122,7 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
     <p className="muted">确认执行会调用配置的 CLI 和模型，可能产生费用。工作区按执行隔离；退出成功仅进入待评审，不代表成果已通过验收。</p>
     <button disabled={loading || busy} onClick={() => void load()}>{loading ? '读取执行中…' : '刷新执行状态'}</button>
     {runtime && <p className="muted">CLI 控制服务：{runtime.running ? '运行中' : '未运行'} · 活动请求 {runtime.active_requests}{runtime.error && ` · ${runtime.error}`}</p>}
-    {dependencies && <p className="muted">前置状态（需求 v{dependencies.requirement_version}）：{dependencies.ready ? dependencies.task_ids.length ? '前置验收条件已满足，执行时仍会重新核查。' : '未设置前置任务。' : `等待前置验收：${dependencies.blocked_reason}。确认执行后会先排队等待。`}此状态不表示本任务已完成。</p>}
+    {dependencies && <p className="muted">前置状态（需求 v{dependencies.requirement_version}）：{dependencies.ready ? dependencies.task_ids.length ? dependencies.handoff_authorized ? '当前实例的前置交接条件已满足，尚不代表前置成果已获Owner批准；再次执行不继承本批交接授权。' : '前置验收条件已满足，执行时仍会重新核查。' : '未设置前置任务。' : `等待前置验收：${dependencies.blocked_reason}。确认执行后会先排队等待。`}此状态不表示本任务已完成。</p>}
     {readError && <p className="error" role="alert">{readError}。已有状态可能过期。</p>}
     {error && <p className="error" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     {storageError && <p className="error" role="alert">{storageError}<button disabled={busy} onClick={() => { restore(); void load(); }}>重新读取待确认执行</button></p>}

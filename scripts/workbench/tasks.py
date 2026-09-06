@@ -148,14 +148,20 @@ class Tasks:
             return self._dependencies(db, task)
 
     @staticmethod
-    def _dependencies(db, task):
+    def _dependencies(db, task, execution_id=None):
         reason = ""
+        task_ids = dependencies.ids(db, task['id'], task['requirement_version'])
+        if execution_id is None and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='task_executions'").fetchone():
+            latest = db.execute('SELECT id,requirement_version FROM task_executions WHERE task_id=? ORDER BY attempt DESC LIMIT 1', (task['id'],)).fetchone()
+            if latest and latest['requirement_version'] == task['requirement_version']:
+                execution_id = latest['id']
         try:
-            dependencies.ready_inputs(db, task["id"], task["requirement_version"])
+            dependencies.ready_inputs(db, task["id"], task["requirement_version"], execution_id)
         except dependencies.DependencyBlocked as exc:
             reason = str(exc)
         return {"task_id": task["id"], "requirement_version": task["requirement_version"],
-                "task_ids": dependencies.ids(db, task["id"], task["requirement_version"]),
+                "task_ids": task_ids,
+                "handoff_authorized": bool(task_ids) and all(dependencies.handoff_source(db, execution_id, parent) for parent in task_ids),
                 "ready": not reason, "blocked_reason": reason}
 
     def set_dependencies(self, identity, payload):

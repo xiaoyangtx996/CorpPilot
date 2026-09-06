@@ -152,7 +152,7 @@ class Executions:
                 self._set(db, identity, "failed", "负责人或会话权限已变化，此次排队未执行")
                 return False
             try:
-                inputs = dependencies.ready_inputs(db, run["task_id"], run["requirement_version"])
+                inputs = dependencies.ready_inputs(db, run["task_id"], run["requirement_version"], identity)
             except dependencies.DependencyBlocked:
                 return False
             db.executemany("INSERT INTO execution_inputs VALUES(?,?,?)",
@@ -177,7 +177,7 @@ class Executions:
             result = {"task": task, "agent": agent, "instructions": instructions, "source_message": dict(source),
                       "dependency_inputs": bindings}
             if include_artifacts:
-                result["input_artifacts"] = artifact_store.input_snapshots(db, bindings)
+                result["input_artifacts"] = artifact_store.input_snapshots(db, bindings, downstream_execution_id=identity)
                 result["memories"] = memories.snapshot(db, run, task["conversation_id"])
             return result
 

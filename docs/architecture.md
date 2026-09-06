@@ -572,3 +572,14 @@ CollaborationPanel复用完整计划预览，api.ts增加ProjectLaunchRequest/Re
 POST只精确核验并保存启动编号，必须再GET /project-launches/{id}核对原计划、会话、coordinator/member集合及唯一task/execution/request绑定后，才允许明确结束原请求核对。首4xx可编辑；重试先清旧rejected；401、丢响应、GET503保留完整原key；损坏存储保守锁定。操作种类冻结，不把旧仅创建授权升级为执行授权。
 
 CollaborationExecutionPanel仅增加可选initialBatchId定位固定首批，已有同plan pending优先（即使尚无batch_id），损坏存储不打开替代批次。停止确认保存detail.id，切历史清许可，stop调用再比当前ID，防A确认用于B；未知停止响应仍只GET核对。未新建调度或巨型dialog。静态/typecheck及48modules构建index-Bl2XnWmG.js通过，浏览器主流程、八项边界和同库401恢复已通过，非自动规划、无审批交接或费用硬门。
+
+
+## F51 固定执行的明确交接许可
+
+ProjectLaunches请求新增可选严格布尔confirm_handoff。缺省/false沿用Owner前置批准，true在原创建事务末尾写execution_handoff_permissions，记录下游execution、前置task、固定upstream_execution及launch外键。复用原队列和回执，权限边不可更新、删除、替换；任一边写入失败回滚整个launch。完整payload幂等比较防止旧key扩大授权；迁移只建空表，不授权旧数据。
+
+ready_inputs在claim/check_bound中接收具体execution身份。授权边要求前置当前版本和最新尝试仍是原绑定、状态awaiting_review、有捕获成果、未被Owner拒绝；递归祖先和既有execution_inputs仍逐层核对。即使替代上游被Owner批准，也不能换绑原批次。Tasks和批次详情按当前/固定execution展示handoff_authorized，重试不继承。
+
+artifacts.input_snapshots仅在Executions.snapshot传入downstream_execution_id时核对固定输入和交接许可，继续验证非空成果、真实BLOB长度、SHA-256及总量上限。没有裸allow_unapproved参数。memories/retrospectives原单字段调用保持默认Owner approved要求；审查发现的dependency_task_id KeyError已通过短路读取修复及原场景回归。
+
+前端原pending保存完整confirm_handoff，恢复/回执不一致锁定，选项改变撤最终确认。普通任务及依赖页面明确交接就绪不等于Owner批准。该许可不会启动额外Run、扩工具权限、跳过unknown核查或自动更新个人记忆。

@@ -106,7 +106,7 @@ class ProjectExecutions:
             execution = self.executions._run(db, binding['execution_id'])
             latest = db.execute('SELECT id FROM task_executions WHERE task_id=? ORDER BY attempt DESC LIMIT 1', (task['id'],)).fetchone()[0]
             items.append({'task': task, 'execution': execution, 'review': Reviews._review(db, execution['id']),
-                          'dependencies': Tasks._dependencies(db, task), 'latest_execution_id': latest})
+                          'dependencies': Tasks._dependencies(db, task, execution['id']), 'latest_execution_id': latest})
         return {**receipt, 'items': items}
 
     def get(self, identity):

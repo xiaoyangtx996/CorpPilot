@@ -198,8 +198,14 @@ def verify_snapshot(row):
     return {**result, "data": content}
 
 
-def input_snapshots(db, bindings):
+def input_snapshots(db, bindings, *, downstream_execution_id=None):
     """Read only direct, frozen inputs; caller holds the authorization transaction."""
+    from . import dependencies
+    if downstream_execution_id:
+        run = db.execute('SELECT * FROM task_executions WHERE id=?', (downstream_execution_id,)).fetchone()
+        if run is None or run['state'] != 'running' or dependencies.bound_inputs(db, downstream_execution_id) != bindings:
+            raise ValueError('前置成果不属于本次运行的固定输入')
+        dependencies.check_bound(db, dict(run))
     selected, total = [], 0
     for binding in bindings:
         identity = binding["upstream_execution_id"]
@@ -207,8 +213,11 @@ def input_snapshots(db, bindings):
                             (identity,)).fetchone()
         metadata = db.execute("""SELECT id,size,length(content) byte_count FROM execution_artifacts
             WHERE execution_id=? ORDER BY id LIMIT ?""", (identity, MAX_FILES + 1)).fetchall()
-        if (review is None or review["decision"] != "approved" or not metadata
-                or [row["id"] for row in metadata] != json.loads(review["artifact_ids"])):
+        authorized = bool(downstream_execution_id) and dependencies.handoff_source(db, downstream_execution_id, binding['dependency_task_id']) == identity
+        if (not metadata or (review is not None and review['decision'] == 'rejected')
+                or (not authorized and (review is None or review['decision'] != 'approved'))
+                or (review is not None and review['decision'] == 'approved'
+                    and [row['id'] for row in metadata] != json.loads(review['artifact_ids']))):
             raise ValueError("前置成果与已批准清单不一致，未启动执行")
         for row in metadata:
             total += row["byte_count"]

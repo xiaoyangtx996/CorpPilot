@@ -35,6 +35,20 @@ def initialize_inputs(db):
         WHEN EXISTS(SELECT 1 FROM execution_inputs WHERE execution_id=NEW.execution_id
         AND dependency_task_id=NEW.dependency_task_id)
         BEGIN SELECT RAISE(ABORT, 'Execution inputs are immutable'); END""")
+    db.execute("""CREATE TABLE IF NOT EXISTS execution_handoff_permissions (
+        execution_id TEXT NOT NULL REFERENCES task_executions(id),
+        dependency_task_id TEXT NOT NULL REFERENCES tasks(id),
+        upstream_execution_id TEXT NOT NULL REFERENCES task_executions(id),
+        launch_id TEXT NOT NULL REFERENCES project_launches(id),
+        PRIMARY KEY(execution_id,dependency_task_id))""")
+    for operation in ("UPDATE", "DELETE"):
+        db.execute(f"""CREATE TRIGGER IF NOT EXISTS handoff_no_{operation.lower()}
+            BEFORE {operation} ON execution_handoff_permissions BEGIN
+            SELECT RAISE(ABORT, 'Handoff permissions are immutable'); END""")
+    db.execute("""CREATE TRIGGER IF NOT EXISTS handoff_no_replace BEFORE INSERT ON execution_handoff_permissions
+        WHEN EXISTS(SELECT 1 FROM execution_handoff_permissions WHERE execution_id=NEW.execution_id
+        AND dependency_task_id=NEW.dependency_task_id)
+        BEGIN SELECT RAISE(ABORT, 'Handoff permissions are immutable'); END""")
 
 
 def ids(db, identity, version):
@@ -74,9 +88,22 @@ def bound_inputs(db, execution_id):
         FROM execution_inputs WHERE execution_id=? ORDER BY dependency_task_id""", (execution_id,))]
 
 
-def ready_inputs(db, identity, version):
-    """Return direct input bindings only when every upstream approval is still current."""
-    pending = [(identity, version, None)]
+def handoff_source(db, execution_id, dependency):
+    if not execution_id or not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='execution_handoff_permissions'").fetchone():
+        return None
+    row = db.execute("""SELECT upstream_execution_id FROM execution_handoff_permissions
+        WHERE execution_id=? AND dependency_task_id=?""", (execution_id, dependency)).fetchone()
+    return row[0] if row else None
+
+
+def ready_inputs(db, identity, version, execution_id=None):
+    """Resolve current approvals or an explicit, immutable same-launch handoff."""
+    if execution_id:
+        current = db.execute("SELECT task_id,requirement_version FROM task_executions WHERE id=?", (execution_id,)).fetchone()
+        if current is None or (current['task_id'], current['requirement_version']) != (identity, version):
+            raise DependencyBlocked("执行与当前任务需求不一致")
+    root_execution = execution_id
+    pending = [(identity, version, execution_id)]
     visited, result = set(), []
     while pending:
         task_id, task_version, execution_id = pending.pop()
@@ -93,12 +120,20 @@ def ready_inputs(db, identity, version):
                 FROM tasks t LEFT JOIN task_executions e ON e.id=(SELECT id FROM task_executions
                     WHERE task_id=t.id ORDER BY attempt DESC LIMIT 1)
                 LEFT JOIN execution_reviews r ON r.execution_id=e.id WHERE t.id=?""", (dependency,)).fetchone()
+            authorized = handoff_source(db, execution_id, dependency)
             if (row is None or row["id"] is None or row["requirement_version"] != row["current_version"]
-                    or row["state"] != "awaiting_review" or row["decision"] != "approved"):
+                    or row["state"] != "awaiting_review"):
+                raise DependencyBlocked("前置任务的当前版本和最新执行尚未获得 Owner 批准")
+            if authorized:
+                if row['id'] != authorized or row['decision'] == 'rejected':
+                    raise DependencyBlocked("本批授权的固定前置执行已变化或被 Owner 拒绝")
+                if not db.execute('SELECT 1 FROM execution_artifacts WHERE execution_id=?', (authorized,)).fetchone():
+                    raise DependencyBlocked("本批前置执行尚无可交接的捕获成果")
+            elif row['decision'] != 'approved':
                 raise DependencyBlocked("前置任务的当前版本和最新执行尚未获得 Owner 批准")
             expected.append({"dependency_task_id": dependency, "upstream_execution_id": row["id"]})
             pending.append((dependency, row["current_version"], row["id"]))
-        if execution_id is None:
+        if task_id == identity and execution_id == root_execution:
             result = expected
         elif bound_inputs(db, execution_id) != expected:
             raise DependencyBlocked("前置成果依赖已变化，需要重新执行并评审")
@@ -106,5 +141,5 @@ def ready_inputs(db, identity, version):
 
 
 def check_bound(db, run):
-    if bound_inputs(db, run["id"]) != ready_inputs(db, run["task_id"], run["requirement_version"]):
+    if bound_inputs(db, run["id"]) != ready_inputs(db, run["task_id"], run["requirement_version"], run['id']):
         raise DependencyBlocked("本次执行使用的前置成果已变化，需要重新核查")

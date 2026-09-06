@@ -421,3 +421,24 @@ F50实际验证：主浏览器1315×1272两条完整流程通过：首400后同�
 主流程page_errors为空，原console包含400/丢连接/503故障注入及2条未记录URL的404；新只读context重走相关页面responses>=400、console及writes均空。两条原404端点无法追溯，保留未归因记录，不宣称原console全零。正常应用已由68562有序停止并重启为43954；health200、index-Bl2XnWmG.js回读成功，33张原表逐行同已核实SHA-256的备份、新launch表0行，原unknown不改。
 
 PM/TechLead/Ponytail/QA及主代理对F50本地增量验收Pass。外部证据位于H:\item\CorpPilot-test-evidence-20260906，包含f50-ui-review、f50-boundary-review、f50-restart-review、f50-verification、f50-normal-readback；后端回归沿用F49，未虚构新全量。真实CLI/双Docker、自动组队后自主交接、费用硬门、检查点恢复等完整目标仍未完成。
+
+
+F50实际交付：已核实外部f50-delivery-result.json，本地提交 `f52a1fb7c87f11a90af17005ebfcdb21848df1c0`，7文件186新增/26删除，立即推送退出128：GitHub403，suiyue1990无写权限。远端回读退出0、remote_head=null，提交后工作区干净；远端交付仍未完成。
+
+## F51 自动交接验收（本地fixture验收Pass）
+
+主代理实施，handoff_review独立完成PM/TechLead/Ponytail审查、缺陷复现与修复复审及浏览器边界。额外分派实现遇agent thread limit，已明确报告并由主代理接手，未伪称前后端由不同代理实施。先审需求与真实输入链，再集成、QA及验收；发布范围仅本地及授权分支推送。
+
+新增test_workbench_authorized_handoff.py共22项，覆盖三步固定依赖连续交接/并发claim一次、无自动reviews、最终Owner审批、默认/false、严格bool与旧key改授权冲突、改版/替代已批准尝试/拒绝/空成果/失败/unknown/取消、运行后的祖先拒绝使结果失效、重试与其他run不能借许可、损坏hash、权限写入全回滚/不可变及旧schema无隐式授权。真实CLIController+Windows artifact capture配受控runner完成三个不同执行及输入字节传递，没有实际CLI/供应商调用。
+
+独审发现memories/retro单字段输入被新增字段访问破坏，两条旧回归确实失败后修复。主代理新增22项及完整memory/retro定向 **61 passed（6.11s）**；独立新22项及原两条失败用例 **24 passed（2.78s）**。根完整`python -m pytest tests/ -q`为 **636 passed、8 subtests passed（115.36s）**，session41623退出0，包含上述修复和旧schema测试。之后只补两处前端文案区分许可/批准，未再改后端；独审Pass，不冒称重复全量。
+
+真实浏览器1315×1272：勾选auto前默认false；改变auto撤最终确认；首400→同key受理丢响应/GET503→reload保留confirm_handoff=true→GET原回执；实际A→B→C三次受控runner自动执行，inputs数量0/1/1，零中间审核。另先经真实下载端点读取最终C的108字节UTF8成果并核对SHA-256和执行ID，再通过UI提交唯一Owner approved；A/B仍未审批。不是用API代替UI审批，也没有新建替代执行。
+
+独立9项context边界及主代理最后重跑全部Pass：原8项加GET篡改confirm_handoff为false后拒绝释放，3个模拟POST仅fulfill，真实写禁转发，原launch回执不变。unexpected_writes/console_errors/page_errors均空，预期GET503一条单列。桌面1280×900/手机390×844截图已保存，主代理亲看自动交接及最终审批截图；最后只读浏览器核对新文案，responses>=400/console/page_errors/writes全空。主流程沿用脚本记录2条未标URL的404、另400/断连接/503预期注入；不声称原console全零，后续精确端点记录未复现404。
+
+最终bundle **index-BvE6_RC6.js**（48modules）typecheck/build通过；初次DP9m-E65后仅两处文案改动，最终9边界及只读界面重跑通过。外部f51-verification.json严格只读通过：1launch/1batch/3tasks/3executions（均awaiting_review）、3artifact哈希正确、2permission边与2execution_inputs完全对应、最终仅C一条approved、种子源行保持、共享仅显式摘要、3次输入无私有历史标记、DB完整性与外键正常。
+
+正常数据备份SHA-256为77b757dd1116a2a6dc6ddd2eae8323d114bf4d7c812dbf8155d3045d2a31e663；正常43954经live poll后Ctrl-C退出1，同路径启动37580，health200及最终bundle回读通过，34张原表逐行与备份相同，新增权限表0行。测试fixture52349确认live后Ctrl-C退出1、7896无监听，正常7892保留。f51-ui-review、handoff-readback、final-review、final-readonly、boundary-review、verification、normal-readback、cleanup在H:\item\CorpPilot-test-evidence-20260906中保留。
+
+PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目标自动规划和动态资源/费用硬门、检查点恢复等仍未完成。本地自动交接证据不替代真实执行环境验收；F51提交与立即推送以实际操作回读为准。
