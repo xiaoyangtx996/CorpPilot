@@ -17,6 +17,7 @@ from .goal_executions import GoalExecutions
 from .directory_lock import acquire
 from .budgets import BudgetDenied, Budgets
 from .store import _text
+from .context_receipts import ContextReceipts
 
 
 class ReplyController:
@@ -27,6 +28,7 @@ class ReplyController:
         try:
             self.runs = Runs(store)
             self.budgets = Budgets(store)
+            self.contexts = ContextReceipts(store)
             self.peer_reviews = PeerReviews(store)
             self.runs.recover()
             self.model_reconciliations = ModelReconciliations(store)
@@ -187,6 +189,12 @@ class ReplyController:
             selected_model = snapshot["agent"]["model"]
             if selected_model != "default":
                 config = {**config, "model": selected_model}
+            try:
+                model_label = '[模型标识已隐藏]' if config.get('api_key') and config['api_key'] in config['model'] else config['model']
+                self.contexts.record_model(identity, snapshot, model_label)
+            except Exception:
+                self.runs.fail(identity, '上下文摘要保存失败，未启动模型请求')
+                return
             result = run_reply(config, snapshot)
             self.runs.record_usage(identity, {key: result[key] for key in ('model', 'prompt_tokens', 'completion_tokens')})
             self.runs.finish(identity, **result)

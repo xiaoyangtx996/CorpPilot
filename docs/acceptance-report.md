@@ -559,3 +559,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 类型检查和54模块index-CgVhIIqB.js构建通过；原goal WMsoYi及预算9Noj4C回归通过。两轮早期金额原生校验假定/textarea标签失败分别修测试与产品，过程见功能台账。正常库未被测试修改，服务76129无需重启，health与实际静态资源字节一致（f64-normal-readback.json）。后端生产未改，未重跑Python全量，最近F63基线814+8不作为本轮新运行。
 
 本功能完成Owner费用录入、不可变更正和持久历史的浏览器入口；费用仍是Owner声明，非服务方账单验真或单调用硬cap。整体目标仍未完成。
+
+## F65 上下文准备证据验收
+
+全量844 passed、8 subtests passed，258.13s（session30035退出0），包含最终生产代码。之后只增加两项来源测试，最终定向32 passed17.98s单列，不扩大前述全量数量。独立只读审查Pass。覆盖普通100消息边界、授权共享摘要非原私聊正文、复盘合成输入、单消息评议、CLI已冻结记忆/成果、hash/正文隔离、不可变并发、失败不派发、GET不重建snapshot和真实备份恢复。
+
+原goal浏览器qad3e0通过、fixture正常退出；本轮无前端生产修改和新摘要UI，不把旧流程回归当作新界面验收。正常42旧表与备份逐行相同，唯一新表为空，health与静态字节一致，见f65-normal-readback.json。prepared只证明实际调用入口准备并保存摘要，不证明供应商收到或CLI启动；没有实际付费调用或真实Docker验收。全目标保持未完成。

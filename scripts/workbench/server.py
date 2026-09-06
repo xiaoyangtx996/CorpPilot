@@ -405,6 +405,8 @@ class Handler(BaseHTTPRequestHandler):
             prefix = "/api/workbench/executions/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")
+                if len(parts) == 2 and parts[0] and parts[1] == 'context-summary' and self.command == 'GET':
+                    return self.respond(200, self.server.controller.contexts.get('cli', parts[0]))
                 if len(parts) == 1 and parts[0] and self.command == "GET":
                     return self.respond(200, self.server.controller.cli.executions.get(parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == "worker" and self.command == "GET":
@@ -465,6 +467,8 @@ class Handler(BaseHTTPRequestHandler):
                 parts = path[len(prefix):].split("/")
                 if len(parts) == 1 and parts[0] and self.command == "GET":
                     return self.respond(200, self.server.controller.runs.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == 'context-summary' and self.command == 'GET':
+                    return self.respond(200, self.server.controller.contexts.get('model', parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == "reconciliation":
                     if self.command == "GET":
                         return self.respond(200, self.server.controller.model_reconciliations.get(parts[0]))

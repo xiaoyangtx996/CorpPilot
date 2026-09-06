@@ -15,6 +15,7 @@ from .reconciliations import Reconciliations, unresolved
 from . import resource_admission
 from .budgets import BudgetDenied, Budgets
 from .store import _text
+from .context_receipts import ContextReceipts
 
 
 class CLIController:
@@ -25,6 +26,7 @@ class CLIController:
         self.settings = CLISettings(store)
         self.executions = Executions(store)
         self.budgets = Budgets(store)
+        self.contexts = ContextReceipts(store)
         self.project_executions = ProjectExecutions(store)
         self.checkpoints = Checkpoints(store, self.project_executions)
         self.project_launches = ProjectLaunches(store)
@@ -72,6 +74,8 @@ class CLIController:
                 return self._unstarted("任务上下文超过 CLI 上限，未启动")
             if cancel.is_set():
                 return self._unstarted("启动前已请求停止")
+            model_label = '[模型标识已隐藏]' if config.get('api_key') and config['api_key'] in model else model
+            self.contexts.record_cli(run['id'], snapshot, model_label, config.get('backend', 'local'))
         except Exception:
             return self._unstarted("无法取得有效授权任务上下文，未启动")
         usage = None

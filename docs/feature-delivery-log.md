@@ -724,3 +724,15 @@ handoff_review负责FeeSettlement、AgentActivity和API类型；根负责隔离f
 原goal浏览器WMsoYi（session73238）和预算浏览器9Noj4C均通过、fixture退出0。后端生产未改，未重复全量Python；最近F63全量814+8为既有基线。正常76129继续运行，无需重启；原41表与F63离线备份逐行一致，费用表仍空，完整性/外键/health200和实际JS字节通过（f64-normal-readback.json）。
 
 独立提交后立即推送，精确提交及远端回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f64-delivery-result.json。远端确认前不标记远端交付；真实CLI/双Docker、可见上下文摘要和工具活动观察的剩余验收及全目标验收仍未完成。
+
+## F65 当次上下文准备证据后端
+
+handoff_review负责context_receipts及最终25项定向测试；根负责控制器/API接线、7项集成测试、迁移与文档；verify_prompt_push只读终审Pass。根及审查发现CLI返回后重复写入，删去冗余路径，仅外部调用前保存一次；没有增加后台服务或正文日志。明确prepared与真实发送不同，snapshot内容hash不是最终网络payload。
+
+根全量844 passed、8 subtests passed，258.13s（session30035退出0），包含全部最终生产改动。作者随后只追加真实goal摘要和冻结记忆/成果两例测试；最终新旧定向32 passed、17.98s（session20690退出0），含这两例，不冒称其包含在先前全量收集中。根首轮集成1失败6通过源于本地HTTP fixture记录为tuple的测试索引错误，修正后7 passed4.46s，未更改产品行为。作者追加记忆测试首次复用request ID冲突后改独立测试ID，生产无修正。
+
+覆盖保存失败不调用provider/runner、实际本地HTTP输入摘要、模型各分支、CLI冻结记忆/成果、元数据白名单、不可变、并发和回滚、旧无回执null、Owner GET零写入且禁止snapshot重建，以及真实backup/restore。CLI/Docker adapter时序使用受控runner，不替代真实工具或双容器。
+
+原goal浏览器qad3e0通过、session10963退出0、fixture退出0。前端未改，沿用F64 index-CgVhIIqB.js；没有新的上下文UI验收。正常76129确认live且无活动后停止，实际f65-normal-backup数据库hash788c9b4a1cbc9b79ffc2a2a964c9853966c2f808a22efa236eaa494b43290f62；新75331同目录运行7892，原42表逐行不变，仅新增空context_receipts，完整性、外键、health200和JS字节读回通过（f65-normal-readback.json）。
+
+独立提交后立即推送，实际提交及远端结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f65-delivery-result.json。远端确认前不标记远端交付；摘要界面、工具活动观察、真实CLI/双Docker及全目标仍未完成。
