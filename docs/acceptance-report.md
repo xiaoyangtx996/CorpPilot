@@ -527,3 +527,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 原浏览器全链session72239退出0，corppilot-browser-RLdPT8/browser-report.json通过，fixture实际退出0；没有新增检查点UI，不将旧浏览器回归作为该流程验收。F59仅后端/API增量，操作合同及边界见checkpoint-recovery.md。
 
 正常库零活动备份后重启39515；原37表逐行未变，仅新增两张空检查点表，integrity=ok、外键空、health200（外部f59-normal-readback.json）。未调用真实模型/CLI或容器；任务级恢复不保证进程内存/CLI会话恢复。完整目标保持未完成。
+
+## F60 检查点浏览器验收
+
+根新增浏览器最终TQHjz0通过：固定成果不重跑、两次恢复和独立停止、重新批准前置后下游执行；精确3次本地受控runner、0模型调用。响应丢失后重新打开保留原请求；真实POST202随后GET400不变成首拒，只读核验后释放；另有GET400、错批次、错授权、坏存储4项隔离边界。fixture正常退出、pageErrors为空。原goal浏览器ZPR0nV全链通过；未新增首次4xx/401浏览器专项覆盖，不扩大声明。
+
+独立审查Return要求补精准路径，补证后Pass。根构建52模块index-BN3hmzBK.js通过并目视恢复页截图。正常服务未重启，健康和静态资源字节一致，正常数据未被测试写入（f60-normal-readback.json）。未重跑Python全量，沿用F59后端765+8基线。这里是本地受控功能验收，不代表真实付费CLI/双容器、金额硬限制或整体交付完成。

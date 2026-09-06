@@ -114,3 +114,10 @@ export type GoalExecutionRequest = { request_id: string; source_message_id: stri
 export type GoalExecutionReceipt = { id: string; source_conversation_id: string; request_id: string; request_payload: GoalExecutionRequest; planning_run_id: string; launch_request_id: string; launch_id: string | null; stop_requested: boolean; state: 'planning' | 'ready_to_launch' | 'launched' | 'failed' | 'unknown' | 'cancelled' | 'stop_requested' | 'stopped'; error: string | null; created_at: string; planning: PlanningRun; launch: ProjectLaunchReceipt | null; batch: ProjectExecutionDetail | null };
 
 export type ResourceAdmission = { enabled: boolean | null; available_memory_mb: number | null; cpu_count: number | null; reserved_memory_mb: number; reserved_cpus: number; message: string };
+
+export type CheckpointNode = { task_id: string; requirement_version: number; execution_id: string | null; latest_execution_id: string | null; execution_requirement_version: number | null; attempt: number | null; state: string | null; action: 'reuse' | 'retry' | 'blocked'; external: boolean; dependencies: string[]; artifacts: { id: string; path: string; size: number; sha256: string }[]; [key: string]: unknown };
+export type CheckpointSnapshot = { source_batch_id: string; collaboration_id: string; project_conversation_id: string; nodes: CheckpointNode[] };
+export type CheckpointPreview = { source_batch_id: string; snapshot: CheckpointSnapshot; fingerprint: string; blockers: string[] };
+export type CheckpointRequest = { request_id: string; checkpoint_fingerprint: string; reconciliation_note: string; confirm: true };
+export type CheckpointReceipt = { id: string; source_batch_id: string; request_id: string; request_payload: CheckpointRequest; checkpoint_fingerprint: string; snapshot: CheckpointSnapshot; batch_id: string; batch: ProjectExecutionReceipt; created_at: string };
+export type CheckpointDetail = Omit<CheckpointReceipt, 'batch'> & { batch: ProjectExecutionDetail };

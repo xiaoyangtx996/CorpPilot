@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { CheckpointRecovery } from './CheckpointRecovery';
 import { api, ApiError, type Agent, type Conversation, type CollaborationReceipt, type Task, type TaskExecution, type TaskDependencyStatus, type CliSettingsValue, type ReplyRuntime, type ProjectExecutionRequest, type ProjectExecutionReceipt, type ProjectExecutionDetail, type ExecutionReconciliationRecord } from './api';
 
 type Pending = { payload: ProjectExecutionRequest; batch_id?: string; rejected?: boolean };
@@ -22,6 +23,7 @@ export function CollaborationExecutionPanel({ plan, onClose, initialBatchId = ''
   const [config, setConfig] = useState<CliSettingsValue | null>(null), [runtime, setRuntime] = useState<ReplyRuntime | null>(null), [project, setProject] = useState<Conversation | null>(null), [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(''), [readError, setReadError] = useState(''), [storageError, setStorageError] = useState('');
   const authority = useRef('');
+  const [checkpoint, setCheckpoint] = useState('');
   const [declarations, setDeclarations] = useState<Record<string, ExecutionReconciliationRecord | null>>({});
   const unresolved = (run: TaskExecution) => run.state === 'unknown' && !declarations[run.id];
   function adopt(row: ProjectExecutionReceipt, sent: Pending) {
@@ -116,6 +118,14 @@ export function CollaborationExecutionPanel({ plan, onClose, initialBatchId = ''
     {detail && <section><h3>本批绑定实例</h3><small>批次 {detail.id}</small>{detail.items.map(item => <article className="task-card" key={item.execution.id}><h4>{item.task.title} · {labels[item.execution.state]}</h4><small>执行 {item.execution.id} · v{item.execution.requirement_version}</small>{item.latest_execution_id !== item.execution.id && <p>此实例不是任务最新执行；本批停止不会操作替代实例。</p>}{item.task.requirement_version !== item.execution.requirement_version && <p>当前需求已变化；本批仍绑定原需求版本。</p>}{item.execution.state === 'unknown' && <p>{declarations[item.execution.id] ? 'Owner 已声明进程停止并核查外部影响；原执行仍为未知。再次执行仍须填写说明并重新确认。' : '未知实例尚未核查或声明未读到，请到任务执行中核查后刷新本页。'}</p>}<p>{item.dependencies.handoff_authorized ? '本实例已获固定前置成果自动交接授权；这不是验收批准。' : '前置成果按原审批规则处理。'}</p><p>Owner 评审：{item.review?.decision === 'approved' ? '已批准' : item.review?.decision === 'rejected' ? '已拒绝' : '尚未批准'}</p>{!item.dependencies.ready && <p>等待前置：{item.dependencies.blocked_reason}</p>}{item.execution.summary && <p>{item.execution.summary}</p>}</article>)}<p>执行结束不等于成果验收通过；请在项目任务中评审成果或核查未知执行。</p>
       {stopUnknown ? <p className="error">停止响应未确认。只刷新本批状态，不自动重发停止；必要时到具体任务核查原实例。</p> : detail.items.some(i => active(i.execution)) && <><label className="check"><input type="checkbox" disabled={busy || loading} checked={stopConfirmed === detail.id} onChange={event => setStopConfirmed(event.target.checked ? detail.id : '')} />我确认只请求停止本批绑定的实例，等待实际退出核实</label><button disabled={busy || loading || stopConfirmed !== detail.id} onClick={() => void stop()}>确认停止本批执行</button></>}
     </section>}
+    {detail && <button disabled={busy || loading || !!storageError || !!pending && pending.batch_id !== detail.id} onClick={() => setCheckpoint(detail.id)}>从本批检查点恢复</button>}
     <details><summary>批量执行历史</summary>{history.map(row => <p key={row.id}><button disabled={busy || loading || !!pending} onClick={() => { viewRef.current = row.id; setDetail(null); setStopConfirmed(''); setStopUnknown(false); void load(); }}>查看批次 {row.id}</button> · {row.created_at}</p>)}</details>
+    {checkpoint && <CheckpointRecovery key={checkpoint} sourceBatchId={checkpoint} plan={plan} onClose={() => setCheckpoint('')} onOpenBatch={id => {
+      try {
+        if (pendingRef.current && pendingRef.current.batch_id !== checkpoint) throw Error('另一原批量请求仍待核对，不能切换');
+        sessionStorage.removeItem(key); pendingRef.current = null; setPending(null);
+        viewRef.current = id; setDetail(null); setStopConfirmed(''); setStopUnknown(false); setCheckpoint(''); void load();
+      } catch (e) { setStorageError(failure(e)); }
+    }} />}
   </dialog>;
 }

@@ -27,6 +27,7 @@ from workbench import cli_controller
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir', required=True, type=Path)
+    parser.add_argument('--checkpoint', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -109,10 +110,35 @@ def main():
 
     cli_controller.run_codex = runner
 
+    checkpoint = None
+    if args.checkpoint:
+        from workbench.collaboration import Collaboration
+        from workbench.project_executions import ProjectExecutions
+        from workbench.reviews import Reviews
+        from workbench import artifacts
+        plan = Collaboration(store).create(source['id'], dict(request_id='checkpoint-plan', source_message_id=message['id'],
+            title='F60 检查点项目', shared_brief='Explicit checkpoint fixture', coordinator_id=people[0]['id'], tasks=proposal['tasks']))
+        batches = ProjectExecutions(store)
+        batch = batches.create(plan['id'], {'request_id': 'original-batch', 'tasks': [
+            dict(task_id=identity, expected_version=1, previous_execution_id=None, reconciliation_note='') for identity in plan['task_ids'].values()]})
+        a, b, c = [item['execution_id'] for item in batch['tasks']]
+        assert batches.executions.claim(a)
+        batches.executions.report(a, 1, 1, 0, 'Retained checkpoint', success=True, artifacts=[{'path': 'retained.txt', 'data': b'F60 retained bytes'}])
+        Reviews(store).save(a, dict(request_id='approve-checkpoint', expected_version=1, decision='approved', note='Inspected retained bytes',
+            artifact_ids=[item['id'] for item in artifacts.list_for(store, a)]))
+        assert batches.executions.claim(b)
+        batches.executions.report(b, 1, 1, 1, 'Fixture interrupted')
+        batches.executions.cancel(c)
+        checkpoint = dict(plan=plan, batch=batch, retained_execution_id=a)
+
     class FixtureHandler(Handler):
         rejected = set()
 
         def do_POST(self):
+            if self.path.endswith('/checkpoint-recoveries'):
+                raw = self.rfile.read(int(self.headers['Content-Length']))
+                self.rfile = io.BytesIO(raw)
+                event('checkpoint_post', payload=json.loads(raw), path=self.path)
             if '/goal-executions/' in self.path and self.path.endswith('/stop'):
                 event('stop_post', path=self.path)
             if self.path.endswith('/goal-executions') and self.headers.get('Authorization') == 'Bearer ' + self.server.access_token:
@@ -126,6 +152,16 @@ def main():
             return Handler.do_POST(self)
 
         def respond(self, status, value):
+            if '/checkpoint' in self.path:
+                if self.command == 'GET' and control().get('checkpoint_get503'):
+                    return Handler.respond(self, 503, {'error': 'Checkpoint readback unavailable'})
+                if self.command == 'POST' and status == 202 and self.path.endswith('/checkpoint-recoveries'):
+                    event('checkpoint_accepted', recovery_id=value['id'], batch_id=value['batch_id'])
+                    if control().get('drop_checkpoint'):
+                        self.close_connection = True
+                        try: self.connection.shutdown(socket.SHUT_RDWR)
+                        except OSError: pass
+                        return
             if '/goal-executions' in self.path:
                 if self.command == 'GET' and control().get('get503'):
                     return Handler.respond(self, 503, {'error': 'Fixture readback unavailable'})
@@ -155,6 +191,7 @@ def main():
     manifest = dict(port=server.server_port, access_token=server.access_token, source_conversation_id=source['id'],
         source_message_id=message['id'], coordinator_id=people[0]['id'], agent_ids=[p['id'] for p in people],
         agent_names=[p['name'] for p in people], data_dir=str(home), pid=os.getpid())
+    if checkpoint is not None: manifest['checkpoint'] = checkpoint
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():

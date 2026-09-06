@@ -11,7 +11,8 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test:browser": "npm run build && node tests/goal-browser.mjs",
-    "test:browser:install": "playwright install chromium"
+    "test:browser:install": "playwright install chromium",
+    "test:browser:checkpoint": "npm run build && node tests/checkpoint-browser.mjs"
   },
   "dependencies": {
     "react": "19.2.8",

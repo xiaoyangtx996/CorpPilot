@@ -674,3 +674,11 @@ handoff_review负责checkpoints/dependencies及新14项测试，根负责控制�
 根全量765 passed、8 subtests passed，209.97s（session64694退出0）。正常68875确认live及零活动后停止，离线f59-normal-backup DB hash004d1143ad528bd70d61ec6e4a1cb93e2405110ad8fc0eb8f28e799c0b91a45e；新39515启动7892，原37表逐行未变，仅增加空checkpoint_recoveries/checkpoint_dependency_pins，integrity/外键/health200通过。
 
 独立提交并立即推送及远端回读结果保存在仓库外 `H:\item\CorpPilot-test-evidence-20260906\f59-delivery-result.json`；远端成功前不标记远端交付。费用约束、真实CLI/双Docker、检查点浏览器操作及整体目标仍未完成。
+
+## F60 检查点浏览器流程
+
+handoff_review负责3个前端生产文件；根负责隔离fixture、浏览器驱动、集成验收与文档；verify_prompt_push只读终审Pass。修复POST202后GET4xx误标首拒及历史快照混显。审查首次Return指出GET400测试路径不精准，追加真实POST202后GET400回归并通过，未放宽产品契约。
+
+根检查点浏览器最终corppilot-checkpoint-TQHjz0/browser-report.json通过、fixture退出0、pageErrors空：两次恢复、保留成果不重跑、新批次停止、新前置Owner批准、精确3次受控CLI和0模型调用，响应丢失重新打开、POST202后GET400只读恢复及4个独立边界。原goal浏览器corppilot-browser-ZPR0nV/browser-report.json通过、session19937退出0。根目视恢复截图，根typecheck/build通过52模块index-BN3hmzBK.js。没有修改后端生产逻辑，未重复全量Python；最近后端全量是F59的765+8，不作为本轮新运行。
+
+正常39515持续运行无需重启，health200、实际JS字节与构建一致。与F59离线备份相比原37表逐行未变、两张F59检查点表仍空、无活动执行、integrity/外键通过（外部f60-normal-readback.json）。本功能单独提交并立即推送，精确结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f60-delivery-result.json；远端回读前不标记远端交付。费用约束、真实CLI/双Docker及整体目标仍未完成。
