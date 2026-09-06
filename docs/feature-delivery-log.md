@@ -496,3 +496,14 @@
 - 旧fixture93937确认live后Ctrl+C退出1；新92039同数据重启，旧授权401触发AccessGate。重新授权后完整1ab99600 payload及rejected=false保留，手动同键回读成功才清pending，项目批准记忆仍v1；未记录token。
 - 外部f42-verification.json已保存：只读SQLite为4个Run（2完成/1取消/1失败）、4候选（个人种子1/模型2/手工1）、2决定/2修订、1任务/1执行/2成果，原手工memory_requests仅1条，integrity_check为ok。实际本地fixture模型3次，未选正文/个人记忆/聊天历史标记无泄漏。
 - 新测试服务92039经持有句柄的Agent确认live后Ctrl+C退出1，主代理核对7896/7897均无Listen，f42-verification.json已补入最终退出结果。本地浏览器及测试服务收尾完成；console/mobile未专项测试，真实供应商经验质量、CLI、Docker与完整目标未验收，F42提交及推送须待实际操作记录。
+
+- F42 实际提交 `55ff1ee922ca465cc3da826965d53cb410178738` 后立即推送退出 1，GitHub403：suiyue1990 无写权限；远端回读退出 0、`remote_head=null`。已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f42-delivery-result.json`，远端交付仍阻塞，此记录替代上文待提交描述。
+
+## F43：批准计划原子批量执行后端
+
+- task_execution_ui 负责后端实现；主代理负责 API、调度集成及最终测试；verify_history_scope 负责独立技术审查及容量测试；verify_prompt_push 本轮负责三份文档核对，未独立重跑测试。F44 界面另行验收和提交。
+- Owner 选择原协作回执的 1–16 项任务，以当前版本、前次 execution ID 与再次执行核查说明原子入队；任何一项失败均回滚。不可变批次回执保留请求及每任务固定 execution ID。
+- 复用 Executions 和 CLIController 队列、依赖与 max_concurrency，不新增调度层；后继等待前置 Owner 批准，未选前置不自动执行。停止仅针对本批绑定实例，不停止替代实例；unknown 保留并沿用既有人工核查门。
+- 批量 API、固定批次读取/停止和仅项目适用的 origin-plan 均受 Owner 鉴权。首次创建核查配置，精确同键原内容重放只回原回执，异内容冲突拒绝。
+- 主代理报告定向 **18 passed（4.17s）**，包含实际 tick/线程池配合受控 runner 的 A/C 同时运行、A 批准后 B 自动启动；不是实际 CLI、模型或 Docker 验收。最终主代理全量 **551 passed、8 subtests passed（93.25s）**，session65228 退出0；独立审查Pass、相关 **57 passed（10.60s）**。全量之后仅新增2项容量测试、产品代码未改，独立 **2 passed（1.07s）**，主代理复跑 **2 passed（1.28s）**，不虚构包含新增测试的第二次全量结果。
+- F44 未完成浏览器验收；F43 当前提交/推送尚待实际操作记录，真实执行环境及整体目标仍未验收。

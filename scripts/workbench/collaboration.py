@@ -114,6 +114,16 @@ class Collaboration:
                 raise KeyError('协作计划不存在')
             return self._receipt(row)
 
+    def for_project(self, project_id):
+        with self.store.connect() as db:
+            db.execute("BEGIN")
+            conversation = self.store._conversation(db, project_id)
+            if conversation["type"] != "project":
+                raise ValueError("来源计划查询只适用于项目会话")
+            row = db.execute("SELECT snapshot,payload FROM collaboration_receipts WHERE json_extract(snapshot,'$.project_conversation_id')=?",
+                             (project_id,)).fetchone()
+            return self._receipt(row) if row else None
+
     def list(self, source_conversation_id):
         source_conversation_id = _text(source_conversation_id, '源会话 ID')
         with self.store.connect() as db:

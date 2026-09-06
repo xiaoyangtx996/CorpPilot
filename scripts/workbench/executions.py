@@ -72,6 +72,11 @@ class Executions:
         return task
 
     def create(self, task_id, payload):
+        with self.store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            return self._create(db, task_id, payload)
+
+    def _create(self, db, task_id, payload):
         if not isinstance(payload, dict) or set(payload) != {"request_id", "expected_version", "reconciliation_note", "previous_execution_id"}:
             raise ValueError("执行请求必须只含 request_id、expected_version、reconciliation_note、previous_execution_id")
         request = _text(payload["request_id"], "请求 ID", 120)
@@ -85,34 +90,32 @@ class Executions:
         prior_id = payload["previous_execution_id"]
         if prior_id is not None:
             prior_id = _text(prior_id, "前次执行 ID")
-        with self.store.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            previous = db.execute("SELECT * FROM task_executions WHERE task_id=? AND request_id=?",
-                                  (task_id, request)).fetchone()
-            if previous:
-                if (previous["requirement_version"], previous["reconciliation_note"], previous["previous_execution_id"]) != (version, note, prior_id):
-                    raise ValueError("request_id 已用于不同任务执行")
-                return dict(previous)
-            task = self.tasks._task(db, task_id)
-            if reconciliations.unresolved(db, task_id):
-                raise ValueError("本任务存在未核实的执行，不能启动替代实例")
-            self._authorize(db, {"task_id": task_id, "requirement_version": version, "agent_id": task["agent_id"]})
-            if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state IN ('queued','running','stopping')",
-                          (task_id,)).fetchone():
-                raise ValueError("任务仍有排队或未确认停止的执行")
-            latest = db.execute("SELECT id,attempt FROM task_executions WHERE task_id=? ORDER BY attempt DESC LIMIT 1", (task_id,)).fetchone()
-            if prior_id != (latest["id"] if latest else None):
-                raise ValueError("必须核对并引用本任务最近一次执行")
-            attempt = latest["attempt"] + 1 if latest else 1
-            if attempt > 1 and not note:
-                raise ValueError("再次执行前必须记录已核查的结果、副作用及重试理由")
-            if db.execute("SELECT count(*) FROM task_executions WHERE state IN ('queued','running','stopping')").fetchone()[0] >= 100:
-                raise ValueError("任务执行队列已满")
-            identity = str(uuid.uuid4())
-            db.execute("""INSERT INTO task_executions(id,task_id,agent_id,requirement_version,attempt,
-                request_id,reconciliation_note,previous_execution_id,state) VALUES(?,?,?,?,?,?,?,?,'queued')""",
-                       (identity, task_id, task["agent_id"], version, attempt, request, note, prior_id))
-            return self._run(db, identity)
+        previous = db.execute("SELECT * FROM task_executions WHERE task_id=? AND request_id=?",
+                              (task_id, request)).fetchone()
+        if previous:
+            if (previous["requirement_version"], previous["reconciliation_note"], previous["previous_execution_id"]) != (version, note, prior_id):
+                raise ValueError("request_id 已用于不同任务执行")
+            return dict(previous)
+        task = self.tasks._task(db, task_id)
+        if reconciliations.unresolved(db, task_id):
+            raise ValueError("本任务存在未核实的执行，不能启动替代实例")
+        self._authorize(db, {"task_id": task_id, "requirement_version": version, "agent_id": task["agent_id"]})
+        if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state IN ('queued','running','stopping')",
+                      (task_id,)).fetchone():
+            raise ValueError("任务仍有排队或未确认停止的执行")
+        latest = db.execute("SELECT id,attempt FROM task_executions WHERE task_id=? ORDER BY attempt DESC LIMIT 1", (task_id,)).fetchone()
+        if prior_id != (latest["id"] if latest else None):
+            raise ValueError("必须核对并引用本任务最近一次执行")
+        attempt = latest["attempt"] + 1 if latest else 1
+        if attempt > 1 and not note:
+            raise ValueError("再次执行前必须记录已核查的结果、副作用及重试理由")
+        if db.execute("SELECT count(*) FROM task_executions WHERE state IN ('queued','running','stopping')").fetchone()[0] >= 100:
+            raise ValueError("任务执行队列已满")
+        identity = str(uuid.uuid4())
+        db.execute("""INSERT INTO task_executions(id,task_id,agent_id,requirement_version,attempt,
+            request_id,reconciliation_note,previous_execution_id,state) VALUES(?,?,?,?,?,?,?,?,'queued')""",
+                   (identity, task_id, task["agent_id"], version, attempt, request, note, prior_id))
+        return self._run(db, identity)
 
     def get(self, identity):
         with self.store.connect() as db:
@@ -181,12 +184,15 @@ class Executions:
     def cancel(self, identity):
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            run = self._run(db, identity)
-            if run["state"] == "queued":
-                self._set(db, identity, "cancelled", "排队取消，未启动执行")
-            elif run["state"] == "running":
-                self._set(db, identity, "stopping", "已请求停止，尚未确认执行实例退出")
-            return self._run(db, identity)
+            return self._cancel(db, identity)
+
+    def _cancel(self, db, identity):
+        run = self._run(db, identity)
+        if run["state"] == "queued":
+            self._set(db, identity, "cancelled", "排队取消，未启动执行")
+        elif run["state"] == "running":
+            self._set(db, identity, "stopping", "已请求停止，尚未确认执行实例退出")
+        return self._run(db, identity)
 
     def recover(self):
         """Call only under the controller's exclusive lifetime lock after restart.

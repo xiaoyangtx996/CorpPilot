@@ -306,3 +306,15 @@ Windows保留应用/数据修复及重启窗口的授权已异步待答，未执
 外部 `H:\item\CorpPilot-test-evidence-20260906\f42-verification.json` 已保存。主代理只读SQLite回查为4个Run（2 completed、1 cancelled、1 failed）、4候选（个人种子1、模型2、手工1）、2条决定/2个修订、1任务/1执行/2成果；原手工request_id在memory_requests中仅1条，integrity_check为ok。实际本地fixture模型调用共3次，选中正文进入模型，未选成果、个人记忆及聊天历史标记均未泄漏。该1次执行为测试来源，未据此声明真实CLI或Docker运行；真实供应商经验质量仍待验证。
 
 新测试服务92039由持有句柄的Agent确认仍运行后Ctrl+C停止，工具确认终端退出1（主动中断）；主代理再次核对7896和7897均无Listen，f42-verification.json已补入最终退出结果。F42本地浏览器恢复与测试服务收尾完成；console/mobile未专项测试，真实供应商经验质量、真实CLI及Docker仍未验收。提交与远端推送结果须以随后实际操作为准。
+
+F42 交付补记：已直接读取外部 `H:\item\CorpPilot-test-evidence-20260906\f42-delivery-result.json`，实际提交为 `55ff1ee922ca465cc3da826965d53cb410178738`；立即推送退出 1，GitHub 403（suiyue1990 无目标仓库写权限）。远端回读命令退出 0，但 `remote_head=null`，没有远端分支哈希；本地提交不代表远端交付成功。
+
+## F43：协作项目批量执行后端验收
+
+本增量复用 Executions/CLIController；批准计划中的选定 1–16 项任务在单事务内全部入队并留下不可变回执，或全部回滚。任务仍按原依赖及并发上限调度，前置成果需要 Owner 批准。回执绑定原 execution ID，停止只针对本批实例；后续替代实例不受影响，unknown 和未确认退出不能被改写成成功。
+
+主代理本轮定向结果为 **18 passed（4.17s）**。其中调度集成使用实际 tick 与线程池，运行受控 runner，验证 A/C 同时运行、B 等待 A 获批准后自动启动。上述证据来自主代理本轮结果；文档维护未独立重跑，不将受控 runner 描述为真实 CLI、付费模型或 Docker。
+
+Owner 鉴权覆盖批量创建、读取、停止与项目来源回执接口。首次创建检查配置和原单任务入队条件；精确重放返回原批次，同 key 异内容拒绝。停止需要 confirm=true，仅表示向固定绑定实例提出停止，不自动产生人工核查声明或批准成果。项目来源查询只用于 project 会话。
+
+主代理完整后端回归 **551 passed、8 subtests passed（93.25s）**，session65228 退出0。独立审查 **Pass**，相关测试 **57 passed（10.60s）**。全量结束后产品代码无变化，仅新增容量测试2项：独立运行 **2 passed（1.07s）**，主代理复跑 **2 passed（1.28s）**；未将新增测试数合并伪称另一次全量结果。F44 前端仍独立开发/审查，尚未浏览器验收。F43 提交及推送结果等待实际操作补记，真实 CLI/模型、双 Docker Worker 与整体目标继续保持未验收边界。

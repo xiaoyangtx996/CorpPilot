@@ -7,6 +7,7 @@ from .cli import run_codex, InputPreparationError
 from .docker_worker import run_docker, inspect_worker, stop_worker
 from .cli_settings import CLISettings
 from .executions import Executions
+from .project_executions import ProjectExecutions
 from .artifacts import capture
 from .reconciliations import Reconciliations, unresolved
 
@@ -17,6 +18,7 @@ class CLIController:
         self.store = store
         self.settings = CLISettings(store)
         self.executions = Executions(store)
+        self.project_executions = ProjectExecutions(store)
         self.reconciliations = Reconciliations(store)
         with store.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS execution_backends (
@@ -176,6 +178,23 @@ class CLIController:
             raise ValueError("CLI 控制器正在关闭，不能创建执行")
         self.settings.resolve()
         return self.executions.create(task_id, payload)
+
+    def enqueue_project(self, collaboration_id, payload):
+        if isinstance(payload, dict) and isinstance(payload.get("request_id"), str):
+            with self.store.connect() as db:
+                existing = db.execute("SELECT 1 FROM project_execution_batches WHERE collaboration_id=? AND request_id=?",
+                                      (collaboration_id, payload["request_id"])).fetchone()
+            if existing:
+                return self.project_executions.create(collaboration_id, payload)
+        if self.closed:
+            raise ValueError("CLI 控制器正在关闭，不能创建执行")
+        self.settings.resolve()
+        return self.project_executions.create(collaboration_id, payload)
+
+    def stop_project(self, identity):
+        if self.closed:
+            raise ValueError("CLI 控制器正在关闭，不能停止批次")
+        return self.project_executions.stop(identity)
 
     def reconcile_unknown(self, identity, payload):
         if self.closed:

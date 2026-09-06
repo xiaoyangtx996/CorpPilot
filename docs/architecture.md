@@ -479,3 +479,13 @@ Owner鉴权接口：`POST/GET /api/workbench/memories/{scope}/{id}/retrospective
 完成记录显示候选ID与模型引用成果，候选审批独立于模型调用确认；queued沿原Run接口取消，running不宣称能停止，unknown继续锁定且不提供替代调用。原MemoryPanel的候选/决定/回滚请求也改为每次发送前清除旧rejected，仅首次明确拒绝可重新编辑；401继续要求重新授权并保留原请求。
 
 主代理已验证项目范围v0选定文本生成候选、原草稿保留、再次Owner审批后才成为v1，以及首400后同键受理202但响应丢失、GET503、刷新保留原键和恢复GET核对原Run。两个有效请求各一次本地受控模型调用；配置禁用时queued可取消且不调用模型，非法JSON失败且不生成候选。原MemoryPanel候选首400后同键201响应丢失时，旧rejected清除、刷新保留pending，候选GET可见不替代原请求确认。测试服务真实重启并轮换口令后，401触发重新授权，原完整payload与rejected=false继续保留，同键回读成功才清除pending，项目批准记忆仍v1。数据库回读4个Run、4候选、2决定/2修订且完整性通过，本地模型共3次、隐私标记未泄漏；测试服务最终经实际句柄中断并确认退出，7896/7897均无监听。未专项测试console/mobile，真实供应商经验质量、CLI和Docker仍未验收；具体结果见 [F42验收记录](acceptance-report.md#f42-浏览器模型复盘验收)。
+
+## F43：批准协作计划的原子批量执行
+
+Owner 从不可变协作创建回执中明确选择 1–16 个原计划任务，以每项当前 `expected_version`、`previous_execution_id` 与 `reconciliation_note` 提交。`ProjectExecutions` 在同一 SQLite 写事务内复用 `Executions._create`，任何一项版本、权限、前次执行或队列条件不满足即整体回滚；成功保存不可变批次回执，将任务映射到固定 execution ID。批次不是新的调度器，实际执行继续使用 `CLIController`、原队列、依赖检查及 `max_concurrency`；未选前置不自动入队，已入队后继仍等待前置成果获 Owner 批准。
+
+全部入口沿用 Owner Bearer 鉴权：`POST/GET /api/workbench/collaboration-plans/{plan_id}/executions` 创建或列出批次，POST 返回 202；`GET /api/workbench/project-executions/{batch_id}` 返回原回执和本批绑定实例的任务、执行、评审、当前依赖及最新执行 ID。`GET /api/workbench/conversations/{project_id}/origin-plan` 仅支持项目会话，按项目 ID 返回原协作回执或 null，不改变源会话协作历史查询语义。
+
+控制器在首次入队前检查 CLI 配置及控制器未关闭；全局未核查执行仍由既有调度器暂停出队；已受理的相同请求与完整 payload 精确重放返回原回执，不因后续配置改变重新执行；同 key 异内容拒绝。`POST /api/workbench/project-executions/{batch_id}/stop` 要求 `{confirm:true}`，只复用原实例取消/停止路径，不寻找或停止后来替代的最新实例。取消排队与请求停止不等于已退出，unknown 保持未知且不会自动核查副作用或启动替代执行；再次执行继续遵循既有人工核查门。
+
+F43 是后端/API 增量。主代理报告 18 项定向测试通过（4.17s），包括真实 `tick`/线程池调度配合受控 runner 的 A/C 并发与 A 获批准后 B 自动启动；这不是实际 CLI、模型或 Docker 运行证据。主代理完整回归 551 项及 8 子用例通过（93.25s，session65228 退出0）；之后产品代码未改，仅新增容量测试2项，独立运行2项通过（1.07s），主代理复跑2项通过（1.28s）。独立审查Pass，相关57项通过（10.60s）。F44 浏览器批量入口尚未验收，不能据此标记界面或整体目标通过。

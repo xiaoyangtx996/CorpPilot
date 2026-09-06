@@ -202,9 +202,24 @@ class Handler(BaseHTTPRequestHandler):
                     return self.respond(201, self.server.memories.decide(parts[0], self.read_json()))
             prefix = "/api/workbench/collaboration-plans/"
             if path.startswith(prefix):
-                identity = path[len(prefix):]
-                if identity and "/" not in identity and self.command == "GET":
-                    return self.respond(200, self.server.collaboration.get(identity))
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 1 and parts[0] and self.command == "GET":
+                    return self.respond(200, self.server.collaboration.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "executions":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.controller.cli.project_executions.list(parts[0]))
+                    if self.command == "POST":
+                        return self.respond(202, self.server.controller.cli.enqueue_project(parts[0], self.read_json()))
+            prefix = "/api/workbench/project-executions/"
+            if path.startswith(prefix):
+                parts = path[len(prefix):].split("/")
+                if len(parts) == 1 and parts[0] and self.command == "GET":
+                    return self.respond(200, self.server.controller.cli.project_executions.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "stop" and self.command == "POST":
+                    payload = self.read_json()
+                    if set(payload) != {"confirm"} or payload["confirm"] is not True:
+                        raise ValueError("停止本批执行必须明确 confirm=true")
+                    return self.respond(200, self.server.controller.cli.stop_project(parts[0]))
             if self.command == "GET" and path == "/api/workbench/templates":
                 return self.respond(200, store.templates())
             if path == "/api/workbench/agents":
@@ -259,6 +274,8 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.collaboration.list(conversation_id))
                     if self.command == "POST":
                         return self.respond(201, self.server.collaboration.create(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "origin-plan" and self.command == "GET":
+                    return self.respond(200, self.server.collaboration.for_project(conversation_id))
                 if len(parts) == 2 and parts[1] == "collaboration-proposals":
                     if self.command == "GET":
                         return self.respond(200, self.server.planning.list(conversation_id))
