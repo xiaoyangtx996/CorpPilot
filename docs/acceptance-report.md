@@ -721,4 +721,8 @@ F83提交后原live session8580正常退出0，完整Python回归1169 passed、8
 
 新增正式npm run test:browser:onboarding并由根实际构建/运行，fYVz0U通过、fixture退出0。两个身份通过UI新建且默认仅read，经UI分别授予协调人read/delegate和执行者read/write/execute；新协调人私聊发目标，真实HTTP权限检查后仅1次受控模型、1次CLI替身，原成果字节SHA256一致并由UI批准。辅助API仅GET；不是数据库补权或复用已赋权身份。pageErrors/errorResponses为空，根目视Owner批准截图，独立QA复核事件与报告Pass。该套为桌面成功旅程，不扩充移动/故障/真实供应商声明。
 
-F85源码补跑其余11浏览器脚本均通过，f86-browser-verified.json逐份确认fixture退出0；原goal沿F85 IkIZc3。完整Python64924在本次独立测试提交时仍运行，f86-full-pytest.log/XML待最终结果，不能提前标当前全量通过。未改生产源码，构建资源仍index-ClAG5vgI.js。真实模型/CLI及双Docker、远端交付和最终PM仍未完成。
+F85源码补跑其余11浏览器脚本均通过，f86-browser-verified.json逐份确认fixture退出0；原goal沿F85 IkIZc3。完整Python64924最终退出0：1210 passed、8 subtests passed，657.73秒；根核对f86-full-pytest.log/XML/result.json，XML共1218、零失败/错误/跳过。本轮覆盖F84/F85权限修改，F86未改生产源码，构建资源仍index-ClAG5vgI.js。真实模型/CLI及双Docker、远端交付和最终PM仍未完成。
+
+## F87 真实执行验收准备
+
+新增live-execution-acceptance.md，明确独立数据、双容器同时运行、文件/HOME/配置隔离、批准记忆、单个失败、重建、停止、有序重启及秘书目标的操作和证据。核心样例需6次真实CLI，秘书另需1模型/1CLI；费用与系统修复须独立授权，额外故障场景保持待执行。根独立核对源码路径、只读挂载和回滚语义；作者自查三项Return（onboarding入口、Docker绝对路径调用、实际镜像回读）均修正。文档检查通过不代表真实执行通过。

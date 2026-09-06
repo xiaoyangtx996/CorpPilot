@@ -1058,4 +1058,10 @@ frontend_integration负责新onboarding脚本、package入口及fixture --onboar
 
 新增身份/授权/消息/目标/成果审批全为page UI写入，辅助请求仅GET，保存后核精确tools和身份ID。受控provider只读取UI创建的指定worker构造单任务结果，默认fixture分支保持原行为；1模型/1CLI与私聊秘密未进入规划输入有断言。作者两次本机临时输出不作为根结果，根正式npm run test:browser:onboarding所得corppilot-onboarding-fYVz0U/browser-report.json通过、fixture0、pageErrors/errorResponses空，Owner批准截图已目视。62模块构建资源不变，体积提示保留。
 
-根11补充浏览器均通过（98303退出0；f86-browser-suite.json及f86-browser-verified.json），完整Python64924尚live，记录仍待完成。无生产源码修改。F86精确commit、即时push、远端回读见H:\item\CorpPilot-test-evidence-20260906\f86-delivery-result.json；真实执行手册另作独立F87，整体目标不提前完成。
+根11补充浏览器均通过（98303退出0；f86-browser-suite.json及f86-browser-verified.json）。完整Python64924最终退出0：1210 passed、8 subtests passed、657.73秒；XML共1218，零失败/错误/跳过，根已核对日志/XML并保存f86-full-pytest-result.json。无生产源码修改。F86本地提交1d0df4bac36fd85012e83a0df4dac4475cbe5538，立即push返回128/HTTP403，账号suiyue1990无目标仓库写权限；ls-remote退出0但分支为空。精确结果见H:\item\CorpPilot-test-evidence-20260906\f86-delivery-result.json；未标远端交付。
+
+## F87 真实执行验收手册与最终回归补记
+
+skill_inputs_backend编写人工验收手册和Docker权限说明，根独立核对源码/路径/权限/证据边界并同步README及13项浏览器入口。作者自查Return三处已修正：补onboarding、故障注入使用已知绝对Docker路径且重读本轮ID、inspect显式输出实际ID与Image。根验收Pass，范围仅为文档准确性与已完成回归记录，不将待执行命令标成实测。
+
+手册限定独立数据与明确费用窗口，6次CLI覆盖双Worker/失败/重建/停止，秘书另1模型及1CLI；崩溃、daemon断线等额外场景单列待验收。未运行真实付费调用、容器或系统修复。本功能单独提交后即时push及远端回读记录于H:\item\CorpPilot-test-evidence-20260906\f87-delivery-result.json；远端确认前仍未交付，完整目标保持未完成。
