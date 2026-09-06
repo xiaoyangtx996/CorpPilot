@@ -28,6 +28,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-dir', required=True, type=Path)
     parser.add_argument('--checkpoint', action='store_true')
+    parser.add_argument('--budget', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -131,6 +132,20 @@ def main():
         batches.executions.cancel(c)
         checkpoint = dict(plan=plan, batch=batch, retained_execution_id=a)
 
+    budget = None
+    if args.budget:
+        from workbench.collaboration import Collaboration
+        from workbench.project_executions import ProjectExecutions
+        from workbench.budgets import Budgets
+        Budgets(store).save(dict(enabled=True, total_micro_usd=0,
+            model_reserve_micro_usd=1000000, cli_reserve_micro_usd=1000000))
+        plan = Collaboration(store).create(source['id'], dict(request_id='budget-plan', source_message_id=message['id'],
+            title='F62 预算项目', shared_brief='Explicit budget fixture', coordinator_id=people[0]['id'],
+            tasks=[{**task, 'depends_on': []} for task in proposal['tasks'][:2]]))
+        batch = ProjectExecutions(store).create(plan['id'], {'request_id': 'budget-batch', 'tasks': [
+            dict(task_id=identity, expected_version=1, previous_execution_id=None, reconciliation_note='') for identity in plan['task_ids'].values()]})
+        budget = dict(plan=plan, batch=batch)
+
     class FixtureHandler(Handler):
         rejected = set()
 
@@ -151,7 +166,24 @@ def main():
                     return Handler.respond(self, 400, {'error': 'Fixture first request rejected before acceptance'})
             return Handler.do_POST(self)
 
+        def do_PATCH(self):
+            if self.path == '/api/workbench/budget-settings':
+                raw = self.rfile.read(int(self.headers['Content-Length']))
+                self.rfile = io.BytesIO(raw)
+                event('budget_patch', payload=json.loads(raw))
+            return Handler.do_PATCH(self)
+
         def respond(self, status, value):
+            if '/budget-' in self.path:
+                if self.command == 'GET' and control().get('budget_get503'):
+                    return Handler.respond(self, 503, {'error': 'Budget readback unavailable'})
+                if self.command == 'PATCH' and status == 200:
+                    event('budget_accepted', config=value)
+                    if control().get('drop_budget'):
+                        self.close_connection = True
+                        try: self.connection.shutdown(socket.SHUT_RDWR)
+                        except OSError: pass
+                        return
             if '/checkpoint' in self.path:
                 if self.command == 'GET' and control().get('checkpoint_get503'):
                     return Handler.respond(self, 503, {'error': 'Checkpoint readback unavailable'})
@@ -192,6 +224,7 @@ def main():
         source_message_id=message['id'], coordinator_id=people[0]['id'], agent_ids=[p['id'] for p in people],
         agent_names=[p['name'] for p in people], data_dir=str(home), pid=os.getpid())
     if checkpoint is not None: manifest['checkpoint'] = checkpoint
+    if budget is not None: manifest['budget'] = budget
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():

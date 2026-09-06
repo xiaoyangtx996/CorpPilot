@@ -692,3 +692,13 @@ handoff_review负责budgets、Runs/Executions事务钩子与18项测试；根负
 原浏览器全链corppilot-browser-kDvKNg/browser-report.json通过，session78933退出0且fixture正常退出；前端未改，用现有52模块index-BN3hmzBK.js，本轮没有新预算界面验收。正常39515零活动停止，离线f61-normal-backup hashf10cbf13f47fb02e044630faf18472ab13ebc821cf882e2a196a752081d9e91f；新99751启动7892，原39表逐行一致、仅两张预算表为空、integrity/外键/health200及JS字节回读通过（f61-normal-readback.json）。
 
 本功能独立提交并立即推送，精确hash和远端结果记录在仓库外H:\item\CorpPilot-test-evidence-20260906\f61-delivery-result.json。远端未回读成功不能视为远端交付；预算UI、费用证据/核销、真实CLI/双Docker和完整目标仍未完成。
+
+## F62 预算设置与Agent预留观察
+
+handoff_review负责BudgetPanel/api/App；根负责可复现budget浏览器命令、隔离fixture、验收及文档；verify_prompt_push只读PM/Ponytail终审Pass。全局配置与Agent只读入口共用既有API；完整pending先保存，PATCH后只读核对，异配需Owner明确采用当前配置。微美元精度、负余额与关闭门禁边界保持真实，不把预留称为账单。
+
+首轮osSQFV发现金额label混入辅助说明，修aria-label；VdHKcc主链通过。新增StrictMode/Escape检查后YPC2dU发现回焦问题，初次cleanup.close仍在q4XVR1/w9aSQl失败；最终稳定opener及捕获DOM节点修复，保留焦点断言，Lwx2FA通过。正式新命令npm run test:browser:budget根实际退出0，最终corppilot-budget-VaIIa7/browser-report.json通过、fixture退出0、pageErrors空；typecheck和53modules index-GHogZ-PU.js构建通过。根目视最终budget-negative.png。
+
+浏览器验证0额度阻塞两个CLI实例、追加额度逐个运行、精确2次受控CLI且0模型；6位金额与上限、负余额、禁用保留、三个Agent范围、PATCH受理丢响应+GET503+刷新、异配采用、坏存储、错币种以及401后实际重新授权不PATCH。开发态StrictMode、Esc恢复入口焦点通过。原goal全链PNppvq/browser-report.json通过、session34004退出0；最终修改仅BudgetPanel焦点。无后端生产修改，不重复Python全量；最近基线为F61的788+8。
+
+正常99751持续运行，无需重启；原39表与F61离线备份逐行相同、两预算表仍空、integrity/外键/health200及新JS字节回读通过（外部f62-normal-readback.json）。独立提交并立即推送的精确结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f62-delivery-result.json。实际费用核算/核销、真实CLI/双Docker与完整目标仍未完成，远端回读成功前不称远端交付。

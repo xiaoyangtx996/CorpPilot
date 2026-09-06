@@ -638,3 +638,7 @@ CheckpointRecovery 嵌入现有项目批次面板，复用服务接口和新批�
 ## F61 共享预算准入
 
 budgets在现有SQLite内保存独立配置与不可变预留，Runs.claim/Executions.claim在同一写事务原子占用，不新增调度服务。BudgetDenied保留queued并通过现有runtime错误展示。模型RPM通过成功claim回调才计数，避免预算拒绝轮询消耗次数。查询和完整配置接口见 [budget-admission.md](budget-admission.md)；无结算或前端预算设置交付声明。
+
+## F62 预算浏览器入口
+
+BudgetPanel复用预算接口，USD输入经BigInt拆分为整数微美元，界面不承担调度或费用结算。全局入口可配置，当前Agent入口只读。完整pending先存会话存储，PATCH后独立GET核对；异配由Owner采用当前配置，无自动写回。按Agent ID重建组件并验证返回记录身份，不扩大模型上下文。

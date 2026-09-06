@@ -121,3 +121,7 @@ export type CheckpointPreview = { source_batch_id: string; snapshot: CheckpointS
 export type CheckpointRequest = { request_id: string; checkpoint_fingerprint: string; reconciliation_note: string; confirm: true };
 export type CheckpointReceipt = { id: string; source_batch_id: string; request_id: string; request_payload: CheckpointRequest; checkpoint_fingerprint: string; snapshot: CheckpointSnapshot; batch_id: string; batch: ProjectExecutionReceipt; created_at: string };
 export type CheckpointDetail = Omit<CheckpointReceipt, 'batch'> & { batch: ProjectExecutionDetail };
+
+export type BudgetConfig = { enabled: boolean; total_micro_usd: number; model_reserve_micro_usd: number; cli_reserve_micro_usd: number };
+export type BudgetSettings = BudgetConfig & { currency: 'USD'; revision: number; reserved_micro_usd: number; available_micro_usd: number; reservation_count: number };
+export type BudgetReservation = { kind: 'model' | 'cli'; run_id: string; agent_id: string; attempt: number; requirement_version: number; amount_micro_usd: number; config_revision: number; created_at: string };

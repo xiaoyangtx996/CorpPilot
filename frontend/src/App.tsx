@@ -5,6 +5,7 @@ import { AgentEditor } from './AgentEditor';
 import { ConversationEditor, ConversationMessages, type Draft } from './ConversationEditor';
 import { ModelSettings } from './ModelSettings';
 import { CliSettings } from './CliSettings';
+import { BudgetPanel } from './BudgetPanel';
 import { ModelRunReconciliation } from './ModelRunReconciliation';
 import { ExecutionReconciliation } from './ExecutionReconciliation';
 import { CollaborationPanel } from './CollaborationPanel';
@@ -31,6 +32,7 @@ export default function App() {
   const [inspector, setInspector] = useState(false);
   const [modelSettings, setModelSettings] = useState(false);
   const [cliSettings, setCliSettings] = useState(false);
+  const [budgetPanel, setBudgetPanel] = useState<{ agent?: Agent } | null>(null);
   const [modelReconciliation, setModelReconciliation] = useState(false);
   const [reconciliation, setReconciliation] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -154,7 +156,7 @@ export default function App() {
           <span className="avatar">{person.name.charAt(0)}</span><span><strong>{person.name}</strong><small>{person.enabled ? '可用' : '已停用'}</small></span>
         </button>)}{!loading && agents.length > 0 && !agents.some(person => person.name.toLowerCase().includes(query.toLowerCase())) && <p className="muted">没有匹配的 Agent</p>}</div>
       </section>
-      <div className="navigation-settings"><button onClick={() => { setNavigation(false); setGoalExecution({ conversationId }); }}>目标执行与恢复</button><button onClick={() => { setNavigation(false); setPeerReview({ conversationId }); }}>Agent评议与恢复</button><button onClick={() => { setNavigation(false); setModelReconciliation(true); }}>模型调用核查</button><button onClick={() => { setNavigation(false); setPlanning({ conversationId }); }}>模型协作提案</button><button onClick={() => { setNavigation(false); setCollaboration({ conversationId }); }}>协作计划与恢复</button><button onClick={() => { setNavigation(false); setReconciliation(true); }}>执行核查</button><button onClick={() => setModelSettings(true)}>模型设置</button><button onClick={() => setCliSettings(true)}>CLI 设置</button></div>
+      <div className="navigation-settings"><button onClick={() => { setNavigation(false); setGoalExecution({ conversationId }); }}>目标执行与恢复</button><button onClick={() => { setNavigation(false); setPeerReview({ conversationId }); }}>Agent评议与恢复</button><button onClick={() => { setNavigation(false); setModelReconciliation(true); }}>模型调用核查</button><button onClick={() => { setNavigation(false); setPlanning({ conversationId }); }}>模型协作提案</button><button onClick={() => { setNavigation(false); setCollaboration({ conversationId }); }}>协作计划与恢复</button><button onClick={() => { setNavigation(false); setReconciliation(true); }}>执行核查</button><button onClick={() => setModelSettings(true)}>模型设置</button><button onClick={() => setCliSettings(true)}>CLI 设置</button><button onClick={() => { setNavigation(false); setBudgetPanel({}); }}>预算与预留</button></div>
     </aside>
     <main className="workspace" inert={navigation || inspector}>
       <header className="topbar"><button className="mobile" aria-expanded={navigation} onClick={() => setNavigation(true)}>会话与 Agent</button><h1>{conversation?.title ?? agent?.name ?? 'Agent 工作台'}</h1><button className="inspector-toggle" aria-expanded={inspector} onClick={() => setInspector(true)}>Agent 视角</button></header>
@@ -166,7 +168,7 @@ export default function App() {
       {conversation && <section><label>查看会话成员<select aria-label="查看会话成员" value={conversation.member_ids.includes(selected) ? selected : ''} onChange={event => setSelected(event.target.value)}><option value="" disabled>选择 Agent</option>{agents.filter(person => conversation.member_ids.includes(person.id)).map(person => <option value={person.id} key={person.id}>{person.name}{person.enabled ? '' : ' · 已停用'}</option>)}</select></label></section>}
       {agent ? <><section><div className="identity-heading"><span className="avatar">{agent.name.charAt(0)}</span><div><h2>{agent.name}</h2><small>{agent.enabled ? '可用' : '已停用'}</small></div></div><p className="muted">身份可用不代表执行实例正在运行。</p></section>
         <section><h3>身份配置</h3><dl><dt>角色</dt><dd>{template?.name}</dd><dt>模型路由</dt><dd>{agent.model}</dd><dt>技能</dt><dd>{agent.skills.join('、') || '未配置'}</dd><dt>工具范围</dt><dd>{agent.tools.join(' / ') || '无'}</dd></dl><button onClick={() => setEditor(agent)}>编辑配置</button> <button disabled={busy} onClick={() => void toggle()}>{agent.enabled ? '停用 Agent' : '重新启用'}</button></section>
-        <section><h3>持久记忆</h3><button onClick={() => { setInspector(false); setMemory({ scope: 'agent', identity: agent.id, title: agent.name, conversationId: conversationId }); }}>个人记忆</button></section><AgentActivity key={agent.id} agent={agent} agents={agents} onOpenConversation={row => { changedConversation(row); chooseConversation(row); setInspector(false); }} />
+        <section><h3>持久记忆</h3><button onClick={() => { setInspector(false); setMemory({ scope: 'agent', identity: agent.id, title: agent.name, conversationId: conversationId }); }}>个人记忆</button></section><section><button onClick={() => { setInspector(false); setBudgetPanel({ agent }); }}>查看预算预留</button></section><AgentActivity key={agent.id} agent={agent} agents={agents} onOpenConversation={row => { changedConversation(row); chooseConversation(row); setInspector(false); }} />
         <section><details><summary>角色定义</summary><p className="source">{template?.source}</p><pre>{template?.instructions}</pre></details></section></> : <p className="muted">请选择 Agent</p>}
     </aside>
     {editor !== undefined && <AgentEditor agent={editor} templates={templates} onClose={() => setEditor(undefined)} onSaved={saved} />}
@@ -178,7 +180,7 @@ export default function App() {
     {memory && <MemoryPanel key={`${memory.scope}.${memory.identity}`} {...memory} onClose={() => setMemory(null)} />}
     {modelReconciliation && <ModelRunReconciliation onClose={() => setModelReconciliation(false)} />}
     {reconciliation && <ExecutionReconciliation onClose={() => setReconciliation(false)} />}
-    {cliSettings && <CliSettings onClose={() => setCliSettings(false)} />}
+    {budgetPanel && <BudgetPanel key={budgetPanel.agent?.id ?? "global"} agent={budgetPanel.agent} onClose={() => setBudgetPanel(null)} />}{cliSettings && <CliSettings onClose={() => setCliSettings(false)} />}
     {conversationEditor !== undefined && <ConversationEditor conversation={conversationEditor} agents={agents} onClose={() => setConversationEditor(undefined)} onSaved={value => { changedConversation(value); if (!conversationEditor) chooseConversation(value); }} />}
   </div>;
 }

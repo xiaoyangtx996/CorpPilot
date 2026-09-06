@@ -539,3 +539,9 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 全量788 passed、8 subtests passed，214.22s（session1736退出0）。预算与claim同事务、模型/CLI并发争抢、不足保留queued、冻结金额/版本、旧数据不追扣、不可变、撤权/依赖无预留、失败/unknown不退款及真实backup/restore均有验证。RPM拒绝/异常无消耗、成功后起算，真实本地请求证明追加额度后第二Run可继续；CLI使用受控runner，不能替代真实CLI/双Docker。独立只读终审Pass。
 
 原浏览器kDvKNg通过、session78933退出0、fixture正常退出；前端未修改，尚无预算设置界面验收。正常库经实际离线备份再启动99751，原39表逐行相同、两张预算表为空、integrity/外键/health及JS字节一致（外部f61-normal-readback.json）。本阶段预留不是账单硬上限，尚无结算/退款能力；完整目标保持未完成。
+
+## F62 预算界面验收
+
+根正式运行npm run test:browser:budget退出0，最终VaIIa7报告通过，53modules index-GHogZ-PU.js构建通过。精确金额/范围拒绝、确认重置、2次受控CLI按预算放行、负可用值、停用不清历史、3个Agent只读范围、响应丢失和重开、异配采用零写、坏存储/错币种/401重新授权均覆盖；StrictMode和Escape焦点恢复通过。label与焦点前轮失败已修且原断言保留，证据目录见功能台账。独立只读终审Pass。
+
+原goal浏览器PNppvq通过、fixture退出0；前端最终只局部修预算焦点，未改后端生产逻辑，未重跑Python全量（最近F61基线788+8）。正常数据未改、health200及实际资源字节一致，服务99751无需重启。费用估算、账单核查及真实CLI/双Docker仍未完成，本轮浏览器fixture不能替代真实执行验收。
