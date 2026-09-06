@@ -17,6 +17,8 @@ from .budgets import BudgetDenied, Budgets
 from .store import _text
 from .context_receipts import ContextReceipts
 from .tool_activities import ToolActivities
+from .repo_sources import RepositorySources
+from .git_checkout import PreparationUnknownError
 
 
 class CLIController:
@@ -29,6 +31,7 @@ class CLIController:
         self.budgets = Budgets(store)
         self.contexts = ContextReceipts(store)
         self.tool_activities = ToolActivities(store)
+        self.repositories = RepositorySources(store)
         self.project_executions = ProjectExecutions(store)
         self.checkpoints = Checkpoints(store, self.project_executions)
         self.project_launches = ProjectLaunches(store)
@@ -72,6 +75,13 @@ class CLIController:
                 "input_artifacts": [{**{key: item[key] for key in ("id", "execution_id", "path", "size", "sha256")},
                                      "workspace_path": "inputs/" + item["id"]} for item in snapshot["input_artifacts"]],
             }, ensure_ascii=False)
+            if snapshot.get('repository'):
+                repository = snapshot['repository']
+                prompt += '\n代码位于 repository 子目录，源仓库不会被修改。代码改动交给指定集成人评审；不要推送或自动合并。' + json.dumps({
+                    'path':'repository', 'commit':repository['snapshot']['commit'],
+                    'branch':'corppilot/run-'+run['id'], 'project_revision':repository['revision'],
+                    'integration_agent_id':repository['snapshot']['integration_agent_id'],
+                }, ensure_ascii=False)
             if len(prompt) > 64000:
                 return self._unstarted("任务上下文超过 CLI 上限，未启动")
             if cancel.is_set():
@@ -88,6 +98,8 @@ class CLIController:
             options = {"image": config["docker_image"], "cpus": config["docker_cpus"],
                        "memory_mb": config["docker_memory_mb"],
                        "pids_limit": config["docker_pids_limit"]} if docker else {}
+            if snapshot.get('repository'):
+                options['repository'] = snapshot['repository']['snapshot']
             executable = str(config["docker_executable"] if docker else config["executable"])
             # Commit the backend before invoking any runner. Missing worker files can never
             # make a Docker execution fall back to the legacy manual-only stop declaration.
@@ -125,6 +137,9 @@ class CLIController:
                     "success": result["success"] is True, "not_started": False, "artifacts": items, 'usage': usage, 'tool_activities': tool_activities}
         except InputPreparationError:
             return self._unstarted("前置成果或工作区准备失败，未启动 CLI")
+        except PreparationUnknownError:
+            return {"exit_code": None, "summary": "Git 准备进程停止未确认；请核查本机准备进程及副作用，不能仅凭容器不存在确认停止；未重试",
+                    "success": False, "not_started": False, 'usage': usage, 'tool_activities': tool_activities}
         except Exception:
             # Never infer that an arbitrary runner exception happened before spawning.
             return {"exit_code": None, "summary": "CLI 执行异常，实例与结果待核实；未重试",

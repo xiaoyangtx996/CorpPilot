@@ -666,3 +666,7 @@ local/Docker复用parse_tools处理返回的有界stdout，在现有SQLite保存
 ## F68 工具观察界面
 
 ToolActivities复用F67接口与实际execution详情，严格验证绑定及完整元数据白名单。原生dialog/details承担交互，serial在刷新与卸载时废弃旧响应，按执行ID挂载；AgentActivity原身份key隔离视角。前端不承担事件采集或补造，不新增宿主依赖、后台服务或写接口。事件明细和说明默认折叠，关键计数常显。
+
+## F69 固定代码输入
+
+RepositorySources复用现有SQLite增加不可变项目版本与执行绑定。Owner指定本机普通仓库、完整提交和项目集成人，先授权后原生Git只读检查，再事务CAS保存；入队同事务冻结，运行不跟随新配置。local/Docker共用prepare_workspace，在当前work/repository创建自含对象、独立分支和生成提交身份，不增加共享源挂载、后台服务或依赖。Git准备退出未知保留unknown；已知失败或准备后取消不启动CLI。API、树限制和恢复范围见 [code-workspaces.md](code-workspaces.md)。当前仅后端接线，代码差异收集/批准合入及仓库配置UI另行交付；F65上下文摘要未扩充，仓库依据用独立绑定GET。

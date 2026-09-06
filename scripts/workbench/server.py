@@ -325,6 +325,13 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith(prefix + "/"):
                 parts = path[len(prefix) + 1:].split("/")
                 conversation_id = parts[0]
+                if len(parts) == 2 and parts[1] == 'repository':
+                    if self.command == 'GET':
+                        return self.respond(200, self.server.controller.cli.repositories.get(conversation_id))
+                    if self.command == 'POST':
+                        return self.respond(201, self.server.controller.cli.repositories.save(conversation_id, self.read_json()))
+                if len(parts) == 4 and parts[1:3] == ['repository','requests'] and self.command == 'GET':
+                    return self.respond(200, self.server.controller.cli.repositories.request(conversation_id, parts[3]))
                 if len(parts) == 1 and conversation_id:
                     if self.command == "GET":
                         return self.respond(200, store.conversation(conversation_id))
@@ -405,6 +412,8 @@ class Handler(BaseHTTPRequestHandler):
             prefix = "/api/workbench/executions/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")
+                if len(parts) == 2 and parts[0] and parts[1] == 'repository' and self.command == 'GET':
+                    return self.respond(200, self.server.controller.cli.repositories.execution(parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == 'tool-activities' and self.command == 'GET':
                     return self.respond(200, self.server.controller.cli.tool_activities.get(parts[0]))
                 if len(parts) == 2 and parts[0] and parts[1] == 'context-summary' and self.command == 'GET':

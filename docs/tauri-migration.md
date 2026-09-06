@@ -100,6 +100,8 @@ D1–D6 各自实现、对应测试、Ponytail审查后单独 commit 并立即 p
 
 ## 本轮证据与未完成项
 
+F69增加项目固定仓库输入，后续桌面文件选择器只把Owner明确选择的源目录交给现有后端API，前端不自行执行Git或读取源码。服务/sidecar须具备可用原生Git并保持受控环境与file协议限制；执行副本位于既有data_dir下，容器只挂载当次work/repository，不额外挂载源库。当前服务接受普通本机仓库，不支持linked worktree和网络路径。SQLite备份含绑定，不含外部源库或执行checkout；迁移机器不能仅恢复数据库就声称代码已恢复。关闭时还须核查宿主Git准备进程，容器不存在不足以确认整个执行停止。没有因此提前增加Tauri接口或第二套业务后端。
+
 当前可执行入口仍为 frontend 的 npm run build 和仓库 .venv/Scripts/python.exe -m pytest tests/；从 scripts 目录执行 ..\.venv\Scripts\python.exe -m workbench.server --port 7892。未建立的 tauri build、冻结打包、安装测试均不能作为本轮已通过命令。
 
 浏览器服务启动后自动打开本次授权页，宿主token默认只驻内存；仅打开失败时生成宿主数据根临时 `owner-access-*.html` 运行入口，退出时删除。入口文件被Git忽略，数据目录不能处于静态前端目录内。服务重启使旧token失效，重新授权仍保留业务pending并沿原键核对；这些F39能力已接入，测试范围见 [鉴权验收记录](acceptance-report.md#f39-owner-api访问鉴权验收)。它们不隔离同一OS用户，也不限制任意网络出口。

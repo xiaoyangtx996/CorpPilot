@@ -766,3 +766,13 @@ handoff_review负责ToolActivities与AgentActivity接线，仅typecheck，根独
 最终56模块index-9mVRW7fo.js构建通过；根目视最终summary和mobile截图。原goal R1Ae54（session47543）及context ssyTN9通过、fixture退出0，共用已完成的最终构建且无并行清dist。后端生产未改，未重复全量Python，最近F67的892+8为既有基线。正常81102继续运行，43旧表与F67备份逐行一致、新活动表仍空，完整性/外键/health和实际JS字节通过（f68-normal-readback.json），无需数据迁移或重启。
 
 独立提交后立即推送；精确哈希及远端结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f68-delivery-result.json。远端确认前不标为远端交付。观察仍是after_process元数据，真实CLI、双Docker、执行中实时观察与全目标仍未完成。
+
+## F69 项目仓库绑定与独立代码副本
+
+handoff_review负责git_checkout及32项真实临时Git测试、code-workspaces文档；根负责RepositorySources、入队冻结、两适配器/控制器/API接线、21项集成测试、正常备份迁移和Git；verify_prompt_push独立只读QA/Ponytail终审Pass。PM按后端垂直增量验收，配置UI和代码成果交接另行完成，不把集成人字段当作已实现的合入流程。
+
+最终全量945 passed、8 subtests passed，303.53s，session32706退出0。覆盖原生SHA1/SHA256、双副本/源不变、恶意配置不执行、固定旧提交、生成身份、准入限制、Owner API/幂等/并发/不可变、入队冻结/撤权、真实复制进入受控CLI、两后端传参、失败/未知不派发不重试、实际复制后取消、真实备份恢复只含绑定。首轮定向51 passed、2 failed，原因是新增取消测试使用非UUID ID，生产校验正确拒绝；仅修测试为UUID，21项重跑19.54s（session53540）通过，再全量通过。
+
+原goal浏览器t7f7G0通过（session7595退出0、fixture退出0），未改前端生产，复用F68最终构建index-9mVRW7fo.js，未声称已有仓库配置UI。正常81102零活动后停止，f69-normal-backup数据库614400字节/hash45bc579449662f98b8aef69dc7b28482d9b1b2fb20d60800745a32e129e1ce01；新93940在原数据目录7892运行。44旧表逐行不变，两新表空，完整性/外键/health200/实际JS字节一致，见f69-normal-readback.json。
+
+独立提交后立即推送；精确commit及远端分支结果见仓库外H:\item\CorpPilot-test-evidence-20260906\f69-delivery-result.json，远端回读成功前不标记远端交付。Git准备unknown不等于容器unknown，不能仅凭容器不存在放行；F65摘要未含新增仓库提示，使用独立绑定GET。真实付费CLI、双Docker、仓库配置UI、代码成果收集/集成及全目标仍未完成。

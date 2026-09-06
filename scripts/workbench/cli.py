@@ -16,7 +16,7 @@ class InputPreparationError(ValueError):
     """Workspace/input preparation failed before any CLI process was started."""
 
 
-def prepare_workspace(data_dir: Path, execution_id: str, input_artifacts=None) -> dict[str, Path]:
+def prepare_workspace(data_dir: Path, execution_id: str, input_artifacts=None, repository=None) -> dict[str, Path]:
     inputs = [] if input_artifacts is None else input_artifacts
     if not isinstance(inputs, list) or len(inputs) > artifacts.MAX_FILES:
         raise ValueError(artifacts.ERROR)
@@ -64,6 +64,13 @@ def prepare_workspace(data_dir: Path, execution_id: str, input_artifacts=None) -
             # UUID filenames cannot become ambient executable configuration or instructions.
             with (inputs_dir / item["id"]).open("xb") as stream:
                 stream.write(item["data"])
+    if repository is not None:
+        from .git_checkout import prepare_checkout
+        if not isinstance(repository, dict) or set(repository) != {'source_path','commit','tree','files','total_bytes','integration_agent_id'}:
+            raise ValueError('仓库输入无效')
+        copied = prepare_checkout(repository['source_path'], repository['commit'], paths['work'] / 'repository', 'corppilot/run-' + execution_id)
+        if any(copied[key] != repository[key] for key in ('commit','tree','files','total_bytes')):
+            raise ValueError('仓库副本与批准提交不一致')
     return paths
 
 
@@ -126,8 +133,8 @@ def parse_result(process: dict, api_key: str) -> dict:
 
 
 def run_codex(executable: Path, data_dir: Path, execution_id: str, prompt: str,
-              model: str, api_key: str, timeout_seconds: int, cancel=None, input_artifacts=None) -> dict:
-    """No automatic login, ambient credentials, repository copying, or retry."""
+              model: str, api_key: str, timeout_seconds: int, cancel=None, input_artifacts=None, repository=None) -> dict:
+    """No automatic login, ambient credentials, unapproved repository copying, or retry."""
     executable = Path(executable)
     if not executable.is_absolute() or not executable.is_file() or executable.suffix.lower() != ".exe":
         raise ValueError("请选择存在的 Codex .exe 绝对路径")
@@ -139,9 +146,11 @@ def run_codex(executable: Path, data_dir: Path, execution_id: str, prompt: str,
     if cancel is not None and cancel.is_set():
         return {"success": False, "exit_code": None, "reason": "cancelled", "summary": "启动前已取消", "usage": None, "workspace": None}
     try:
-        paths = prepare_workspace(data_dir, execution_id, input_artifacts)
+        paths = prepare_workspace(data_dir, execution_id, input_artifacts, repository)
     except (ValueError, OSError, TypeError) as exc:
         raise InputPreparationError("CLI 输入或工作目录准备失败，进程尚未启动") from exc
+    if cancel is not None and cancel.is_set():
+        return {'success':False,'exit_code':None,'reason':'cancelled','summary':'准备后启动前已取消','usage':None,'workspace':None}
     env = execution_environment(paths, api_key)
     argv = [str(executable), "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--json",
             "--sandbox", "workspace-write", "--skip-git-repo-check", "--color", "never", "--model", model,

@@ -11,6 +11,7 @@ from . import dependencies
 from . import memories
 from . import reconciliations
 from . import budgets
+from . import repo_sources
 
 ACTIVE = ("queued", "running", "stopping")
 
@@ -47,6 +48,7 @@ class Executions:
             memories.initialize(db)
             reconciliations.initialize(db)
             budgets.initialize(db)
+            repo_sources.initialize(db)
             db.execute('''CREATE TABLE IF NOT EXISTS execution_usage (
                 execution_id TEXT PRIMARY KEY REFERENCES task_executions(id),
                 attempt INTEGER NOT NULL, requirement_version INTEGER NOT NULL, usage TEXT NOT NULL)''')
@@ -100,6 +102,7 @@ class Executions:
                    (state, summary, exit_code, identity))
 
     def _authorize(self, db, run):
+        repo_sources.authorize(self.store, db, run.get('id'))
         task = self.tasks._task(db, run["task_id"])
         if task["requirement_version"] != run["requirement_version"]:
             raise TaskVersionConflict("执行需求版本已过期")
@@ -155,6 +158,7 @@ class Executions:
         db.execute("""INSERT INTO task_executions(id,task_id,agent_id,requirement_version,attempt,
             request_id,reconciliation_note,previous_execution_id,state) VALUES(?,?,?,?,?,?,?,?,'queued')""",
                    (identity, task_id, task["agent_id"], version, attempt, request, note, prior_id))
+        repo_sources.freeze(self.store, db, identity, task['conversation_id'])
         return self._run(db, identity)
 
     def get(self, identity):
@@ -220,6 +224,9 @@ class Executions:
             if include_artifacts:
                 result["input_artifacts"] = artifact_store.input_snapshots(db, bindings, downstream_execution_id=identity)
                 result["memories"] = memories.snapshot(db, run, task["conversation_id"])
+                repository = repo_sources.bound(db, identity)
+                if repository is not None:
+                    result['repository'] = repository
             return result
 
     def cancel(self, identity):

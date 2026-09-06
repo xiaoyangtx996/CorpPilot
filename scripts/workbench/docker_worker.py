@@ -182,7 +182,7 @@ def stop_worker(executable, record_path, execution_id=None):
 
 
 def run_docker(executable, data_dir, execution_id, prompt, model, api_key, timeout_seconds,
-               cancel=None, input_artifacts=None, *, image, cpus=1, memory_mb=1024, pids_limit=128):
+               cancel=None, input_artifacts=None, repository=None, *, image, cpus=1, memory_mb=1024, pids_limit=128):
     executable = Path(executable)
     if os.name != 'nt' or not executable.is_absolute() or not executable.is_file() or executable.suffix.lower() != '.exe':
         raise ValueError('Docker Worker 需要本机 Windows Docker .exe 绝对路径')
@@ -195,7 +195,9 @@ def run_docker(executable, data_dir, execution_id, prompt, model, api_key, timeo
     if cancel is not None and cancel.is_set():
         return {'success': False, 'exit_code': None, 'reason': 'cancelled', 'summary': '启动前已取消', 'usage': None, 'workspace': None}
     try:
-        paths = prepare_workspace(data_dir, execution_id, input_artifacts)
+        paths = prepare_workspace(data_dir, execution_id, input_artifacts, repository)
+        if cancel is not None and cancel.is_set():
+            return {'success':False,'exit_code':None,'reason':'cancelled','summary':'准备后启动前已取消','usage':None,'workspace':None}
         (paths['root'] / 'docker-config').mkdir()
         inputs = paths['work'] / 'inputs'
         inputs.mkdir(exist_ok=True)
