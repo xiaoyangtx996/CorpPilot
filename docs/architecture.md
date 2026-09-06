@@ -615,3 +615,8 @@ GET /api/workbench/agents/{id}/activity在一个SQLite只读事务中返回当�
 操作入口见[备份与恢复](backup-recovery.md)。backup/verify/restore使用固定目录清单、流式hash、数据库完整性/外键/schema校验及现有控制器互斥锁；锁实现提取到directory_lock供服务和维护命令复用。不会复制工具HOME/工作文件/Owner令牌，仅保存DB、审计日志及Docker核查记录。
 
 restore写隔离标记后复制，完成验证再写restore-complete；部分恢复不能解除。ReplyController在goals、CLI、模型调度之前检查隔离标记存在，坏JSON/坏链接也不放行。初始化仍沿用running/stopping恢复unknown，读接口和已有核查入口可用。recovery命令要求原实例停止/外部影响核对的明确确认、两目录离线、完整证据匹配和无未核查unknown，先fsync审计再解除；不自动启动或改写历史结果。这是记录恢复，不是进程检查点、完整checkout或Docker迁移。
+## F57 模型用量与回复发布分离
+
+模型 provider 在校验回复内容之前提取合法 model/prompt_tokens/completion_tokens 回执；截断、空正文、非法工具回复和不合格 choices 仍可携带已知用量。子进程仅返回筛选字段，不返回上游错误正文；模型名称反射完整 API key 时隐藏名称。无有效回执、网络失败和超时保持未知，缺失 token 不转换为 0。
+
+ReplyController 在发布消息或解析规划/复盘之前独立提交回执到原 runs.model/usage。后续发布失败或重启不会回滚已保存用量；首次写入仅接受 running，相同回执幂等，冲突回执及 finish 覆盖均拒绝。没有新增数据库或上下文权限，现有 Run/Agent 活动接口直接展示。进程在收到回执与持久化之间崩溃仍可能丢失用量，不承诺任意故障下完整账单。它是服务方报告的 token 证据，不是货币费用、完整账单或预算硬限制。

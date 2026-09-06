@@ -171,8 +171,11 @@ class ReplyController:
             if selected_model != "default":
                 config = {**config, "model": selected_model}
             result = run_reply(config, snapshot)
+            self.runs.record_usage(identity, {key: result[key] for key in ('model', 'prompt_tokens', 'completion_tokens')})
             self.runs.finish(identity, **result)
         except ProviderError as exc:
+            if exc.receipt is not None:
+                self.runs.record_usage(identity, exc.receipt)
             self.runs.fail(identity, str(exc), state="unknown" if exc.unknown else "failed")
         except RetrospectiveError:
             self.runs.fail(identity, "模型复盘格式无效，未创建记忆候选或自动重试")

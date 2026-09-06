@@ -167,6 +167,8 @@ class Runs:
             run = self._run(db, identity)
             if run["state"] != "running":
                 return run
+            if run['usage'] is not None and (run['model'] != model or run['usage'] != json.loads(usage)):
+                raise ValueError('模型用量回执与已保存记录冲突')
             self._authorize(db, run)
             if retrospectives.finish(db, run, content, self.memories) or planning.finish(db, run, content):
                 db.execute("""UPDATE runs SET state='completed',model=?,usage=?,error=NULL,
@@ -181,6 +183,25 @@ class Runs:
                        (model, usage, reply_id, identity))
             db.execute("UPDATE conversations SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?", (run["conversation_id"],))
             return self._run(db, identity)
+
+    def record_usage(self, identity, receipt):
+        """Persist provider-reported tokens independently of publishing its output."""
+        if not isinstance(receipt, dict) or set(receipt) != {'model', 'prompt_tokens', 'completion_tokens'}:
+            raise ValueError('模型用量回执字段无效')
+        model = _text(receipt['model'], '模型', 200)
+        tokens = {key: receipt[key] for key in ('prompt_tokens', 'completion_tokens')}
+        if any(value is not None and (type(value) is not int or value < 0) for value in tokens.values()):
+            raise ValueError('Token 数量必须为非负整数或 null')
+        with self.store.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            run = self._run(db, identity)
+            if run['usage'] is not None:
+                if run['model'] != model or run['usage'] != tokens:
+                    raise ValueError('模型用量回执与已保存记录冲突')
+                return
+            if run['state'] != 'running':
+                raise ValueError('只有运行中的请求可以记录首次用量回执')
+            db.execute('UPDATE runs SET model=?,usage=? WHERE id=?', (model, json.dumps(tokens), identity))
 
     def fail(self, identity, error, state="failed"):
         if state not in ("failed", "unknown"):

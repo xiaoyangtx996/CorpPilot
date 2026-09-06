@@ -508,3 +508,8 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 正常数据零活动停服务后使用同一backup命令成功，f56-normal-backup/manifest.json记录DB hash52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854；重启新25767，36表逐行一致、integrity=ok、外键空、health200、无恢复隔离标记，见f56-normal-readback.json。没有用恢复副本替换正常库。
 
 备份包含工作台记录和Docker核查证据，不含完整工作区、CLI HOME/凭据、进程检查点；日志不恢复RPM内存窗口。目录锁不证明外部进程/容器退出，解除确认是Owner声明；原副本不得再次同时启动。完整目标仍未完成。
+## F57 模型失败回执验收
+
+定向27项19.80s通过；新增10例验证真实本地HTTP请求子进程的截断/非法输出用量、发布失败后重启与Agent活动读回、未知token不记0、相同回执幂等、冲突回执不能发布或覆盖，以及成功/截断的合成密钥反射隐藏。根全量733 passed、8 subtests passed，199.07s（session52860退出0）。子代理首轮Return两项修正后只读复审Pass，未冒称独立执行测试。
+
+正常库离线备份SHA256为52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854，25767停止、新67999同数据目录运行；36表逐行未变，integrity=ok、外键空、health200（外部f57-normal-readback.json）。前端未变，本轮无新的浏览器验收或付费调用。CLI用量持久化、真实CLI/双Docker、金额预算和检查点恢复仍未完成。

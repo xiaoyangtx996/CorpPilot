@@ -645,3 +645,10 @@ F55实际交付：05bdcc887bc245701c8d3bfa4cb6718caa97a0e2，11文件322新增/2
 - 实际CLI backup/verify/restore全部退出0，fixture恢复后真实HTTP核对47身份、3会话、4消息、6任务、3模型Run、6执行、3成果、1评审；3成果下载hash一致，隔离期间模型/CLI active0，测试服务已关闭。离线解除命令退出0并保留audit，没有启动恢复服务执行任务。模型排队解除后只执行原Run一次由独立本地HTTP单测证明。
 - 正常94528确认live且零活动后停止，实际新命令创建f56-normal-backup（DB hash52d450363ae382eb58562892dc71718edfff66329429303e2b1dacc71725f854）；25767同数据路径启动，36表逐行未变、integrity/外键通过、health200，无恢复隔离标记。前端无产品代码改动，未重复宣称新浏览器构建。
 - F56独立提交并立即推送，实际结果外部f56-delivery-result.json。此功能不是完整工具工作区或检查点恢复；真实CLI/Docker、费用硬预算和全目标仍未完成。
+## F57 模型失败用量回执保留
+
+根负责模型 provider/controller/Run 实现与测试；handoff_review 独立核查 CLI 计费能力，并对实现做只读审查。首轮 Return 指出 finish 可覆盖既存回执及模型名称可能反射凭据；修正后最终 Pass。此次只解决模型回执持久化，CLI 回执及金额硬限制未实现。
+
+定向命令 `.venv\Scripts\python.exe -m pytest tests/test_workbench_usage_receipts.py tests/test_workbench_provider.py tests/test_workbench_controller.py -q`：27 passed，19.80s（session79959退出0）。新增10例含真实本地HTTP/请求子进程，不调用付费模型；无前端修改，不冒称新的浏览器验收。
+
+根全量733 passed、8 subtests passed，199.07s（session52860退出0）。正常25767确认无活动后停止，离线f57-normal-backup成功，新67999启动，36表逐行相同、integrity/外键及health200通过。独立提交并立即推送、远端回读的精确哈希与结果保存在仓库外 `H:\item\CorpPilot-test-evidence-20260906\f57-delivery-result.json`；远端回读成功前不标记远端交付。

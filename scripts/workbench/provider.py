@@ -18,9 +18,10 @@ MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 class ProviderError(RuntimeError):
     """Safe public failure text. Never include upstream body or credentials."""
 
-    def __init__(self, message, unknown=False):
+    def __init__(self, message, unknown=False, receipt=None):
         super().__init__(message)
         self.unknown = unknown
+        self.receipt = receipt
 
 
 def reply(config, snapshot):
@@ -57,15 +58,9 @@ def reply(config, snapshot):
         raise ProviderError("无法完成模型请求，请检查连接与凭据；未自动重试", unknown=True) from None
     finally:
         connection.close()
+    receipt = None
     try:
         result = json.loads(raw)
-        choice = result["choices"][0]
-        message = choice["message"]
-        content = message["content"]
-        if choice.get("finish_reason") != "stop" or message.get("tool_calls") or message.get("refusal"):
-            raise ProviderError("模型未完整完成文本回复，请检查输出上限或模型状态")
-        if not isinstance(content, str) or not content.strip() or len(content.strip()) > 16000:
-            raise ProviderError("模型回复为空或超过消息上限")
         usage = result.get("usage") or {}
         tokens = {}
         for field in ("prompt_tokens", "completion_tokens"):
@@ -76,11 +71,22 @@ def reply(config, snapshot):
         model = result.get("model", config["model"])
         if not isinstance(model, str) or not model or len(model) > 200:
             raise ProviderError("模型响应标识无效")
+        if config.get('api_key') and config['api_key'] in model:
+            model = '[模型标识已隐藏]'
+        receipt = {"model": model, **tokens}
+        choice = result["choices"][0]
+        message = choice["message"]
+        content = message["content"]
+        if choice.get("finish_reason") != "stop" or message.get("tool_calls") or message.get("refusal"):
+            raise ProviderError("模型未完整完成文本回复，请检查输出上限或模型状态")
+        if not isinstance(content, str) or not content.strip() or len(content.strip()) > 16000:
+            raise ProviderError("模型回复为空或超过消息上限")
         return {"content": content.strip(), "model": model, **tokens}
-    except ProviderError:
+    except ProviderError as exc:
+        exc.receipt = receipt
         raise
     except (ValueError, TypeError, KeyError, IndexError, AttributeError):
-        raise ProviderError("模型响应格式无效") from None
+        raise ProviderError("模型响应格式无效", receipt=receipt) from None
 
 
 def run_reply(config, snapshot):
@@ -101,7 +107,7 @@ def run_reply(config, snapshot):
     try:
         value = json.loads(result.stdout)
         if result.returncode:
-            raise ProviderError(value["error"], unknown=value.get("unknown", False))
+            raise ProviderError(value["error"], unknown=value.get("unknown", False), receipt=value.get("receipt"))
         return value
     except (ValueError, KeyError, TypeError):
         raise ProviderError("模型请求进程异常退出，结果未知", unknown=True) from None
@@ -112,7 +118,7 @@ def main():
         request = json.load(sys.stdin)
         result = reply(request["config"], request["snapshot"])
     except ProviderError as exc:
-        print(json.dumps({"error": str(exc), "unknown": exc.unknown}))
+        print(json.dumps({"error": str(exc), "unknown": exc.unknown, "receipt": exc.receipt}))
         raise SystemExit(1)
     except Exception:
         print(json.dumps({"error": "模型请求进程异常，结果未知", "unknown": True}))
