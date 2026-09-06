@@ -702,3 +702,7 @@ CodeReview复用F72三接口，校验规范JSON的SHA256指纹、完整来源及
 ## F75 Owner代码集成服务
 
 CodeIntegrations保存固定授权、原生操作状态及Owner未知核查声明。预览复用F72来源验证，并固定最新专用评审执行及其完整批准成果；F74原生核心生成独立分支。CLIController沿原线程池/锁/tick处理，授权先落库再提交，最多一个原生集成并与CLI共享总槽位及资源预约；不启动第二个调度器，也不要求模型凭据。重启不重跑，失败的结果保存只重传同一Future，提交异常的持有权持续到池关闭。接口及真实代码备份限制见 [代码集成服务](code-workspaces.md#f75-owner授权代码集成)。
+
+## F84 CLI工具范围准入
+
+Executions._authorize沿原方法增加显式dispatch参数，仅_create、claim、snapshot启用read/write附加检查；execute原门保持。CLIController调用snapshot后才准备调用local/Docker，两者共享该门；运行轮询撤权设置cancel信号，仍等待实际runner退出/报告。report和Reviews保留原权限规则，新增读写门不回溯剥夺已产出成果的核查能力。创建回执在新派发检查前按完整原payload回放，无新依赖、数据表或默认权限迁移。

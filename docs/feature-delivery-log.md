@@ -1031,3 +1031,13 @@ frontend_integration更新README与frontend使用文档；根更新15项需求�
 根AST只读核对core.AGENT_ROLES的13项与13个SOUL部门目录完全相同，另34专业模板；默认data/agent_config.json不存在，不编造旧快照迁移。文档所有本地链接存在，package十二个浏览器运行入口及安装入口逐项匹配，pip check无依赖冲突；没有声称重新执行pip安装或npm ci。开发Vite正式配置只转换自身来源，保留外部来源拒绝。
 
 沿F82构建补跑checkpoint/budget/fee/context/tool-activities/repository/code-review/code-integration/memory-inputs九脚本全部退出0（session81152），汇总H:\item\CorpPilot-test-evidence-20260906\f83-browser-suite.json，各f83-browser-*.log记录独立browser-report路径；原goal/skills/agent-creation沿F82最终结果。Python全量session8580在本次文档提交时仍运行，日志f83-full-pytest.log，不提前记通过。文档独立验收不等待最终全量才提交；精确commit、立即push与远端回读记录于f83-delivery-result.json。
+
+## F84 CLI读写执行权限
+
+skill_inputs_backend负责executions及新17项测试；frontend_integration负责AgentEditor说明并独立审后端/根测试；根负责HTTP/双runner取消测试、旧成功夹具明确写权限、构建/浏览器、正常服务、文档/Git。仅新create/claim/snapshot启用read/write附加门，原execute门、回执和报告/成果评审保持规则；无新表或自动增权。delegate单独增量。
+
+首轮旧项目成功路径12 failed、53 passed，原因是三个夹具只授权read/execute；显式补write而不改断言。第二轮4 failed、99 passed（f84-targeted.log），新增取消用例误等Owner cancelled；既有轮询只设置runner取消事件，非零19落failed。独立QA指出同一问题后按实证修正，仍要求停止信号及退出19。最终103 passed、44.36秒（69483退出0），额外目标/批次/检查点/评审90 passed、40.94秒（59472退出0）。作者34项重复范围不累加，独立终审Pass。
+
+正式agent-creation构建并运行wjzm9V通过（23215退出0）；原goal QpCpZh通过（85094退出0），均fixture0。62模块index-1df8cjYF.js构建成功，保留超过500kB提示。正常55052确认live且三类active均0后明确停止；f84-normal-backup数据库704512字节，SHA256 f34cd422f23a899825d06d292defa4b625695b2bfa1ad7a683e41d1cd6872a03；56575在原目录7892启动。f84-normal-readback.json确认51旧表逐行不变、创建请求表空、完整性/外键/health200与JS字节SHA256 f8e110597e99d2363e482dd1307bfb5d0996858cedbcd4cd5a47728ce1b08b2e一致。
+
+F83最终全量1169+8、611.04秒的日志/XML已独立确认，属于本次改动之前。F84即时提交/push/远端回读精确结果见H:\item\CorpPilot-test-evidence-20260906\f84-delivery-result.json；远端回读前不标已交付，整体目标继续。

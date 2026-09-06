@@ -36,7 +36,7 @@ def test_capacity_99_plus_two_rolls_back_entire_batch_and_retries_same_key(tmp_p
 
 def test_sixteen_distinct_plan_tasks_admit_once_with_dependencies_still_gated(tmp_path):
     store, plans, source, draft = setup(tmp_path)
-    store.save_agent({'tools': ['read', 'execute']}, draft['tasks'][0]['agent_id'])
+    store.save_agent({'tools': ['read', 'write', 'execute']}, draft['tasks'][0]['agent_id'])
     draft['tasks'].extend({**draft['tasks'][0], 'key': f'task-{number}'} for number in range(14))
     plan = plans.create(source, draft)
     api = ProjectExecutions(store)

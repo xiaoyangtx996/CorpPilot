@@ -105,7 +105,7 @@ class Executions:
             updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?""",
                    (state, summary, exit_code, identity))
 
-    def _authorize(self, db, run):
+    def _authorize(self, db, run, *, dispatch=False):
         code_reviews.authorize(self.store, db, run)
         repo_sources.authorize(self.store, db, run.get('id'))
         task = self.tasks._task(db, run["task_id"])
@@ -115,6 +115,11 @@ class Executions:
         tools = json.loads(db.execute("SELECT tools FROM agents WHERE id=?", (run["agent_id"],)).fetchone()[0])
         if "execute" not in tools:
             raise PermissionError("负责人尚未获得 execute 工具权限")
+        # Dispatch writes artifact files; historical reports/reviews retain their existing authority checks.
+        if dispatch:
+            missing = [tool for tool in ("read", "write") if tool not in tools]
+            if missing:
+                raise PermissionError("CLI 读取任务资料并写入成果，负责人尚未获得 " + "、".join(missing) + " 工具权限")
         if run.get("id") and run.get("state") != "queued":
             dependencies.check_bound(db, run)
         return task
@@ -147,7 +152,7 @@ class Executions:
         task = self.tasks._task(db, task_id)
         if reconciliations.unresolved(db, task_id):
             raise ValueError("本任务存在未核实的执行，不能启动替代实例")
-        self._authorize(db, {"task_id": task_id, "requirement_version": version, "agent_id": task["agent_id"]})
+        self._authorize(db, {"task_id": task_id, "requirement_version": version, "agent_id": task["agent_id"]}, dispatch=True)
         if db.execute("SELECT 1 FROM task_executions WHERE task_id=? AND state IN ('queued','running','stopping')",
                       (task_id,)).fetchone():
             raise ValueError("任务仍有排队或未确认停止的执行")
@@ -193,7 +198,7 @@ class Executions:
             if reconciliations.unresolved(db, run["task_id"]):
                 return False
             try:
-                self._authorize(db, run)
+                self._authorize(db, run, dispatch=True)
             except TaskVersionConflict:
                 self._set(db, identity, "superseded", "需求已修改，此次排队未执行")
                 return False
@@ -223,7 +228,7 @@ class Executions:
             run = self._run(db, identity)
             if run["state"] != "running":
                 raise ValueError("只有运行中的执行可取得上下文")
-            task = self._authorize(db, run)
+            task = self._authorize(db, run, dispatch=True)
             agent = self.store._agent(db.execute("SELECT * FROM agents WHERE id=?", (run["agent_id"],)).fetchone())
             instructions = db.execute("SELECT instructions FROM templates WHERE id=?", (agent["template_id"],)).fetchone()[0]
             frozen = skill_inputs.snapshot(db, 'cli', run)

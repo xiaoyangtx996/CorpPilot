@@ -4,7 +4,7 @@
 
 ## 当前待完成项（F83审计）
 
-- CLI权限一致性：身份UI的read/write选择目前未控制固定workspace-write沙箱，只有execute准入已生效；须实现并验证实际支持的读写授权。
+- 工具权限一致性：F84已限制CLI派发必须具备read/write/execute；delegate委派权限尚待独立落实，不能将整组工具范围标为完全验收。
 - 真实已授权模型/CLI完整交付，以及两个实际Docker Worker隔离、停止、失败互不影响和重建恢复；本地fixture及原生Git不能替代。
 - 最终Python/浏览器集成回归、独立QA及PM逐项验收；本轮结果在末尾单列，不覆盖早期失败记录。
 - GitHub功能分支远端交付：F82提交a85b25f立即push403，当前账号无仓库写权限，不能标已推送。
@@ -700,3 +700,13 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 浏览器创建请求在发送前持久化固定key/配置，未知结果只读核对或显式同键重试；原创建回执与当前身份分开验证，已改名/停用以当前GET为准。sessionStorage支持同标签页刷新恢复，不宣称关闭整个浏览器后仍保存未确认请求。存储损坏保留原值，首次明确拒绝经再次核对可结束，401/卸载迟到响应不会清除pending。
 
 最终yWCski通过20项边界、390px及真实开发StrictMode恢复/焦点，16次受控POST、0模型CLI调用、无pageErrors、fixture退出0。源码独立审查通过，测试覆盖Return补齐后运行通过；初次焦点缺陷与测试事件名、开发来源限制的修正见台账。原goal c6ESWu与skills iHKuFR通过。正常数据/空创建表、完整性/外键/health和最新资源回读通过（f82-normal-readback.json），无迁移或重启。构建保留体积提示，Python最终全量、真实CLI/双Docker、远端交付和最终目标验收仍未完成。
+
+## F83最终回归结果补记
+
+F83提交后原live session8580正常退出0，完整Python回归1169 passed、8 subtests passed，611.04秒。f83-full-pytest.log/xml/result.json保留完整输出及零失败/错误结果；源码基线F82，F83只有文档变化。这是该基线全量通过，不包含随后F84权限修改。
+
+## F84 CLI读写执行准入验收
+
+根定向103 passed、44.36秒（f84-targeted-final.log），相关目标/批次/检查点/评审集成90 passed、40.94秒（f84-integration.log），共193项。新增17项Store及12项真实HTTP/受控runner场景覆盖缺权限无创建/预算、排队和运行前撤权、local/Docker零调用、运行停止信号/退出19、重启原回执与历史Owner评审。两种runner为故障替身，不是实际Docker或付费CLI。
+
+浏览器agent-creation wjzm9V与原goal QpCpZh均通过、fixture退出0。前端仅增加真实权限说明，构建62模块、551.08kB/162.55kB gzip，保留体积提示。源码/Ponytail独立审查Pass；运行撤权测试误等cancelled已改为既有failed结果且保留停止信号/实际退出码断言。正常数据重启与回读通过（f84-normal-readback.json），没有迁移或自动补权。当前功能未重复全量Python，不将F83全量冒称包含本次修改；delegate、真实CLI/双Docker、远端交付和最终PM验收仍未完成。

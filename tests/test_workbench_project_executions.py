@@ -13,7 +13,7 @@ from workbench.store import Store
 
 def fixture(tmp_path):
     store, plans, source, payload = setup(tmp_path)
-    store.save_agent({'tools': ['read', 'execute']}, payload['tasks'][0]['agent_id'])
+    store.save_agent({'tools': ['read', 'write', 'execute']}, payload['tasks'][0]['agent_id'])
     plan = plans.create(source, payload)
     api = ProjectExecutions(store)
     p = {'request_id': 'batch', 'tasks': [dict(task_id=identity, expected_version=1, previous_execution_id=None, reconciliation_note='') for identity in plan['task_ids'].values()]}
