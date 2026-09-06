@@ -462,3 +462,15 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 正常数据库备份 `browser-state-before-f52-20260906-103509.sqlite3` 的SHA-256为 `c394cce78849f3326b7aafb65c56d727b0d96b4e596ea4552cca2f7440adf20b`；备份时模型/CLI活动数均0。旧37580确认live后Ctrl-C退出1，新49304运行7892，health200；35张原表逐行未变，新goal_executions为空，integrity=ok、foreign_key_check为空。外部f52-normal-backup.json及f52-normal-readback.json保留迁移证据。
 
 本增量后端验收Pass，浏览器目标授权表单尚待F53；没有把本地provider/controlled runner称为真实付费模型、真实CLI或Docker验收。次数、任务数及超时不是货币硬预算，完整目标仍未完成。
+
+## F53 浏览器目标授权验收
+
+最终独立根命令 npm run test:browser（session69261）退出0，包含TypeScript检查和49模块生产构建index-DXckru0z.js。证据目录 H:\item\CorpPilot-test-evidence-20260906\corppilot-browser-eEnl7f；browser-report.json与goal-boundaries.json记录结果，fixtureExit.code=0。此前AvgfQP在固定批次读取完成前断言失败、VjrfOm因停止日志处理器位置错误失败；原报告保留。最终修正等待读回、停止响应实际丢弃证据后通过，未将这些测试基础设施问题声称为产品缺陷。
+
+真实Vite开发模式StrictMode打开表单并刷新成功，业务POST为0。生产页面验证首次400后同键接受、响应丢失及503后reload、完整授权保留；一次本地模型规划、3个唯一受控runner执行、输入数0/1/1，私聊标记未进入模型或执行上下文。项目和固定批次准确，下载最终成果核对SHA-256与执行ID，再通过浏览器仅批准C；A/B仍无Owner评审。截图goal-chain.png和goal-final-review.png保留，根已目视最终评审截图。
+
+17组只读边界覆盖8授权字段、规划/启动/批次/执行关联、坏存储、同目标ID的停止摘要/launch冲突、unknown及401重新鉴权。两份冲突恢复记录均保留，无意外写入；桌面与手机对话框边界通过。401是模拟GET拒绝后同token登录，未冒称服务重启和token轮换。
+
+两种真实fixture停止分别在模型运行及CLI运行时，已落库停止响应被丢弃、读取503、页面reload仍保留原目标和停止记录，恢复GET后仅核对不重发。模型停止无迟到launch，执行停止三项cancelled；共3次本地provider、4次受控runner。页面异常0，主流程console/HTTP仅允许注入400/503/断线，边界无非预期console与业务写入。独审提出的StrictMode锁和停止关联校验已修复并纳入最终检查。
+
+正常应用数据库未参与测试，未操作真实供应商、CLI、Docker或安装系统组件；本地通过不代表远端推送、费用硬门或完整目标完成。浏览器测试运行方式与环境变量见frontend/README.md。

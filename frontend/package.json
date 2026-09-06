@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:browser": "npm run build && node tests/goal-browser.mjs",
+    "test:browser:install": "playwright install chromium"
   },
   "dependencies": {
     "react": "19.2.8",
@@ -18,6 +20,7 @@
   "devDependencies": {
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
+    "playwright": "1.62.1",
     "typescript": "7.0.2",
     "vite": "6.4.3"
   }

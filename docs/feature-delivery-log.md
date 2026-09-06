@@ -605,3 +605,13 @@ HTTP修复实际提交为 `22481d77ea81acc7c0a656d46c3096e835818cee`，4文件12
 - 两轮全量发现HTTP早拒绝连接问题，先独立交付22481d7；其后最终全量 **671 passed、8 subtests passed（170.26s，session70333）**，全部最终产品代码均已包含，之后只更新文档。没有放宽原测试断言。
 - 正常服务37580确认live后Ctrl-C退出1；49304从同数据路径启动，health200。35张原表逐行同备份，新goal表0行，完整性与外键通过。真实CLI/付费模型/Docker未调用，本地HTTP provider和Python controlled runner证明一次规划→A/B/C捕获成果交接→仅C最终Owner验收。
 - PM/TechLead/Ponytail与根对后端增量Pass；浏览器一次授权入口作为F53继续，不以API完成冒称用户交互已交付。F52本地提交与即时推送待实际结果，完整目标仍未完成。
+
+F52实际交付：本地提交 ec60c186772372bd37736e74d37d489ffaec488a，10文件729新增/21删除；立即推送退出1、GitHub403，当前suiyue1990无写权限。独立远端回读退出0、remote_head=null；证据f52-delivery-result.json，远端交付未完成。
+
+## F53 浏览器一次目标授权与恢复（本地验收Pass）
+
+- Owner消息直接授权秘书规划一次、创建项目和启动固定首批；默认摘要为空，明确选择候选与交接，修改字段撤销确认。全局恢复入口核对完整原授权与固定关联，停止先保存原记录，未知不自动重规划。
+- handoff_review实施前端及边界测试，根集成真实HTTP fixture、开发/生产浏览器驱动、成果下载与最终验收。独审发现StrictMode读取锁和同ID停止记录冲突，根修复并在最终命令中验证；后续审查同时检查开发挂载和每份恢复记录，避免只以生产构建通过判断。
+- 最终 npm run test:browser 退出0（session69261）：类型检查、生产构建index-DXckru0z.js、真实Vite StrictMode、一次规划A→B→C、最终成果hash校验且仅C批准、17组边界、模型/执行中停止丢响应+503+reload均Pass。fixture最终退出0。证据corppilot-browser-eEnl7f/browser-report.json，详情见验收报告。
+- PM/TechLead/Ponytail/QA针对本增量验收；沿用F52后端全量671及8子用例，本次没有产品后端变更。测试使用独立临时库、本地HTTP provider和受控runner，不等于真实CLI、付费模型、Docker或浏览器真实服务重启验收。Tauri沿用既有迁移边界，未生成安装包。
+- 本功能独立提交后立即推送，实际结果记录外部f53-delivery-result.json；完整目标仍未完成。
