@@ -513,3 +513,15 @@ F44 实际提交 `02b364144b890663efc3276a2dc81c65f34818e1` 后立即推送退�
 Owner Bearer 鉴权覆盖 `GET /api/workbench/model-run-reconciliations/pending` 和 `GET/POST /api/workbench/runs/{id}/reconciliation`。POST 严格六字段：request_id、attempt、requirement_version、local_request_stopped、provider_effects_checked、note；布尔项必须为 true，版本为非 bool 正整数，说明最多2000字符。待核查列表含 kind 及复盘 scope/scope_id 供导航，不含冻结输入正文。F45 是后端/API 增量；F46 界面当前仅草稿及 typecheck，未完成浏览器验收。
 
 F45 主代理完整回归570项及8子用例通过（97.96s，session88107退出0）；独立QA15项通过（2.19s），审查Pass。该结果包含F45新增测试，不扩大为F46浏览器或真实供应商验收。
+
+F45 实际提交 `5b37cad73e97607f8f8f6709e779d060036a748d` 后立即推送退出1、GitHub403（suiyue1990 无写权限）；远端回读退出0且 remote_head=null。已直接核实外部 `f45-delivery-result.json`，F46草稿未包含在此提交；远端交付仍阻塞。
+
+## F46：浏览器模型未知请求核查与显式新意图
+
+浏览器统一展示普通回复、协作提案、模型复盘的待核查 unknown，声明只记录本地请求已停止与供应商影响已核查，不把原模型结果改为成功。声明提交前保存完整原请求；首次明确400可修正，重发前清旧拒绝标记；401、服务重启、201受理丢响应及GET503均保留原key。读取原声明只核对事实，另一请求已为同Run保存声明时，须明确接受该不可变声明，不能悄悄覆盖冲突。
+
+核查后可以准备新的意图，仍要按原产品路径重新选择来源/身份或候选/成果并明确确认，新key创建新的Run；原unknown不重发。普通回复仅新Run发布一条消息，规划只生成待导入提案，复盘只生成待审批记忆候选、目标批准版本不自动变化。F45服务端精确scope门禁与当前控制器持有检查始终有效。
+
+独立typecheck与静态Ponytail审查Pass；主代理构建47 modules、index-DdLyA6xU.js，并在IAB 1315×1272、独立7896 fixture验证三类型核查及各一次明确新调用。直接只读验证表明三seed完整Run未变、三声明唯一、三个新completed与三次本地HTTP模型调用一一对应，旧unknown调用0，无额外消息。附加QA三项已通过：损坏声明存储即使GET已有回执仍不清除或解锁；规划/复盘原pending遇GET503保持，恢复GET后须明确release；全过程零POST。完整证据和限制见F46验收记录；真实供应商、CLI及Docker均未调用。
+
+最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46提交/推送尚待实际操作。

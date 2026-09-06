@@ -340,3 +340,17 @@ F43 交付补记：已直接核实外部 `H:\item\CorpPilot-test-evidence-202609
 控制器/API 覆盖当前持有请求和提交不确定请求的声明阻挡、完整关闭/重启边界、Owner 鉴权及禁用配置后的精确回读。人工声明不改原 model、usage 或 RPM 历史，不把未知结果改成成功。主代理完整回归 **570 passed、8 subtests passed（97.96s）**，session88107 退出0，包含F45全部新增测试；独立QA **15 passed（2.19s）**、审查Pass。提交异常错误文案保留“本地请求可能仍在处理”的不确定性，不声称已退出。
 
 本增量不声称真实供应商影响或模型质量已验收。F46 仅界面草稿和 typecheck，尚无该界面的浏览器验收。F40 真实双 Docker Worker、真实 CLI/模型和整体目标仍未验收。
+
+F45 实际提交 `5b37cad73e97607f8f8f6709e779d060036a748d` 后立即推送退出1、GitHub403（suiyue1990 无写权限）；远端回读退出0且 remote_head=null。已直接核实外部 `f45-delivery-result.json`，F46草稿未包含在此提交；远端交付仍阻塞。
+
+## F46：浏览器模型 unknown 核查验收（本地fixture通过）
+
+独立类型检查、静态Ponytail审查Pass；主代理npm构建47 modules，bundle `index-DdLyA6xU.js`。主代理IAB 1315×1272、独立7896 fixture显示三类unknown列表；核查首400后，服务重启新口令401仍保留同key，重新授权同key201受理但响应丢失、GET503及reload不丢pending，GET恢复后读到原声明。
+
+普通回复核查后准备新key，刷新并重选原source/member、明确确认，Run `58d56833-83a5-4368-ad0d-29ec66ca47b2` completed；查询原请求不新建。规划同Run被另一fixture声明占用时，Owner显式接受该不可变声明，再选coordinator/candidate并确认，Run `90c224f0-4bc2-4c5c-896d-7291b6714f56` completed。复盘历史核查后重新选来源、成果并明确确认，Run `c43d679f-54b2-4934-b261-3b0ddd6dac74` completed，生成候选 `bafd8b0d-88ef-4d27-86e4-d763dcc5542b` 待审批，目标记忆仍v0。
+
+文档代理直接只读运行外部 `f46_verify.py`：6 Runs（原3 unknown、新3 completed）、3核查声明、2 planning_requests、2 retrospective_requests、1 memory_candidate、1原fixture task_execution、4消息。与原始SQLite基线逐字段比较的seed_runs_unchanged=true；声明唯一、新key与seed不同。三个新Run各对应一次真实本地HTTP fixture模型调用，old_unknown_never_called=true、each_called_run_once=true；无额外消息，integrity_check=ok、foreign_key_check为空。原三个unknown为状态注入测试种子，不是实际供应商故障；声明不改其状态/model/usage。
+
+已直接核实外部 f46-boundary-review.json：passed=true，三项测试全部Pass。损坏global pending即使GET已有声明也不清存储/不解锁reply；规划与复盘GET503保留原pending，恢复GET后明确release才清除。writes=[]（零POST），console_errors=[]、page_errors=[]，另有2条预期503控制台信息单独记录，不冒充无故障请求。主代理已查看desktop1280×900和mobile390×844截图，移动dialog在视口内。F46本地fixture验收Pass。本轮未调用真实供应商、CLI或Docker；后端回归沿用F45的570项及8子用例，不虚构新全量。F46尚未提交/推送，不能据此称远端交付或整体目标完成。
+
+最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46提交/推送尚待实际操作。

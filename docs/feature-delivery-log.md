@@ -524,3 +524,14 @@
 - reply/planning 按会话、来源消息、身份与类型挡住未核查 unknown；retro 按目标范围及来源执行挡住，其他任务不互锁。pending 过滤防 RPM 消耗，claim 事务复查；精确旧 key 回读优先，声明可放行已有授权 queued，新意图须新 key，原 unknown 永不重跑。
 - futures/unsettled/uncertain_submissions 仍持有时拒绝首次声明；提交结果不确定需完整关闭线程池/服务并重启后核查。API 沿用 Owner 鉴权，已保存声明在配置停用后仍可精确回读。
 - 主代理定向 **29 passed（11.16s）**；全量 **570 passed、8 subtests passed（97.96s）**，session88107 退出0；独立QA **15 passed（2.19s）**、审查Pass，含F45全部新增测试。提交不确定错误文案不再声称请求已退出。F46 仅草稿 typecheck，不计浏览器完成；F45 提交/推送尚待主代理操作，整体目标未完成。
+
+F45 实际提交 `5b37cad73e97607f8f8f6709e779d060036a748d` 后立即推送退出1、GitHub403（suiyue1990 无写权限）；远端回读退出0且 remote_head=null。已直接核实外部 `f45-delivery-result.json`，F46草稿未包含在此提交；远端交付仍阻塞。
+
+## F46：浏览器模型 unknown 核查与新请求恢复
+
+- 独立typecheck、静态Ponytail审查Pass；主代理构建47 modules、index-DdLyA6xU.js。真实IAB1315×1272测试独立7896服务，三类型unknown列表与核查入口、首400→重启401新授权→同key201丢响应/GET503/reload保留pending→GET恢复通过。
+- 普通回复重新选择来源/member后确认新key；规划显式接受同Run另一声明冲突后重选coordinator/candidate；复盘从历史核查后重选source/artifact并确认。各自生成一个新completed；规划不建项目、复盘只产生待批准候选，v0不改。
+- 文档代理直接运行只读f46_verify.py：原三unknown逐字段未变、三声明唯一、新三Run各对应一次本地HTTP模型调用、旧Run零调用、无额外消息，SQLite及外键完整性通过。全部6Runs/4messages/1memory_candidate；状态注入种子不是供应商真实故障，真实供应商/CLI/Docker调用0。
+- 已直接核实f46-boundary-review.json，storage损坏及规划/复盘pending GET503三项Pass；writes=[]、非预期console/page错误均空，预期503信息2条单列。主代理已看1280×900桌面与390×844移动截图，移动dialog在视口内。F46本地fixture验收Pass。沿用F45后端回归，不虚构新的全量。F46尚未提交/推送，整体目标仍未完成。
+
+最终补充：主代理模型核查后端/控制器/API定向 **17 passed（4.39s）**，不记作新全量。正常7892服务原session69967先确认仍live再Ctrl-C退出1，保留browser-state由session19278重启；health200并回读index-DdLyA6xU.js，正常库仍只有历史unknown模型Run1、任务执行0、批次0，未作fixture写入。最终测试fixture session74866先poll确认live再Ctrl-C退出1，已停止；主代理重新运行f46_verify并落盘最终证据。真实供应商/CLI/Docker及整体目标未验收，F46提交/推送尚待实际操作。

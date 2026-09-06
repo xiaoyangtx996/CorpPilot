@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, ApiError, type ExecutionArtifact, type OwnerReview, type RetrospectiveRequest, type RetrospectiveRun } from './api';
+import { ModelRunReconciliation } from './ModelRunReconciliation';
+import { api, ApiError, type ModelReconciliationRecord, type ExecutionArtifact, type OwnerReview, type RetrospectiveRequest, type RetrospectiveRun } from './api';
 
 type Pending = { payload: RetrospectiveRequest; run_id?: string; rejected?: boolean };
 const message = (error: unknown) => error instanceof Error ? error.message : '请求失败';
@@ -17,6 +18,7 @@ export function RetrospectivePanel({ scope, identity, version, sources, disabled
   const base = `/memories/${scope}/${identity}/retrospectives`, key = `corppilot.retrospective-pending.v1.${scope}.${identity}`;
   const alive = useRef(false), serial = useRef(0), writing = useRef(false), reading = useRef(false), pendingRef = useRef<Pending | null>(null), notified = useRef(new Set<string>()), callback = useRef(onCandidate);
   callback.current = onCandidate;
+  const [checkId, setCheckId] = useState(''), [checkedRuns, setCheckedRuns] = useState<Record<string, ModelReconciliationRecord>>({});
   const [pending, setPending] = useState<Pending | null>(null), [current, setCurrent] = useState<RetrospectiveRun | null>(null), [history, setHistory] = useState<RetrospectiveRun[]>([]);
   const [source, setSource] = useState(''), [artifacts, setArtifacts] = useState<ExecutionArtifact[]>([]), [selected, setSelected] = useState<string[]>([]), [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [sourceLoading, setSourceLoading] = useState(false), [error, setError] = useState(''), [readError, setReadError] = useState(''), [storageError, setStorageError] = useState('');
@@ -90,8 +92,15 @@ export function RetrospectivePanel({ scope, identity, version, sources, disabled
       }
     } finally { writing.current = false; if (alive.current) { setBusy(false); void load(); } }
   }
-  function release() {
-    if (writing.current || storageError || !pending || !(pending.rejected || current && ['completed', 'failed', 'cancelled'].includes(current.state))) return;
+  async function release() {
+    if (writing.current || storageError || !pending || !(pending.rejected || current && (['completed', 'failed', 'cancelled'].includes(current.state) || current.state === 'unknown' && !!checkedRuns[current.id]))) return;
+    if (current?.state === 'unknown') {
+      writing.current = true; setBusy(true);
+      try { const receipt = await api<ModelReconciliationRecord | null>(`/runs/${current.id}/reconciliation`); if (!receipt || receipt.run_id !== current.id || !receipt.local_request_stopped || !receipt.provider_effects_checked) throw Error('尚未读回原调用核查声明'); }
+      catch (error) { setCheckedRuns(rows => { const next = { ...rows }; delete next[current.id]; return next; }); setError('核查声明读取失败，原请求继续保留。'); return; }
+      finally { writing.current = false; if (alive.current) setBusy(false); }
+      if (!alive.current) return;
+    }
     try { sessionStorage.removeItem(key); pendingRef.current = null; setPending(null); setCurrent(null); setConfirmed(false); setSelected([]); setSource(''); setArtifacts([]); setSourceLoading(false); sourceSerial.current++; setError(''); serial.current++; void load(); }
     catch { setStorageError('无法清除查看记录，原请求继续锁定。'); }
   }
@@ -102,14 +111,15 @@ export function RetrospectivePanel({ scope, identity, version, sources, disabled
     catch (error) { if (alive.current) setError(`${message(error)}。取消结果待核对，不会自动重试。`); }
     finally { writing.current = false; if (alive.current) { setBusy(false); void load(); } }
   }
-  function record(row: RetrospectiveRun) { return <article className="task-card"><h4>{labels[row.state]}</h4><small>复盘 {row.id} · 来源执行 {row.request_payload.source_execution_id} · 记忆 v{row.request_payload.expected_version}</small><p>模型：{row.model ?? '未知'} · 输入/输出 token：{row.usage?.prompt_tokens ?? '未知'} / {row.usage?.completion_tokens ?? '未知'}</p>{row.error && <p className="error">{row.error}</p>}{row.state === 'queued' && <button disabled={busy} onClick={() => void cancel(row)}>取消复盘排队</button>}{row.state === 'running' && <p>模型调用已开始，不能保证停止；不会自动重试。</p>}{row.state === 'unknown' && <p className="error">调用结果未知，请核查供应商记录；原请求保留，不提供替代调用。</p>}<p>所选成果：{row.selected_artifacts.map(a => a.path).join('、') || '暂无'}</p>{row.evidence_artifact_ids.length > 0 && <p>模型引用证据：{row.evidence_artifact_ids.map(id => row.selected_artifacts.find(a => a.id === id)?.path ?? id).join('、')}</p>}{row.candidate_id && <p>候选 {row.candidate_id} 已生成。请在下方经验候选中审阅全文并单独决定；尚未修改批准记忆。</p>}</article>; }
+  function record(row: RetrospectiveRun) { return <article className="task-card"><h4>{labels[row.state]}</h4><small>复盘 {row.id} · 来源执行 {row.request_payload.source_execution_id} · 记忆 v{row.request_payload.expected_version}</small><p>模型：{row.model ?? '未知'} · 输入/输出 token：{row.usage?.prompt_tokens ?? '未知'} / {row.usage?.completion_tokens ?? '未知'}</p>{row.error && <p className="error">{row.error}</p>}{row.state === 'queued' && <button disabled={busy} onClick={() => void cancel(row)}>取消复盘排队</button>}{row.state === 'running' && <p>模型调用已开始，不能保证停止；不会自动重试。</p>}{row.state === 'unknown' && <section><p className="error">原调用结果未知，不自动重发；须核查本地请求、供应商结果及费用。</p><button disabled={busy} onClick={() => setCheckId(row.id)}>核查此模型调用</button>{checkedRuns[row.id] && <p>已读回人工声明，原状态仍为未知；结束原请求查看后才能重新选取并确认调用。</p>}</section>}<p>所选成果：{row.selected_artifacts.map(a => a.path).join('、') || '暂无'}</p>{row.evidence_artifact_ids.length > 0 && <p>模型引用证据：{row.evidence_artifact_ids.map(id => row.selected_artifacts.find(a => a.id === id)?.path ?? id).join('、')}</p>}{row.candidate_id && <p>候选 {row.candidate_id} 已生成。请在下方经验候选中审阅全文并单独决定；尚未修改批准记忆。</p>}</article>; }
   return <section><h3>从批准成果生成模型复盘</h3><p>选择 1–100 个 Owner 已批准的文本成果；服务端严格校验 UTF-8 正文，拒绝二进制和控制符，含全文快照的输入总量不得超过 64KiB。生成只创建待审批候选，不会自动批准或替换记忆。</p><button disabled={busy || loading} onClick={() => void load()}>刷新复盘状态</button>
     {error && <p className="error" role="alert">{error}</p>}{readError && <p className="error" role="alert">{readError}。读取失败不代表没有复盘，原记录保留。</p>}{storageError && <p className="error" role="alert">{storageError}</p>}
-    {pending ? <section><p>已保存原请求 {pending.payload.request_id} · 记忆 v{pending.payload.expected_version}</p>{current && record(current)}<button disabled={busy || loading || !!storageError} onClick={() => void submit()}>{pending.run_id ? '读取原复盘（不调用模型）' : '核对原复盘请求'}</button>{!pending.run_id && <p>如果服务端尚未收到，手动核对可能首次发起这次已确认的模型调用。</p>}{(pending.rejected || current && ['completed', 'failed', 'cancelled'].includes(current.state)) && <button disabled={busy || !!storageError} onClick={release}>{pending.rejected ? '修改首次未接受的复盘' : '结束查看并准备新复盘'}</button>}</section> : <fieldset className="task-fields" disabled={disabled || busy || loading || !!readError || !!storageError}>
+    {pending ? <section><p>已保存原请求 {pending.payload.request_id} · 记忆 v{pending.payload.expected_version}</p>{current && record(current)}<button disabled={busy || loading || !!storageError} onClick={() => void submit()}>{pending.run_id ? '读取原复盘（不调用模型）' : '核对原复盘请求'}</button>{!pending.run_id && <p>如果服务端尚未收到，手动核对可能首次发起这次已确认的模型调用。</p>}{(pending.rejected || current && (['completed', 'failed', 'cancelled'].includes(current.state) || current.state === 'unknown' && !!checkedRuns[current.id])) && <button disabled={busy || !!storageError} onClick={release}>{pending.rejected ? '修改首次未接受的复盘' : '结束查看并准备新复盘'}</button>}</section> : <fieldset className="task-fields" disabled={disabled || busy || loading || !!readError || !!storageError}>
       <label>已批准来源<select value={source} onChange={event => void chooseSource(event.target.value)}><option value="">选择来源执行</option>{sources.map(row => <option key={row.id} value={row.id}>{row.title} · {row.id}</option>)}</select></label>{sourceLoading && <p>正在读取批准成果…</p>}
       <fieldset className="member-choices"><legend>明确选择批准文本成果（{selected.length}/100）</legend>{artifacts.map(row => <label className="check" key={row.id}><input type="checkbox" checked={selected.includes(row.id)} disabled={sourceLoading || !selected.includes(row.id) && selected.length >= 100} onChange={event => { setSelected(event.target.checked ? [...selected, row.id] : selected.filter(id => id !== row.id)); setConfirmed(false); }} />{row.path} · {row.size} 字节</label>)}</fieldset>
       <label className="check"><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />我确认调用一次模型，读取所选成果及目标记忆快照以生成候选，可能产生费用</label><button disabled={sourceLoading || !selected.length || !confirmed || !sources.some(row => row.id === source)} onClick={() => void submit()}>确认调用模型复盘</button>
     </fieldset>}
     <details><summary>复盘历史</summary>{history.filter(row => row.id !== current?.id).map(row => <div key={row.id}>{record(row)}</div>)}</details>
+    {checkId && <ModelRunReconciliation runId={checkId} onClose={() => setCheckId('')} onVerified={row => setCheckedRuns(current => ({ ...current, [row.run_id]: row }))} />}
   </section>;
 }
