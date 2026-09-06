@@ -35,6 +35,7 @@ def main():
     parser.add_argument('--context', action='store_true')
     parser.add_argument('--tools', action='store_true')
     parser.add_argument('--repository', action='store_true')
+    parser.add_argument('--code-review', action='store_true')
     args = parser.parse_args()
     home = args.data_dir.resolve()
     home.mkdir(parents=True, exist_ok=True)
@@ -43,12 +44,16 @@ def main():
     control_path = home / 'control.json'
     evidence_path = home / 'evidence.jsonl'
     lock = threading.Lock()
+    last_control = {}
 
     def control():
+        nonlocal last_control
         try:
-            return json.loads(control_path.read_text(encoding='utf-8'))
+            value = json.loads(control_path.read_text(encoding='utf-8'))
+            if isinstance(value, dict): last_control = value
         except (OSError, ValueError):
-            return {}
+            pass
+        return last_control
 
     def event(kind, **values):
         with lock, evidence_path.open('a', encoding='utf-8') as stream:
@@ -101,9 +106,13 @@ def main():
 
     def runner(**kwargs):
         identity = kwargs['execution_id']
-        paths = prepare_workspace(store.data_dir, identity, kwargs['input_artifacts'])
+        paths = prepare_workspace(store.data_dir, identity, kwargs['input_artifacts'], kwargs.get('repository'))
         event('cli_call', execution_id=identity, input_ids=[a['id'] for a in kwargs['input_artifacts']],
               private_leaked='F53_PRIVATE_' in kwargs['prompt'])
+        if args.code_review:
+            event('code_review_inputs', execution_id=identity, repository=kwargs.get('repository'),
+                  artifacts=[{k:a[k] for k in ('id','execution_id','path','size','sha256')} for a in kwargs['input_artifacts']],
+                  base_text=(paths['work']/'repository/code.txt').read_text(encoding='utf-8'))
         deadline = time.monotonic() + 50
         while control().get('pause_runner') and time.monotonic() < deadline:
             if kwargs['cancel'].is_set():
@@ -111,7 +120,8 @@ def main():
             time.sleep(0.02)
         directory = paths['work'] / 'artifacts'
         directory.mkdir(exist_ok=True)
-        (directory / 'result.txt').write_text(f'F53 captured result {identity}; inputs={len(kwargs["input_artifacts"])}', encoding='utf-8')
+        filename = 'review.md' if args.code_review else 'result.txt'
+        (directory / filename).write_text(f'F73 集成人建议，仍待 Owner 批准。{identity}' if args.code_review else f'F53 captured result {identity}; inputs={len(kwargs["input_artifacts"])}', encoding='utf-8')
         return dict(exit_code=0, success=True, reason='exited', summary='Fixture result captured', workspace=str(paths['work']),
                     usage={'input_tokens': 7, 'output_tokens': None, 'cached_input_tokens': 0})
 
@@ -244,7 +254,8 @@ def main():
             tool_samples[key] = executions.get(run['id'])
 
     repository_sample = None
-    if args.repository:
+    code_review_sample = None
+    if args.repository or args.code_review:
         from workbench.tasks import Tasks
         from workbench.executions import Executions
         from workbench.repo_sources import RepositorySources
@@ -274,11 +285,33 @@ def main():
         bound_run=ended('fixed-binding')
         repository_sample=dict(room=room,other_room=other_room,source_path=str(repository_path),commit=commit,
             initial_binding=saved,old_run=old_run,bound_run=bound_run)
+        if args.code_review:
+            from workbench.code_changes import capture_code
+            from workbench.reviews import Reviews
+            from workbench import artifacts
+            samples = {}
+            for key, title in [('primary','F73 原代码成果'),('stop','F73 可停止评审'),('unapproved','F73 未批准成果'),('other','F73 另一个来源'),('retry','F73 同键恢复')]:
+                task=tasks.create(room['id'],dict(agent_id=people[0]['id'],source_message_id=owner_message['id'],request_id=key,
+                    title=title,scope='Change independent code copy',acceptance='Captured code patch'))
+                run=executions.create(task['id'],dict(expected_version=1,request_id=key,previous_execution_id=None,reconciliation_note=''))
+                assert executions.claim(run['id'])
+                paths=prepare_workspace(store.data_dir,run['id'],[],saved['snapshot'])
+                (paths['work']/'repository/code.txt').write_text('F73 changed '+key+'\n',encoding='utf-8')
+                items=capture_code(store.data_dir,run['id'],saved,'fixture-only')
+                executions.report(run['id'],1,1,0,'Native Git fixture captured',success=True,artifacts=items)
+                if key!='unapproved':
+                    Reviews(store).save(run['id'],dict(request_id='approve-'+key,expected_version=1,decision='approved',note='Owner checked fixture code',
+                        artifact_ids=[a['id'] for a in artifacts.list_for(store,run['id'])]))
+                samples[key]=dict(task=task,run=executions.get(run['id']))
+            code_review_sample=dict(room=room,samples=samples,repository=saved)
 
     class FixtureHandler(Handler):
         rejected = set()
 
         def do_POST(self):
+            if self.path.endswith('/code-review'):
+                raw = self.rfile.read(int(self.headers['Content-Length'])); self.rfile = io.BytesIO(raw)
+                event('code_review_post',payload=json.loads(raw),path=self.path)
             if self.path.endswith('/repository'):
                 raw = self.rfile.read(int(self.headers['Content-Length'])); self.rfile = io.BytesIO(raw)
                 event('repository_post',payload=json.loads(raw),path=self.path)
@@ -310,6 +343,16 @@ def main():
             return Handler.do_PATCH(self)
 
         def respond(self, status, value):
+            if '/code-review' in self.path:
+                if self.command == 'GET' and control().get('code_review_get503'):
+                    return Handler.respond(self,503,{'error':'Code review readback unavailable'})
+                if self.command == 'POST' and status == 202:
+                    event('code_review_accepted',receipt=value)
+                    if control().get('drop_code_review'):
+                        self.close_connection=True
+                        try:self.connection.shutdown(socket.SHUT_RDWR)
+                        except OSError:pass
+                        return
             if '/repository' in self.path:
                 if self.command == 'GET' and control().get('repository_get503'):
                     return Handler.respond(self,503,{'error':'Repository readback unavailable'})
@@ -385,6 +428,7 @@ def main():
     if context is not None: manifest['context'] = context
     if tool_samples is not None: manifest['tools'] = tool_samples
     if repository_sample is not None: manifest['repository'] = repository_sample
+    if code_review_sample is not None: manifest['code_review'] = code_review_sample
     (home / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False), encoding='utf-8')
 
     def shutdown_watcher():

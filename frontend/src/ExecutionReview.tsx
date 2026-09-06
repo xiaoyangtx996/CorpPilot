@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { CodeReview } from './CodeReview';
 import { api, ApiError, downloadArtifact, type Agent, type Conversation, type Task, type ExecutionArtifact, type OwnerReview, type ReviewRequest, type TaskExecution } from './api';
 
 function decode(raw: string): ReviewRequest {
@@ -8,12 +9,14 @@ function decode(raw: string): ReviewRequest {
   return row;
 }
 
-export function ExecutionReview({ run }: { run: TaskExecution }) {
+type CodeReviewTarget = { agents: Agent[]; onOpenTask: (task: Task, conversation: Conversation, focusReturnTo: HTMLElement) => void; allowCodeReview: boolean };
+export function ExecutionReview({ run, ...target }: { run: TaskExecution } & CodeReviewTarget) {
   const [open, setOpen] = useState(false);
-  return <details onToggle={event => setOpen(event.currentTarget.open)}><summary>成果与 Owner 评审</summary>{open && <ReviewPanel key={run.id} run={run} />}</details>;
+  return <details onToggle={event => setOpen(event.currentTarget.open)}><summary>成果与 Owner 评审</summary>{open && <ReviewPanel key={run.id} run={run} {...target} />}</details>;
 }
 
-function ReviewPanel({ run }: { run: TaskExecution }) {
+function ReviewPanel({ run, agents, onOpenTask, allowCodeReview }: { run: TaskExecution } & CodeReviewTarget) {
+  const [codeOpen, setCodeOpen] = useState(false);
   const key = `corppilot.review-pending.v1.${run.id}`;
   const alive = useRef(false), serial = useRef(0), writing = useRef(false);
   const pendingRef = useRef<ReviewRequest | null>(null);
@@ -86,6 +89,8 @@ function ReviewPanel({ run }: { run: TaskExecution }) {
     catch { setStorageError('无法清除未接受请求，仍保持锁定。'); }
   }
   return <section className="execution-review">
+    {allowCodeReview && loaded && artifacts.some(a => a.path === 'corppilot-code/change.patch') && artifacts.some(a => a.path === 'corppilot-code/manifest.json') && <button disabled={busy || loading} onClick={() => setCodeOpen(true)}>交指定集成人评审</button>}
+    {codeOpen && <CodeReview key={run.id} sourceRun={run} agents={agents} onClose={() => setCodeOpen(false)} onOpenTask={onOpenTask} />}
     <button disabled={loading || busy} onClick={() => { restore(); void load(); }}>{loading ? '读取成果与评审中…' : '刷新成果与评审'}</button>
     {error && <p className="error" role="alert">{error}</p>}{storageError && <p className="error" role="alert">{storageError}</p>}
     {loaded && <><h4>已保存成果（{artifacts.length}）</h4>{!artifacts.length && <p className="muted">暂无已保存成果，不能批准交付。</p>}<ul>{artifacts.map(item => <li key={item.id}><button type="button" disabled={!!downloading} onClick={() => void download(item)}>{downloading === item.id ? '正在下载…' : item.path}</button><small>{item.size.toLocaleString()} 字节 · SHA-256：{item.sha256}</small></li>)}</ul>{downloadError && <p className="error" role="alert">{downloadError}</p>}</>}

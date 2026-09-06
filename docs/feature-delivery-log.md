@@ -812,3 +812,15 @@ handoff_review负责code_reviews、执行授权/依赖/仓库冻结接线及21�
 原goal浏览器corppilot-browser-p7xjGK通过（session79952退出0、fixture退出0）；未改前端生产，沿用F70构建index-CcNlQM1m.js。正常74988确认live且零活动后停止，f72-normal-backup数据库638976字节/hash f984b47955dd5ef2a052caf93f7590d9a697490a37ee48fc76e4c8b527896a34；新31979在原目录7892运行。46旧表逐行不变，仅新增空code_review_requests，完整性/外键/health200和实际JS字节通过（f72-normal-readback.json）。
 
 独立提交后立即推送；精确提交和远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f72-delivery-result.json，远端确认前不标记远端交付。专用浏览器确认入口、实际代码合入、真实付费CLI与双Docker及整体目标仍未完成；本轮受控CLI不能替代这些验收。
+
+## F73 浏览器代码评审闭环
+
+handoff_review负责CodeReview、ExecutionReview与TaskExecutions三个前端文件，仅typecheck；根负责真实Git fixture、新浏览器脚本、独占构建、PM目视、正常数据回读、文档与Git；verify_prompt_push独立源码/Ponytail终审Pass。复用F72接口及原执行控制面板，原生dialog/useId和显式返回焦点，无新依赖或后端业务变更。
+
+正式npm run test:browser:code-review最终corppilot-code-review-v6E1RA通过（session35767退出0）：21项异常/授权/恢复边界、原仓库停用后仍用固定旧绑定、未批准阻塞、明确首拒恢复、丢POST响应及GET503/401、同键未受理重试、真实双key竞争显式接受、错误存储/来源/快照/初始映射、来源切换迟到、历史源改版及撤权仍保留原回执。5次受控CLI真实进入队列，读取原生Git基线和固定成果hash、产生review.md待Owner；评审停止及第二次执行不重跑原任务。pageErrors为空、fixture退出0，390px无溢出及StrictMode两层Escape焦点通过，根目视最终手机与报告界面。
+
+审查修复首拒判定、映射核对前错误保存known receipt，以及另一标签赢得同源唯一请求后本地无法恢复的死路；同请求错配仍拒绝，不把B称为A成功。首轮iUv0zP业务及手机通过，末尾Escape连关父层失败，修React cancel传播；第二轮AQ1cBx新增子任务Escape焦点检查失败，修为点击时保存原按钮并显式传入返回焦点。没有删除失败断言或用延时猜测，最终完整重跑通过。
+
+最终59模块index-yz8gomkr.js构建通过，505.35kB/148.84kB gzip；Vite提示单chunk超过500kB，无编译失败，未调高阈值隐藏提示。原goal最终corppilot-browser-V2PCk8通过（session39077退出0、fixture退出0），此前0OVwY7也通过。后端生产未改，未重复Python全量；最近F72全量1003+8为既有基线。正常31979持续live，无需重启，46旧表与F72备份逐行一致、新评审表仍空，完整性/外键/health200和实际最终JS字节一致（f73-normal-readback.json）。
+
+独立提交后立即推送；精确commit及远端分支回读见仓库外H:\item\CorpPilot-test-evidence-20260906\f73-delivery-result.json，远端未确认前不标记远端交付。实际代码合入、真实付费CLI、双Docker及全目标仍未完成。Browser skill未提供，本轮按frontend-testing-debugging使用项目Playwright，测试用模拟适配器与真实Git的边界分别保留。

@@ -1,5 +1,5 @@
 import { ExecutionUsage } from './ExecutionUsage';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ExecutionReconciliation } from './ExecutionReconciliation';
 import { ExecutionReview } from './ExecutionReview';
 import { api, ApiError, type Agent, type Conversation, type Task, type TaskExecution, type ExecutionRequest, type CliSettingsValue, type ReplyRuntime, type TaskDependencyStatus, type ExecutionReconciliationRecord } from './api';
@@ -14,8 +14,11 @@ function decode(raw: string): ExecutionRequest {
   return row;
 }
 
-export function TaskExecutions({ task, conversation, agents, onClose }: { task: Task; conversation: Conversation; agents: Agent[]; onClose: () => void }) {
+export function TaskExecutions({ task, conversation, agents, onClose, allowCodeReview = true, focusReturnTo }: { task: Task; conversation: Conversation; agents: Agent[]; onClose: () => void; allowCodeReview?: boolean; focusReturnTo?: HTMLElement }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const opener = useRef(focusReturnTo ?? document.activeElement);
+  const [codeReviewTask, setCodeReviewTask] = useState<{ task: Task; conversation: Conversation; focusReturnTo: HTMLElement } | null>(null);
   const alive = useRef(false), reading = useRef<number | null>(null), writing = useRef(false), serial = useRef(0);
   const key = `corppilot.execution-pending.v1.${task.id}`;
   const [reconciliationId, setReconciliationId] = useState('');
@@ -73,8 +76,8 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
     if (alive.current && request !== serial.current && reading.current === null && !writing.current) void load();
   }
   useEffect(() => {
-    alive.current = true; const previous = document.activeElement; dialog.current?.showModal(); restore(); void load();
-    return () => { alive.current = false; serial.current++; reading.current = null; if (previous instanceof HTMLElement) previous.focus(); };
+    alive.current = true; const node = dialog.current; node?.showModal(); restore(); void load();
+    return () => { alive.current = false; serial.current++; reading.current = null; node?.close(); if (opener.current instanceof HTMLElement) opener.current.focus(); };
   }, []);
   const polling = runs.some(active) || !!pending;
   useEffect(() => { if (!polling) return; const timer = window.setInterval(() => void load(), 1000); return () => window.clearInterval(timer); }, [polling]);
@@ -117,8 +120,8 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
     catch (error) { if (alive.current) setError(`停止请求结果待核对：${failure(error)}。刷新状态或再次请求停止，不会创建新执行。`); }
     finally { writing.current = false; if (alive.current) { setBusy(false); setLoading(false); void load(); } }
   }
-  return <dialog ref={dialog} className="task-dialog" aria-labelledby="execution-title" onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
-    <header><h2 id="execution-title">任务执行 · {task.title}</h2><button disabled={busy} onClick={onClose}>关闭</button></header>
+  return <dialog ref={dialog} className="task-dialog" aria-labelledby={titleId} onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) onClose(); }}>
+    <header><h2 id={titleId}>任务执行 · {task.title}</h2><button disabled={busy} onClick={onClose}>关闭</button></header>
     <p>当前任务需求 v{task.requirement_version} · 负责人：{agent?.name ?? task.agent_id}</p>
     <p className="muted">确认执行会调用配置的 CLI 和模型，可能产生费用。工作区按执行隔离；退出成功仅进入待评审，不代表成果已通过验收。</p>
     <button disabled={loading || busy} onClick={() => void load()}>{loading ? '读取执行中…' : '刷新执行状态'}</button>
@@ -134,7 +137,8 @@ export function TaskExecutions({ task, conversation, agents, onClose }: { task: 
         <button className="primary" disabled={confirmed !== confirmationKey || !!latest && !note.trim()}>{latest ? '确认再次执行任务' : '确认执行任务'}</button>
       </fieldset>{blocked && <p className="muted">{blocked}</p>}</form>}
     {loaded && !runs.length && <p className="muted">暂无执行记录，尚未启动任务。</p>}
-    {runs.map(run => <article className="task-card" key={run.id}><header><h3>第 {run.attempt} 次执行 · 需求 v{run.requirement_version}</h3><span>{labels[run.state]}</span></header><small>执行 ID：{run.id}</small><p>退出码：{run.exit_code ?? '尚未确认'} · {new Date(run.created_at).toLocaleString()}</p>{run.summary && <p className="task-source">{run.summary}</p>}{run.reconciliation_note && <p className="task-source">执行前核查：{run.reconciliation_note}</p>}{run.state === 'unknown' && <section>{declarations[run.id] ? <><p>Owner 已声明进程停止并已核查外部影响；原执行仍为结果未知。</p><p className="task-source">{declarations[run.id]!.note}</p></> : <p className="error">{Object.hasOwn(declarations, run.id) ? '实例和副作用尚未核查，不能启动替代执行。' : '核查记录未成功读取，暂不能确认是否已核查。'}</p>}<button disabled={busy} onClick={() => setReconciliationId(run.id)}>查看与核查未知执行</button></section>}{run.state === 'stopping' && <p role="status">停止请求已记录，等待实际执行实例退出确认。</p>}{['queued', 'running'].includes(run.state) && <button disabled={busy} onClick={() => void cancel(run)}>{run.state === 'queued' ? '取消排队执行' : '请求停止执行'}</button>}<ExecutionUsage run={run} /><ExecutionReview run={run} /></article>)}
+    {runs.map(run => <article className="task-card" key={run.id}><header><h3>第 {run.attempt} 次执行 · 需求 v{run.requirement_version}</h3><span>{labels[run.state]}</span></header><small>执行 ID：{run.id}</small><p>退出码：{run.exit_code ?? '尚未确认'} · {new Date(run.created_at).toLocaleString()}</p>{run.summary && <p className="task-source">{run.summary}</p>}{run.reconciliation_note && <p className="task-source">执行前核查：{run.reconciliation_note}</p>}{run.state === 'unknown' && <section>{declarations[run.id] ? <><p>Owner 已声明进程停止并已核查外部影响；原执行仍为结果未知。</p><p className="task-source">{declarations[run.id]!.note}</p></> : <p className="error">{Object.hasOwn(declarations, run.id) ? '实例和副作用尚未核查，不能启动替代执行。' : '核查记录未成功读取，暂不能确认是否已核查。'}</p>}<button disabled={busy} onClick={() => setReconciliationId(run.id)}>查看与核查未知执行</button></section>}{run.state === 'stopping' && <p role="status">停止请求已记录，等待实际执行实例退出确认。</p>}{['queued', 'running'].includes(run.state) && <button disabled={busy} onClick={() => void cancel(run)}>{run.state === 'queued' ? '取消排队执行' : '请求停止执行'}</button>}<ExecutionUsage run={run} /><ExecutionReview run={run} agents={agents} allowCodeReview={allowCodeReview} onOpenTask={(task, conversation, focusReturnTo) => setCodeReviewTask({ task, conversation, focusReturnTo })} /></article>)}
     {reconciliationId && <ExecutionReconciliation executionId={reconciliationId} onClose={() => { setReconciliationId(''); void load(); }} />}
+    {codeReviewTask && <TaskExecutions key={codeReviewTask.task.id} {...codeReviewTask} agents={agents} allowCodeReview={false} onClose={() => setCodeReviewTask(null)} />}
   </dialog>;
 }

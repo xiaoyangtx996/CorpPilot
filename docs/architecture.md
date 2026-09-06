@@ -682,3 +682,7 @@ code_changes从固定执行目录和DB绑定采集净变化，在干净临时Git
 ## F72 固定来源评审执行
 
 code_review_requests以来源执行和专用任务分别唯一，先保存固定授权与初始执行request_id，再同事务调用Tasks/Executions创建依赖与排队，初始执行ID通过唯一键读回；无第二套调度器或审批权威。Executions授权检查专用任务版本、集成人和原来源快照，dependencies固定来源实例，repo_sources为该任务及普通核查后重试选择原绑定revision。CLIController只允许配置就绪的新请求，同键原回执不受后来配置失效影响；真实队列执行须提交非空review.md才可交付成果。授权回执与执行状态分开读取，后续Owner批准和实际代码合入不由报告自动触发。
+
+## F73 评审浏览器接线
+
+CodeReview复用F72三接口，校验规范JSON的SHA256指纹、完整来源及初始执行映射；pending按source execution隔离，serial阻止卸载后的异步回写。不同请求冲突保留原pending，显式接受时重读校验已有授权；同请求错配仍拒绝。ExecutionReview提供入口，TaskExecutions复用自身处理评审任务并禁止再次嵌套代码评审入口，useId隔离弹窗标题。不增加后端表或协议，浏览器仅通过既有API取得授权、状态和成果。
