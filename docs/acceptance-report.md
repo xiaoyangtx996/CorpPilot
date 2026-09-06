@@ -442,3 +442,11 @@ F50实际交付：已核实外部f50-delivery-result.json，本地提交 `f52a1f
 正常数据备份SHA-256为77b757dd1116a2a6dc6ddd2eae8323d114bf4d7c812dbf8155d3045d2a31e663；正常43954经live poll后Ctrl-C退出1，同路径启动37580，health200及最终bundle回读通过，34张原表逐行与备份相同，新增权限表0行。测试fixture52349确认live后Ctrl-C退出1、7896无监听，正常7892保留。f51-ui-review、handoff-readback、final-review、final-readonly、boundary-review、verification、normal-readback、cleanup在H:\item\CorpPilot-test-evidence-20260906中保留。
 
 PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目标自动规划和动态资源/费用硬门、检查点恢复等仍未完成。本地自动交接证据不替代真实执行环境验收；F51提交与立即推送以实际操作回读为准。
+
+## HTTP早拒绝的Windows连接关闭修复
+
+在F52待提交工作区，全量两次分别为1失败/663通过/8子用例（169.72s）、2失败/662通过/8子用例（170.31s）。失败为原test_ambiguous_headers_rejected及复盘API未鉴权POST在getresponse发生WinError10053；单例复跑通过不被当成问题已解决。独立审查确认F52未修改原HTTP请求校验，Python客户端分两次发送头和体，早拒绝关闭与后到入站数据存在竞争。
+
+错误响应完整发送和flush后关闭写端，最多100ms、65537字节排空后到数据，随后正常关闭。排空不信任Content-Length、不解析正文、不接受未授权或歧义请求，正常成功响应保持。新7项检查覆盖延迟正文400/401、总字节/总时间上限及断开、超时、EOF；禁用辅助时两个真实延迟正文用例均复现10053，启用通过。
+
+主代理独立运行新7项、原API及复盘API共 **27 passed（24.75s，session90156）**；子代理新7项及原歧义头共8项2.46s。根审查Pass，未放宽任何原测试断言。修复独立提交；这项定向通过不冒称F52全量通过或完整项目交付。

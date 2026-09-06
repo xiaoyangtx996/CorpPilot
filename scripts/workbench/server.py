@@ -6,7 +6,9 @@ import json
 import logging
 import mimetypes
 import secrets
+import socket
 import tempfile
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -74,6 +76,30 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
+        if status >= 400:
+            self._close_rejected()
+
+    def _close_rejected(self):
+        # Headers may be rejected before the client's separate body send arrives.
+        # Send the error first, then drain without trusting or parsing its framing;
+        # closing with unread inbound bytes can otherwise reset the response on Windows.
+        self.close_connection = True
+        try:
+            self.wfile.flush()
+            self.connection.shutdown(socket.SHUT_WR)
+            deadline, remaining = time.monotonic() + 0.1, MAX_BODY_BYTES + 1
+            while remaining:
+                timeout = deadline - time.monotonic()
+                if timeout <= 0:
+                    break
+                self.connection.settimeout(timeout)
+                chunk = self.rfile.read1(min(8192, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except (OSError, ValueError):
+            # The peer may already have closed; rejection never authorizes a retry.
+            pass
 
     def check_origin(self):
         hosts = self.headers.get_all("Host", [])

@@ -589,3 +589,9 @@ F50实际交付：已核实外部f50-delivery-result.json，本地提交 `f52a1f
 - 根实施及集成；handoff_review负责独立PM/TechLead/Ponytail/QA审查。分派实现碰线程数量上限后根接手。独审复现memory/retro单字段KeyError后修复并复验，旧schema不隐式授权；后续工作改为同时检查真实调用数据形状，不以新helper测试代替原调用回归。
 - 全量636项及8子用例115.36s通过；独立24项2.78s、定向61项6.11s单列不相加。浏览器自动A→B→C、最终唯一Owner验收、独立9边界和最后只读文案回归Pass，最终构建index-BvE6_RC6.js。详细证据及原404记录见acceptance-report.md的F51段。
 - 1launch/1batch/3exec/3artifact/2permission/2input/1最终review，真实CLI/model/Docker0。正常37580健康、34原表无变化，测试52349已停止，7896无监听。整体目标仍未完成；F51独立提交并即时推送待实际记录。
+
+F51实际交付：已读取外部f51-delivery-result.json，本地提交 `2e5135855ba074caac3a401905ebf34716114408`，16文件380新增/32删除，立即推送退出128：GitHub403，suiyue1990无写权限。远端回读退出0、remote_head=null，提交后工作区干净；本地通过不等于远端交付。
+
+## HTTP错误响应连接关闭修复（独立交付）
+
+F52未提交工作区的两轮全量暴露原请求头/未鉴权早拒绝的Windows10053：首轮1失败663通过、次轮2失败662通过，均8子用例，原失败记录保留在外部f52-regression-attempts.json。handoff_review实现错误响应发送后半关闭写端并有界排空，最大100ms/65537字节；不改原请求校验、授权或测试断言。主代理审查并独立运行新增关闭边界、原API及复盘API共27项，24.75s通过；子代理8项2.46s通过。禁用辅助的独立对照两个延迟正文测试均复现10053，启用通过。此修复单独提交并立即推送，F52目标执行继续保持未提交直到全量通过。
