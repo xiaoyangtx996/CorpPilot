@@ -318,3 +318,17 @@ F42 交付补记：已直接读取外部 `H:\item\CorpPilot-test-evidence-202609
 Owner 鉴权覆盖批量创建、读取、停止与项目来源回执接口。首次创建检查配置和原单任务入队条件；精确重放返回原批次，同 key 异内容拒绝。停止需要 confirm=true，仅表示向固定绑定实例提出停止，不自动产生人工核查声明或批准成果。项目来源查询只用于 project 会话。
 
 主代理完整后端回归 **551 passed、8 subtests passed（93.25s）**，session65228 退出0。独立审查 **Pass**，相关测试 **57 passed（10.60s）**。全量结束后产品代码无变化，仅新增容量测试2项：独立运行 **2 passed（1.07s）**，主代理复跑 **2 passed（1.28s）**；未将新增测试数合并伪称另一次全量结果。F44 前端仍独立开发/审查，尚未浏览器验收。F43 提交及推送结果等待实际操作补记，真实 CLI/模型、双 Docker Worker 与整体目标继续保持未验收边界。
+
+F43 交付补记：已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f43-delivery-result.json`。实际提交 `47c4086d1f65326191ffaf12ba12491b6c161574` 后立即推送退出1、GitHub403；远端回读退出0但 remote_head=null。F44 前端当时仍留在工作树中，未混入 F43 提交；远端交付未完成。
+
+## F44：浏览器协作批量执行验收
+
+主代理在真实 IAB、7896 测试入口及1315×1272桌面视口完成浏览器验收并截图。源私聊历史和项目 origin-plan 均能找到协作创建回执。提交前呈现选定任务的当前 scope、acceptance、version 与负责人，再明确确认整批执行；独立审查两项缺陷（对非项目查询 origin-plan、封锁已人工核查 unknown）修复后 Pass。最终 typecheck/构建通过，46 modules，index-DNIGCKAo.js。
+
+三个任务一次入队，受控 runner 中 A/C 并行、B 等待 A 成果批准；Owner 批准后 B 自动开始并取得1个批准输入。再次批量请求首发400后沿同 key 重试，202 已受理但响应丢失并遇到GET503；刷新保留完整原请求且清除旧 rejected，GET恢复原批次，没有新POST替代。fixture有序重启、访问口令轮换后旧授权401，重新授权仍保留原批次。
+
+第三批仅运行 C，明确停止后响应丢失，界面经GET观察 stopping→cancelled；再次加载后 stop POST累计仍只有1次，没有盲重发或新执行。unknown UI未注入浏览器，仅有独立静态审查与F43后端证据，不扩大为浏览器实测结论。
+
+已直接读取外部 `H:\item\CorpPilot-test-evidence-20260906\f44-verification.json`：3任务、3批次、5执行（4 awaiting_review、1 cancelled）、4成果、1评审、1输入、0人工核查收据；5次受控runner各绑定不同execution，unique_call_per_execution=true，4成果hash_ok均true，integrity_check=ok、foreign_key_check为空。事件记录4次创建POST（含1次首400）、3次受理、1次stop POST和1次stop受理；最终取消实例退出码130。
+
+本轮真实CLI、模型、Docker调用均为0，受控runner不等于生产执行验收；console及移动视口未专项测试。后端沿用F43已记录的完整回归，未虚构新全量。测试fixture原38539与重启31647均先确认实际句柄仍运行，再Ctrl+C退出1；最终7896无监听。正常7892旧26019在数据库无活动执行后有序停止，新69967启动健康检查200并回读index-DNIGCKAo.js，新增批次表为空、任务执行0、原1个unknown模型Run保留，未注入测试数据。 F44提交与推送须据实际操作记录。

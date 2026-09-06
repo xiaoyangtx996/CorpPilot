@@ -507,3 +507,13 @@
 - 批量 API、固定批次读取/停止和仅项目适用的 origin-plan 均受 Owner 鉴权。首次创建核查配置，精确同键原内容重放只回原回执，异内容冲突拒绝。
 - 主代理报告定向 **18 passed（4.17s）**，包含实际 tick/线程池配合受控 runner 的 A/C 同时运行、A 批准后 B 自动启动；不是实际 CLI、模型或 Docker 验收。最终主代理全量 **551 passed、8 subtests passed（93.25s）**，session65228 退出0；独立审查Pass、相关 **57 passed（10.60s）**。全量之后仅新增2项容量测试、产品代码未改，独立 **2 passed（1.07s）**，主代理复跑 **2 passed（1.28s）**，不虚构包含新增测试的第二次全量结果。
 - F44 未完成浏览器验收；F43 当前提交/推送尚待实际操作记录，真实执行环境及整体目标仍未验收。
+
+- F43实际提交 `47c4086d1f65326191ffaf12ba12491b6c161574` 后立即推送退出1、GitHub403，远端回读退出0但 remote_head=null。已直接核实外部 f43-delivery-result.json；F44前端未包含在该提交内，远端交付仍阻塞。
+
+## F44：浏览器协作批量执行
+
+- verify_prompt_push负责前端实现及文档；主代理补齐当前任务scope/acceptance展示、集成、构建与浏览器QA。独立审查所发现的非project origin查询、已核查unknown重试阻断已修复并Pass。
+- 回执及项目入口选择原计划任务当前版本，明确确认范围、验收、前次实例及再次执行说明后整批入队；依赖仍需Owner批准，未选前置不自动执行。完整请求独立持久化，202后只GET，首4xx重试清旧拒绝，401/丢响应保留同键。停止只针对绑定Run，响应未知只GET核对。
+- 真实IAB7896、1315×1272：DM历史/project origin入口通过；3任务一次入队A/C并行，A批准后B自动启动并消费1input。首400同key202丢响应/GET503/刷新保留完整请求，GET恢复不新增POST；fixture有序重启口令401后重新授权保留batch。第三批C停止丢响应后stopping→cancelled，reload后stopPOST仅1。
+- 已核实外部f44-verification.json：3batches/5executions（4awaiting_review、1cancelled）/4artifacts/1review/1input，5unique受控runner，全部成果hash及数据库完整性通过；真实CLI/model/Docker均0。unknown UI未注入，仅静态独审和后端证据；console/mobile未专项。
+- 最终typecheck/build通过，46modules、index-DNIGCKAo.js，已截图。F43后端测试沿用原记录；测试fixture原38539与重启31647均先确认实际句柄仍运行，再Ctrl+C退出1；最终7896无监听。正常7892旧26019在数据库无活动执行后有序停止，新69967启动健康检查200并回读index-DNIGCKAo.js，新增批次表为空、任务执行0、原1个unknown模型Run保留，未注入测试数据。F44实际commit/push尚待记录，不能据本地浏览器验收称远端交付或整体目标完成。
