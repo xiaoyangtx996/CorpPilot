@@ -1,10 +1,16 @@
 # CorpPilot 架构说明
 
-F81身份创建支持可选request_id：新请求在同一BEGIN IMMEDIATE事务内创建身份并保存不可变agent_creation_requests映射；同key规范化六项配置必须一致，重放返回原创建快照，不恢复后来修改的身份。旧无key接口仍兼容，PATCH拒绝request_id。Owner GET /api/workbench/agent-requests/{key}返回null或原请求配置及原Agent快照；恢复后须另读/agents/{id}取得当前状态。技能/工具列表按首次顺序去重，不排序。浏览器持久pending与断线恢复将在下一增量接入。
+F81身份创建支持可选request_id：新请求在同一BEGIN IMMEDIATE事务内创建身份并保存不可变agent_creation_requests映射；同key规范化六项配置必须一致，重放返回原创建快照，不恢复后来修改的身份。旧无key接口仍兼容，PATCH拒绝request_id。Owner GET /api/workbench/agent-requests/{key}返回null或原请求配置及原Agent快照；恢复后须另读/agents/{id}取得当前状态。技能/工具列表按首次顺序去重，不排序。F82浏览器在发送前保存sessionStorage固定请求，重开只GET，显式同键重试；独立GET当前身份后更新界面。坏存储和401保留原请求，不保证浏览器整个关闭后保留pending。
 
-F79普通聊天在claim事务内将本身份个人记忆和当前非私聊会话的共享记忆固定为版本引用。model_memory_snapshots保存scope/version/chars/hash，正文复用不可变memory_revisions；未批准候选不生效，回滚只影响后续claim。执行前重查enabled/member/archive，规划、成员评议和复盘不自动扩大记忆范围。最终角色、Skill与非空记忆参考输入合计上限64000字符；现有上下文指令hash覆盖实际合成输入。Owner GET /api/workbench/runs/{id}/memories仅提供固定元数据，无历史返回null，版本0明确空；专用浏览器历史版本查看另行接入。
+F79普通聊天在claim事务内将本身份个人记忆和当前非私聊会话的共享记忆固定为版本引用。model_memory_snapshots保存scope/version/chars/hash，正文复用不可变memory_revisions；未批准候选不生效，回滚只影响后续claim。执行前重查enabled/member/archive，规划、成员评议和复盘不自动扩大记忆范围。最终角色、Skill与非空记忆参考输入合计上限64000字符；现有上下文指令hash覆盖实际合成输入。Owner GET /api/workbench/runs/{id}/memories仅提供固定元数据，无历史返回null，版本0明确空；F80浏览器独立读取精确历史版本并核对字符数/hash；当前版本不替换当次固定内容。
 
 F77补齐身份技能的实际应用：固定内置目录为正文权威，执行在SQLite保存本身份有序正文及内容哈希，模型四分支和CLI均消费固定输入。Skill不扩大权限，空快照与旧无记录区分，旧运行不追随文件修改。目录和历史快照使用现有Owner API，不新建调度器或发布平台；协议及限制见 [Skill输入说明](skill-authoring.md#新工作台内置-skill-实际输入f77)。
+
+## 当前结构与历史阅读方式（F83）
+
+当前工作台已接入模型与CLI队列、固定计划/目标授权、批准记忆、资源与预算准入、检查点、代码评审和独立集成。具体契约分别见 [代码工作区](code-workspaces.md)、[预算](budget-admission.md)、[上下文](context-observation.md)、[工具活动](tool-activities.md) 和 [备份恢复](backup-recovery.md)。模型聊天Run与任务execution仍为不同对象；观察接口只读持久事实，不触发执行或扩大上下文。
+
+下文按功能形成的说明保留阶段历史，其中“尚未实现/待续”须结合后续F编号阅读；当前验收结论以 [需求矩阵](product-requirements.md) 为准。真实CLI及双Docker未通过，不能从架构接线推断真实隔离已验收。
 
 ## 浏览器工作台增量（2026-09-06）
 

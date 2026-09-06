@@ -1,24 +1,31 @@
 # CorpPilot · 企业智脑
 
-## 浏览器 Agent 工作台（开发中）
+## 当前浏览器 Agent 工作台（F82，本地开发中）
 
-新工作台以持久身份和会话为入口，按需组队与隔离执行正在逐功能实现。
-当前身份管理可在浏览器使用；运行方法见 [工作台开发与启动](frontend/README.md)，
-完整范围见 [需求矩阵](docs/product-requirements.md)，真实进度见 [功能交付台账](docs/feature-delivery-log.md)。
-后续桌面实现按 [Tauri 2 迁移方案](docs/tauri-migration.md) 复用前端和 Python 业务服务；该方案不代表安装包已完成。
-个人／项目记忆已提供候选、审批、版本回滚和 CLI 启动快照；右侧“个人记忆”及群工具条“项目共享记忆”可管理，接口与权限边界见 [架构说明](docs/architecture.md)。自动复盘与完整隔离仍在实现中。
-F39 已接入 Owner API 访问鉴权：按现有命令启动服务后自动打开本次启动的授权页面；自动打开失败时，使用宿主数据目录中的 `owner-access-*.html` 本机入口，服务退出时删除。每次服务重启需重新授权；401 不清除业务待确认请求，重新授权后继续核对原请求。全部业务 API 和成果下载均需授权，静态页面与基础健康检查不代表已获业务访问权。
-F40 已接入固定 Linux 镜像的 Docker Worker、资源限制和未知容器核查/停止入口，配置可在浏览器保存并保持禁用；[镜像构建、配置与恢复步骤](docs/docker-worker.md) 说明具体边界。当前本机 Docker 安装注册不完整、WSL2 不可用，DISM 报告组件存储无法修复；真实镜像构建、容器运行与双 Worker 隔离尚未验收。F39 鉴权不隔离同一操作系统用户，也不限制任意网络出口，不能据此宣布真实供应商或 CLI 链路已验收。
-下方旧组织流程说明仍对应原看板，不代表新工作台已完成全部验收。
+当前工作台以持久 Agent 身份、Owner 会话和逐次明确授权为入口。前端为 React 静态页面，Python 服务监听本机；下方旧组织看板的部门投票、HR扩缩容与部署示例不是当前工作台的完成声明。
 
+- **身份与协作**：私聊、董事会/项目群、成员与归档管理；指定成员回复、模型提案、协作项目及目标规划执行。创建身份支持稳定请求键和断线恢复，原创建回执与后来修改的当前身份分别核对。
+- **任务与交付**：需求版本、任务依赖、CLI执行、停止与未知核查、成果下载和Owner完整清单审批；固定批次及检查点恢复不会把未知结果自动改为成功。
+- **资料与观察**：内置 coding/demo-generator 技能正文选择与当次固定输入，个人/项目记忆候选、自动复盘候选、审批及回滚；普通回复读取当次固定批准记忆，历史界面核对原版本正文。模型/CLI用量、预算预留、Owner费用声明、上下文及工具活动均有独立证据边界。
+- **代码工作区**：固定仓库绑定、独立执行副本、补丁清单、指定集成人评审及Owner授权的1–16来源有序代码集成。集成生成独立副本与提交，不自动合入原仓库或推送。
+
+Windows环境安装、构建、启动/停止与完整浏览器测试命令见 [工作台开发与启动](frontend/README.md)。逐项范围、验证结果及限制以 [需求矩阵](docs/product-requirements.md)、[功能交付台账](docs/feature-delivery-log.md) 和 [验收报告](docs/acceptance-report.md) 为准。
+
+服务启动自动打开本次Owner授权页面；浏览器自动打开失败时，控制台给出数据目录内的临时 `owner-access-*.html` 路径。基础页面或health可访问不代表获得业务权限。服务重启须重新授权，401保留业务待确认请求。身份/任务保存本身不启动模型；模型与CLI运行可能产生费用。
+
+**交付边界**：受控模型/CLI、隔离HTTP、浏览器和临时原生Git验证不等于真实付费供应商、真实CLI或双Docker隔离验收。Docker Worker已有实现，真实运行仍未验收，见 [Docker步骤与限制](docs/docker-worker.md)。F82本地提交后的推送返回HTTP403，远端分支未确认；本地提交、构建或截图不代表已远端交付。Tauri仍是 [迁移方案](docs/tauri-migration.md)，没有已验收安装包。
+
+## 历史组织看板与设计资料
+
+以下介绍原 `dashboard/`、组织角色/SOP及历史示例，供理解角色来源；其能力声明和样例对话不作为当前浏览器工作台验收结果。历史看板与当前 `scripts/workbench` 服务是不同入口。
 > 基于国内大厂组织架构的多智能体协作系统。皆在为了快速落地Idea，你作为CorpPilot具有话语权的人，提出对应idea，和董事会进行讨论需求，明确好你的边界想要的内容，多Agent协同实现出结果，快速验证。一人公司OPC，小型公司很好的选择！
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/)
 
 ---
 
-## 核心特性
+## 历史核心特性
 
 **四层架构 · 分权制衡 · 岗位细分**
 
@@ -136,21 +143,9 @@ PMO 派发任务
 
 ---
 
-## 快速开始
+## 启动入口说明
 
-### Docker 一键启动
-
-```bash
-docker run -p 7891:7891 your-org/corppilot
-```
-
-### 完整安装
-
-```bash
-git clone https://github.com/your-org/corppilot.git
-cd corppilot
-./install.sh
-```
+当前工作台请使用 [Windows启动步骤](frontend/README.md)，默认端口7892。旧版7891看板示例不适用于新工作台；本仓库未提供已验收的公开Docker一键镜像，不能使用占位镜像或占位仓库地址作为安装命令。
 
 ---
 
@@ -346,7 +341,7 @@ corppilot/
 
 ---
 
-## 使用方法
+## 历史组织流程使用示例
 
 ### 向 AI 下达任务
 
@@ -375,7 +370,7 @@ HR（招聘专员）：已回收动态 Agent
 
 ---
 
-## 技术亮点
+## 历史看板技术特点
 
 - **零依赖后端**：Python 标准库实现 API 服务器
 - **单文件看板**：纯 HTML/CSS/JS，无需构建

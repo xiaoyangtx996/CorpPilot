@@ -934,3 +934,100 @@ frontend_integration负责AgentEditor/App；skill_inputs_backend独立审查其�
 首轮pAt1qW发现Escape焦点缺陷，固定入口ref并关闭dialog后还焦；O2Jpjs因测试失效事件名错误修正。PhnfQ1/FClOv7揭示开发proxy POST跨来源400，前者route断言异常后根写该专属fixture shutdown并确认PID52528已退出，后者正常退出；改为记录routeFailure与正常清理，最终沿真实pending做开发GET恢复。QA五项覆盖Return均已补强后重跑。原skills iHKuFR、原goal c6ESWu均通过（sessions49110/32067退出0）。
 
 62模块构建成功，index-DAdKGv8x.js 550.81kB/162.41kB gzip，保留超过500kB提示。正常55052无需重启，f82-normal-readback.json确认51原表逐行不变、创建请求表仍空、完整性/外键/health200与资源SHA256 9faa97e0205000a2c4cb1dddf24907a025cb2ecd38b483c2f930b427e1e7ab51通过。未新增Python全量声明。精确commit、立即推送结果和远端回读见H:\item\CorpPilot-test-evidence-20260906\f82-delivery-result.json，远端确认前不标记已交付。真实CLI、双Docker、当前文档总览同步和最终整体验收继续推进。
+
+## F83 当前本地功能提交索引
+
+由实际Git历史核对至F82；每行是功能主提交，补充修正仍保留原Git历史。此索引不是远端到达证明：截至F82立即推送仍403，远端功能分支未读回；各阶段测试、责任和推送证据见上方对应F段落及其delivery-result记录。F83自身提交在本段完成后形成，精确结果见仓库外f83-delivery-result.json。
+
+| 功能 | 本地主提交 |
+|---|---|
+| F01 | `77d7e9e90f133dadaa43e555493429c4d0eaa3ae` |
+| F02 | `d15b2ff43dabbfb1cfb5f0070ce5ca66f850b9cc` |
+| F03 | `47c691ee37d85283e4e3af2a22edc917fe3e4f5c` |
+| F04 | `f3eb6a854f7c097f241564108fb0fb0677a56ee1` |
+| F05 | `52e57105b2edadc47ac163d53b54a12301c77791` |
+| F06 | `1a42ecfcfeb65a311bdd3852823430450069bbb9` |
+| F07 | `20ddd3dd10ad941e34ba27a4622f3ddf3d892664` |
+| F08 | `dfa17818045a3cd5d6dfece7bd251f566f89734e` |
+| F09 | `5258be3ba49bec2dde1811032abf7f941ecf5db5` |
+| F10 | `78d59b415c6598acb54efb9702d62cb657a38226` |
+| F11 | `726e53b259248a63507b77b5f3dd6663ba356d0e` |
+| F12 | `49bceba52d65a09bc6f7a3172bf19b12bb7d840e` |
+| F13 | `c71f2c2f66ce8af0c881c653b6449893c8e8cd95` |
+| F14 | `e2772053bd23c19d738dfd3b1347df7a9a5cde51` |
+| F15 | `a84a28680930e0f800b5ea0823c19a7d3b480339` |
+| F16 | `51059a01f83d74c2ef9c4c3c86bbc950ba30b205` |
+| F17 | `07205fd76f581edcfa48d74170f13cb21aed16a9` |
+| F18 | `23fcb308e04876a8c8db41ee5297ef1c25f99dad` |
+| F19 | `ee0ef14ff5fe0ba89e02788064037526fbd2e4f4` |
+| F20 | `3809b749035f18a6e2997b94d0e5e54321474852` |
+| F21 | `d805178b3f0c0f04391187821e3e3495b4dee66b` |
+| F22 | `1e6fd119cf500fbc8784c39ac43a2da4d31bb795` |
+| F23 | `666d8798c42adbca851b6cdb4971de2288e54c20` |
+| F24 | `0f0dbd7a36da19880643ddb8a0970e7ccd0c2390` |
+| F25 | `da029db1c2cf860bd52b248fc26e48051acd19f1` |
+| F26 | `63dedcef083c2c42588dae57f547eff8c5e38699` |
+| F27 | `0ddec290af0741eff12fa864a9f2b400ad518de1` |
+| F28 | `7e793779b07c660101703ce21f8f727c515838b7` |
+| F29 | `babc37960bb155b56752590be588a69baeceb265` |
+| F30 | `b3029bec60b403cd3d657adbeb73a437c3d9dbe4` |
+| F31 | `d9b70e05c9c2f9fe638bfab0bc4c4cfbf9cf51b1` |
+| F32 | `a60af4342f11e784eaae497ddee86b9c901b85c3` |
+| F33 | `fcf911a7ee894df277844998a27aaaf6b0af03d3` |
+| F34 | `3fe9cf7e24980aa558edd70b710a4d0752c34b22` |
+| F35 | `77d31323169611c9d4c8e5f18b11926db1bda36a` |
+| F36 | `4f24ea00ba55fc0936a9fbdec2a8269de8cdfb6a` |
+| F37 | `502b96202d3b6692b4d204c2db2b72f9d9f9f34d` |
+| F38 | `c592eaebdd57c82178bf076d76bb234d016a1c29` |
+| F39 | `36acd48b6d84ec587268661addb71476d346d831` |
+| F40 | `a632631d9917eadfa97568d40d63c3c38e54b67c` |
+| F41 | `ffb7c3ac3a9316a1e459fec8c0ab6d5bd88edceb` |
+| F42 | `55ff1ee922ca465cc3da826965d53cb410178738` |
+| F43 | `47c4086d1f65326191ffaf12ba12491b6c161574` |
+| F44 | `02b364144b890663efc3276a2dc81c65f34818e1` |
+| F45 | `5b37cad73e97607f8f8f6709e779d060036a748d` |
+| F46 | `18b5c481bd2cbb5d07cd21e953bf04f337673bb9` |
+| F47 | `a4f7875c73bc29d0d1570b4e3aaaf9f17f2562c4` |
+| F48 | `43be70154bc7d373932a0cd5f14ce672fbfef48f` |
+| F49 | `6e68e864ed6804972f13cd03e4cc92c1fa32ca3b` |
+| F50 | `f52a1fb7c87f11a90af17005ebfcdb21848df1c0` |
+| F51 | `2e5135855ba074caac3a401905ebf34716114408` |
+| F52 | `ec60c186772372bd37736e74d37d489ffaec488a` |
+| F53 | `5d888ae5267b40bd174d99c7346278154273d542` |
+| F54 | `ff15347b48ee5abf62307991dcd03af3eb49fd53` |
+| F55 | `05bdcc887bc245701c8d3bfa4cb6718caa97a0e2` |
+| F56 | `174b11dbf7ce42b1168005c4512189ed8d9670bc` |
+| F57 | `2662b778f0bcdec5832c9351e005724c716c54b3` |
+| F58 | `ba70fbbc8ef6e296d23cedbede6c95122297ee1e` |
+| F59 | `ddeeb7d9f035faed7c9945ce627c00ab2e7b1a49` |
+| F60 | `561b4095a4dcb082216e48e89387ab8a18cd94d2` |
+| F61 | `bc251b3491c388946d4d0cfe0e729ca55b65b0f3` |
+| F62 | `20577c9424ea9112d716f0e759ffb01b1c051d0c` |
+| F63 | `bfde64002695710ac16fe1af044f2966a61d3d37` |
+| F64 | `d6cb3acea3b63825d33df7186ff2ea15e9f97638` |
+| F65 | `6778d55f6f266bb04d0e177bb5fc2731b8f880b3` |
+| F66 | `d72066ec131e0afc212bbacd0a61c97d7173a1fd` |
+| F67 | `906bc4a5d7da23eb88005092387873089cbae412` |
+| F68 | `b0e185c9173d801d91b08132f54a151bd897a4ad` |
+| F69 | `c1459c177db2d23b64c8396fefe733e1a94b434a` |
+| F70 | `92cb4827b70eb12d738ce891db0f87afc8c71666` |
+| F71 | `5098b6d56945ffe37fa4494871e21b28a9414bfc` |
+| F72 | `209e36cfcbf3ed9ded990a7315c6476234ad52f7` |
+| F73 | `dfd8ae5614d5611ca046202db503549652ff5089` |
+| F74 | `8dc40d09011d48198e34e8e9c1ee4410a77107a2` |
+| F75 | `5b2aa8679c5caed0a7aa791ccad7152e2e49e30f` |
+| F76 | `6ea9b72dabbe6131b0f950de3a2ee46da4ba4cac` |
+| F77 | `0213f6ea941ef04d3ceed1119aa4ecff9ed8cd97` |
+| F78 | `aeb52c72541da785fbb2dec027f6e9c5d73533a6` |
+| F79 | `2d3eb030f1e3059be31cd9c8e10026b98783db7b` |
+| F80 | `12179804fdf8dd5c47f8176a03f563e8e9cff0e1` |
+| F81 | `1f68b87798e50cce202281c75146af1de5aa0a36` |
+| F82 | `a85b25f0f12f477a8ec076c5eb7c6671a3940da3` |
+
+## F83 当前文档同步验收
+
+frontend_integration更新README与frontend使用文档；根更新15项需求矩阵、架构当前接线、Tauri边界、验收当前缺口及实际Git提交索引；skill_inputs_backend独立核源/测试/文档Pass。历史阶段记录保留并明确时点，不再把早期缺口当当前结论。F84待修的CLI read/write授权缺口已明确登记，整体目标仍Return；真实CLI/双Docker与远端交付仍未完成。
+
+根AST只读核对core.AGENT_ROLES的13项与13个SOUL部门目录完全相同，另34专业模板；默认data/agent_config.json不存在，不编造旧快照迁移。文档所有本地链接存在，package十二个浏览器运行入口及安装入口逐项匹配，pip check无依赖冲突；没有声称重新执行pip安装或npm ci。开发Vite正式配置只转换自身来源，保留外部来源拒绝。
+
+沿F82构建补跑checkpoint/budget/fee/context/tool-activities/repository/code-review/code-integration/memory-inputs九脚本全部退出0（session81152），汇总H:\item\CorpPilot-test-evidence-20260906\f83-browser-suite.json，各f83-browser-*.log记录独立browser-report路径；原goal/skills/agent-creation沿F82最终结果。Python全量session8580在本次文档提交时仍运行，日志f83-full-pytest.log，不提前记通过。文档独立验收不等待最终全量才提交；精确commit、立即push与远端回读记录于f83-delivery-result.json。
