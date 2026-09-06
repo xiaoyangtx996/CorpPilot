@@ -516,4 +516,11 @@
 - 回执及项目入口选择原计划任务当前版本，明确确认范围、验收、前次实例及再次执行说明后整批入队；依赖仍需Owner批准，未选前置不自动执行。完整请求独立持久化，202后只GET，首4xx重试清旧拒绝，401/丢响应保留同键。停止只针对绑定Run，响应未知只GET核对。
 - 真实IAB7896、1315×1272：DM历史/project origin入口通过；3任务一次入队A/C并行，A批准后B自动启动并消费1input。首400同key202丢响应/GET503/刷新保留完整请求，GET恢复不新增POST；fixture有序重启口令401后重新授权保留batch。第三批C停止丢响应后stopping→cancelled，reload后stopPOST仅1。
 - 已核实外部f44-verification.json：3batches/5executions（4awaiting_review、1cancelled）/4artifacts/1review/1input，5unique受控runner，全部成果hash及数据库完整性通过；真实CLI/model/Docker均0。unknown UI未注入，仅静态独审和后端证据；console/mobile未专项。
-- 最终typecheck/build通过，46modules、index-DNIGCKAo.js，已截图。F43后端测试沿用原记录；测试fixture原38539与重启31647均先确认实际句柄仍运行，再Ctrl+C退出1；最终7896无监听。正常7892旧26019在数据库无活动执行后有序停止，新69967启动健康检查200并回读index-DNIGCKAo.js，新增批次表为空、任务执行0、原1个unknown模型Run保留，未注入测试数据。F44实际commit/push尚待记录，不能据本地浏览器验收称远端交付或整体目标完成。
+- 最终typecheck/build通过，46modules、index-DNIGCKAo.js，已截图。F43后端测试沿用原记录；测试fixture原38539与重启31647均先确认实际句柄仍运行，再Ctrl+C退出1；最终7896无监听。正常7892旧26019在数据库无活动执行后有序停止，新69967启动健康检查200并回读index-DNIGCKAo.js，新增批次表为空、任务执行0、原1个unknown模型Run保留，未注入测试数据。F44 实际提交 `02b364144b890663efc3276a2dc81c65f34818e1` 后立即推送退出1：GitHub403（suiyue1990 无写入权限）。远端回读退出0但 remote_head=null；已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f44-delivery-result.json`。本地验收和提交不代表远端交付。
+
+## F45：未知模型请求核查与范围门禁
+
+- task_execution_ui 实现领域层与13项定向单测，主代理负责控制器所有权挡板、HTTP及集成测试；复用 Runs，不新增队列。不可变声明不改旧 Run、model、usage 或 RPM 账目。
+- reply/planning 按会话、来源消息、身份与类型挡住未核查 unknown；retro 按目标范围及来源执行挡住，其他任务不互锁。pending 过滤防 RPM 消耗，claim 事务复查；精确旧 key 回读优先，声明可放行已有授权 queued，新意图须新 key，原 unknown 永不重跑。
+- futures/unsettled/uncertain_submissions 仍持有时拒绝首次声明；提交结果不确定需完整关闭线程池/服务并重启后核查。API 沿用 Owner 鉴权，已保存声明在配置停用后仍可精确回读。
+- 主代理定向 **29 passed（11.16s）**；全量 **570 passed、8 subtests passed（97.96s）**，session88107 退出0；独立QA **15 passed（2.19s）**、审查Pass，含F45全部新增测试。提交不确定错误文案不再声称请求已退出。F46 仅草稿 typecheck，不计浏览器完成；F45 提交/推送尚待主代理操作，整体目标未完成。

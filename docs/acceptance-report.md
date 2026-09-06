@@ -331,4 +331,12 @@ F43 交付补记：已直接核实外部 `H:\item\CorpPilot-test-evidence-202609
 
 已直接读取外部 `H:\item\CorpPilot-test-evidence-20260906\f44-verification.json`：3任务、3批次、5执行（4 awaiting_review、1 cancelled）、4成果、1评审、1输入、0人工核查收据；5次受控runner各绑定不同execution，unique_call_per_execution=true，4成果hash_ok均true，integrity_check=ok、foreign_key_check为空。事件记录4次创建POST（含1次首400）、3次受理、1次stop POST和1次stop受理；最终取消实例退出码130。
 
-本轮真实CLI、模型、Docker调用均为0，受控runner不等于生产执行验收；console及移动视口未专项测试。后端沿用F43已记录的完整回归，未虚构新全量。测试fixture原38539与重启31647均先确认实际句柄仍运行，再Ctrl+C退出1；最终7896无监听。正常7892旧26019在数据库无活动执行后有序停止，新69967启动健康检查200并回读index-DNIGCKAo.js，新增批次表为空、任务执行0、原1个unknown模型Run保留，未注入测试数据。 F44提交与推送须据实际操作记录。
+本轮真实CLI、模型、Docker调用均为0，受控runner不等于生产执行验收；console及移动视口未专项测试。后端沿用F43已记录的完整回归，未虚构新全量。测试fixture原38539与重启31647均先确认实际句柄仍运行，再Ctrl+C退出1；最终7896无监听。正常7892旧26019在数据库无活动执行后有序停止，新69967启动健康检查200并回读index-DNIGCKAo.js，新增批次表为空、任务执行0、原1个unknown模型Run保留，未注入测试数据。 F44 实际提交 `02b364144b890663efc3276a2dc81c65f34818e1` 后立即推送退出1：GitHub403（suiyue1990 无写入权限）。远端回读退出0但 remote_head=null；已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f44-delivery-result.json`。本地验收和提交不代表远端交付。
+
+## F45：模型 unknown 核查与门禁验收
+
+主代理报告定向 **29 passed（11.16s）**。领域层覆盖不可变声明、原 Run 不变、严格字段、并发及重启精确回读、真实 INSERT 故障回滚，以及普通回复/提案/复盘的创建、pending、claim 范围门禁。相同摘要不同来源执行的复盘不会互锁；未核查 queued 不进入调度候选，不消耗常态 RPM。声明后既有已授权 queued 可继续，旧 unknown 仍未知且不自动重试。
+
+控制器/API 覆盖当前持有请求和提交不确定请求的声明阻挡、完整关闭/重启边界、Owner 鉴权及禁用配置后的精确回读。人工声明不改原 model、usage 或 RPM 历史，不把未知结果改成成功。主代理完整回归 **570 passed、8 subtests passed（97.96s）**，session88107 退出0，包含F45全部新增测试；独立QA **15 passed（2.19s）**、审查Pass。提交异常错误文案保留“本地请求可能仍在处理”的不确定性，不声称已退出。
+
+本增量不声称真实供应商影响或模型质量已验收。F46 仅界面草稿和 typecheck，尚无该界面的浏览器验收。F40 真实双 Docker Worker、真实 CLI/模型和整体目标仍未验收。

@@ -5,7 +5,7 @@ import json
 import uuid
 
 from .store import Store, _text
-from . import planning, retrospectives
+from . import planning, retrospectives, model_reconciliations
 from .memories import Memories
 
 
@@ -39,6 +39,7 @@ class Runs:
 
             planning.initialize(db)
             retrospectives.initialize(db)
+            model_reconciliations.initialize(db)
 
     @staticmethod
     def _run(db, identity):
@@ -76,6 +77,10 @@ class Runs:
             if (previous["agent_id"], previous["source_message_id"]) != (agent_id, source):
                 raise ValueError("request_id 已用于不同 Run")
             return self._run(db, previous["id"])
+        if not is_retrospective and model_reconciliations.unresolved(db,
+                {"conversation_id": conversation_id, "source_message_id": source, "agent_id": agent_id},
+                kind="planning" if is_planning else "reply"):
+            raise ValueError("同一模型操作存在未核查的未知请求，不能启动替代请求")
         self._authorize(db, {"conversation_id": conversation_id, "agent_id": agent_id})
         if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'",
                           (source, conversation_id)).fetchone():
@@ -106,13 +111,16 @@ class Runs:
             raise ValueError("队列读取上限必须为 1–100")
         with self.store.connect() as db:
             db.execute("BEGIN")
-            return [self._run(db, row[0]) for row in db.execute(
-                "SELECT id FROM runs WHERE state='queued' ORDER BY created_at,id LIMIT ?", (limit,))]
+            rows = [self._run(db, row[0]) for row in db.execute(
+                "SELECT id FROM runs WHERE state='queued' ORDER BY created_at,id LIMIT 100")]
+            return [row for row in rows if not model_reconciliations.unresolved(db, row)][:limit]
 
     def claim(self, identity):
         with self.store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            self._run(db, identity)
+            run = self._run(db, identity)
+            if run["state"] != "queued" or model_reconciliations.unresolved(db, run):
+                return False
             return db.execute("""UPDATE runs SET state='running',
                 updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND state='queued'""", (identity,)).rowcount == 1
 

@@ -499,3 +499,17 @@ F43 是后端/API 增量。主代理报告 18 项定向测试通过（4.17s）�
 本批停止另行勾选确认，先持久保存停止待核对标记再 POST；响应未知后仅 GET 刷新，不盲目重发，也不操作替代实例。独立审查发现的非项目 origin 查询及已核查 unknown 被封锁问题已修复，结论 Pass。主代理浏览器验证了批量并发、前置批准、请求及停止丢响应、重启401和同批恢复；实际 runner 为受控替身，真实 CLI/模型/Docker 均未调用。最终46模块构建 index-DNIGCKAo.js；具体证据及未测试边界见 F44 验收记录。
 
 测试fixture原38539与重启31647均先确认实际句柄仍运行，再Ctrl+C退出1；最终7896无监听。正常7892旧26019在数据库无活动执行后有序停止，新69967启动健康检查200并回读index-DNIGCKAo.js，新增批次表为空、任务执行0、原1个unknown模型Run保留，未注入测试数据。
+
+F44 实际提交 `02b364144b890663efc3276a2dc81c65f34818e1` 后立即推送退出1：GitHub403（suiyue1990 无写入权限）。远端回读退出0但 remote_head=null；已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f44-delivery-result.json`。本地验收和提交不代表远端交付。
+
+## F45：未知模型请求的核查与精确范围门禁
+
+`model_run_reconciliations` 保存 Owner 对 unknown 模型 Run 的不可变声明：原 run_id、request_id、attempt、requirement_version、本地请求已停止及供应商影响已核查两个 true 标志、说明和时间。更新、删除及替换均拒绝；声明不等于供应商成功或机器退出证据，不改原 Run 的 state、model、usage、attempt，也不回填或重置 RPM 账目。相同声明精确回读，异内容冲突拒绝，后续停用身份或模型配置不影响已有回执核对。
+
+门禁复用 Runs：普通回复/协作提案按 conversation_id、source_message_id、agent_id 和 kind 分别约束；复盘按目标 scope、scope_id 和 source_execution_id 约束，不把同一共享摘要下不同任务成果互锁。范围内未核查 unknown 阻止新 key 创建；原 key 回读优先于门禁。pending 排除被挡住的 queued，避免常态轮询消耗 RPM 或饿死无关请求；claim 在事务中再次核查。被挡请求仍是 queued，在列表可见且可取消。声明可能放行已经获 Owner 授权的 queued；原 unknown 从不重新出队，新意图仍须 Owner 显式提交新 key。
+
+控制器在共享状态锁下拒绝为仍由 futures、unsettled 或 uncertain_submissions 持有的请求首次保存声明。线程提交结果不确定时，即使表中已记 unknown，也保留所有权与并发槽；有可靠 Future 的请求必须等其结束并由控制器移除；没有可靠 Future 绑定的提交异常保守保留至完整关闭线程池和服务，重启后再核查，不能仅凭本地状态字符串解除。控制器关闭时拒绝新的声明，既有精确回执仍可读。
+
+Owner Bearer 鉴权覆盖 `GET /api/workbench/model-run-reconciliations/pending` 和 `GET/POST /api/workbench/runs/{id}/reconciliation`。POST 严格六字段：request_id、attempt、requirement_version、local_request_stopped、provider_effects_checked、note；布尔项必须为 true，版本为非 bool 正整数，说明最多2000字符。待核查列表含 kind 及复盘 scope/scope_id 供导航，不含冻结输入正文。F45 是后端/API 增量；F46 界面当前仅草稿及 typecheck，未完成浏览器验收。
+
+F45 主代理完整回归570项及8子用例通过（97.96s，session88107退出0）；独立QA15项通过（2.19s），审查Pass。该结果包含F45新增测试，不扩大为F46浏览器或真实供应商验收。

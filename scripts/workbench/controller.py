@@ -11,6 +11,7 @@ from .runs import Runs
 from .planning import PlanningError
 from .retrospectives import RetrospectiveError
 from .cli_controller import CLIController
+from .model_reconciliations import ModelReconciliations
 
 
 class ReplyController:
@@ -34,11 +35,16 @@ class ReplyController:
         try:
             self.runs = Runs(store)
             self.runs.recover()
+            self.model_reconciliations = ModelReconciliations(store)
+            self.state_lock = threading.RLock()
             self.monitor = TrafficMonitor(store.data_dir / "reply-usage.jsonl")
             self.stop = threading.Event()
             self.pool = ThreadPoolExecutor(max_workers=16, thread_name_prefix="reply")
             self.futures = {}
             self.unsettled = set()
+            # A submit exception can occur after a work item was queued. Without a
+            # reliable Future, keep ownership until this pool is fully shut down.
+            self.uncertain_submissions = set()
             self.error = ""
             self.cli = CLIController(store)
             self.thread = threading.Thread(target=self._dispatch, daemon=True, name="reply-dispatch")
@@ -67,21 +73,28 @@ class ReplyController:
                     self.error = "模型配置或凭据未就绪，队列等待配置"
                     continue
                 for run in pending:
-                    if self.stop.is_set() or len(self.futures) >= config["max_concurrency"]:
-                        break
-                    if not self.monitor.reserve_call(config["rpm"]):
-                        break
-                    if self.runs.claim(run["id"]):
-                        self.unsettled.add(run["id"])
-                        future = self.pool.submit(self._execute, run["id"], config)
-                        self.futures[future] = run["id"]
-                        self.unsettled.remove(run["id"])
+                    with self.state_lock:
+                        if self.stop.is_set() or len(self.futures) + len(self.uncertain_submissions) >= config["max_concurrency"]:
+                            break
+                        if not self.monitor.reserve_call(config["rpm"]):
+                            break
+                        if self.runs.claim(run["id"]):
+                            self.unsettled.add(run["id"])
+                            self.uncertain_submissions.add(run["id"])
+                            future = self.pool.submit(self._execute, run["id"], config)
+                            self.futures[future] = run["id"]
+                            self.uncertain_submissions.remove(run["id"])
+                            self.unsettled.remove(run["id"])
             except Exception:
                 # Do not print arbitrary database/provider exceptions containing user data.
                 # The next poll can recover temporary SQLite contention; claims stay observable.
                 self.error = "回复调度异常，请检查运行记录；未自动重发已开始请求"
 
     def _reconcile(self):
+        with self.state_lock:
+            self._reconcile_locked()
+
+    def _reconcile_locked(self):
         for future, identity in list(self.futures.items()):
             if future.done():
                 try:
@@ -90,12 +103,42 @@ class ReplyController:
                     self.unsettled.add(identity)
                 del self.futures[future]
         for identity in list(self.unsettled):
-            self.runs.fail(identity, "请求已退出但结果未能保存，结果未知；未自动重发", state="unknown")
+            reason = ("提交结果不确定，本地请求可能仍在处理；结果未知，未自动重发"
+                      if identity in self.uncertain_submissions else "请求已退出但结果未能保存，结果未知；未自动重发")
+            self.runs.fail(identity, reason, state="unknown")
             self.unsettled.remove(identity)
 
     def status(self):
-        return {"error": self.error, "active_requests": sum(not future.done() for future in tuple(self.futures)),
-                "running": self.thread.is_alive() and not self.stop.is_set()}
+        with self.state_lock:
+            return {"error": self.error or ("模型线程提交结果不确定，仍保留并发槽；请完整停止服务并核查后恢复" if self.uncertain_submissions else ""),
+                    "active_requests": sum(not future.done() for future in self.futures) + len(self.uncertain_submissions),
+                    "running": self.thread.is_alive() and not self.stop.is_set()}
+
+    def reconcile_unknown(self, identity, payload):
+        with self.state_lock:
+            # Historical acknowledgements remain available after shutdown or
+            # authorization/configuration changes; save still checks exact payload.
+            if self.model_reconciliations.get(identity) is not None:
+                return self.model_reconciliations.save(identity, payload)
+            if self.stop.is_set():
+                raise ValueError("模型控制器正在关闭，不能提交新的核查声明")
+            if (identity in self.futures.values() or identity in self.unsettled
+                    or identity in self.uncertain_submissions):
+                raise ValueError("本地模型请求仍被控制器持有或提交结果不确定；请等待，必要时完整停止服务后再核查")
+            return self.model_reconciliations.save(identity, payload)
+
+    def enqueue(self, conversation_id, payload):
+        with self.state_lock:
+            if isinstance(payload, dict) and isinstance(payload.get("request_id"), str):
+                with self.runs.store.connect() as db:
+                    existing = db.execute("SELECT 1 FROM runs WHERE conversation_id=? AND request_id=?",
+                                          (conversation_id, payload["request_id"].strip())).fetchone()
+                if existing:
+                    return self.runs.create(conversation_id, payload)
+            if self.stop.is_set():
+                raise ValueError("模型控制器正在关闭，不能创建新的请求")
+            self.settings.resolve()
+            return self.runs.create(conversation_id, payload)
 
     def _execute(self, identity, config):
         try:

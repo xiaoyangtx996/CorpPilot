@@ -123,7 +123,11 @@ def test_recovery_and_cancellation_do_not_fake_a_stopped_request(tmp_path):
     assert restored.recover() == 0
     assert restored.get(running["id"])["state"] == "unknown"
     assert restored.get(queued["id"])["state"] == "queued"
-    assert [item["id"] for item in restored.pending()] == [queued["id"]]
+    # The same-source queued request stays visible, but cannot dispatch before
+    # the interrupted request's outcome is explicitly reconciled.
+    assert restored.pending() == []
+    assert queued["id"] in {item["id"] for item in restored.list(cid)}
+    assert not restored.claim(queued["id"])
     for limit in (0, 101, True):
         with pytest.raises(ValueError):
             restored.pending(limit)

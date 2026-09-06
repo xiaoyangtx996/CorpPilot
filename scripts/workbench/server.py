@@ -151,6 +151,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, self.server.controller.cli.status())
             if self.command == "GET" and path == "/api/workbench/execution-reconciliations/pending":
                 return self.respond(200, self.server.controller.cli.reconciliations.pending())
+            if self.command == "GET" and path == "/api/workbench/model-run-reconciliations/pending":
+                return self.respond(200, self.server.controller.model_reconciliations.pending())
             if path == "/api/workbench/model-settings":
                 if self.command == "GET":
                     return self.respond(200, self.server.settings.get())
@@ -262,8 +264,7 @@ class Handler(BaseHTTPRequestHandler):
                     if self.command == "GET":
                         return self.respond(200, self.server.controller.runs.list(conversation_id))
                     if self.command == "POST":
-                        self.server.settings.resolve()
-                        return self.respond(202, self.server.controller.runs.create(conversation_id, self.read_json()))
+                        return self.respond(202, self.server.controller.enqueue(conversation_id, self.read_json()))
                 if len(parts) == 2 and parts[1] == "tasks":
                     if self.command == "GET":
                         return self.respond(200, self.server.tasks.list(conversation_id))
@@ -358,6 +359,11 @@ class Handler(BaseHTTPRequestHandler):
                 parts = path[len(prefix):].split("/")
                 if len(parts) == 1 and parts[0] and self.command == "GET":
                     return self.respond(200, self.server.controller.runs.get(parts[0]))
+                if len(parts) == 2 and parts[0] and parts[1] == "reconciliation":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.controller.model_reconciliations.get(parts[0]))
+                    if self.command == "POST":
+                        return self.respond(201, self.server.controller.reconcile_unknown(parts[0], self.read_json()))
                 if len(parts) == 2 and parts[1] == "cancel" and self.command == "POST":
                     if self.read_json():
                         raise ValueError("取消请求体必须为空对象")

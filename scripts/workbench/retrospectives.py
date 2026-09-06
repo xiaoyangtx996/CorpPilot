@@ -7,6 +7,7 @@ from .tasks import Tasks, TaskVersionConflict
 from .memories import _scope, _document
 from .artifacts import input_snapshots
 from .planning import _json, _unique
+from . import model_reconciliations
 
 
 class RetrospectiveError(ValueError):
@@ -122,6 +123,9 @@ class Retrospectives:
                 if row is None or (row['scope'], row['scope_id'], row['payload']) != (scope, identity, encoded):
                     raise ValueError('request_id 已用于不同请求')
                 return self._get(db, prior[0])
+            if model_reconciliations.unresolved(db, {}, kind='retrospective',
+                    retrospective=(scope, identity, payload['source_execution_id'])):
+                raise ValueError('此来源与记忆范围存在未核查的未知复盘，不能创建替代请求')
             _check(db, {'scope': scope, 'scope_id': identity, 'payload': encoded}, self.runs.memories)
             approved = {a['id']: a for a in input_snapshots(db, [{'upstream_execution_id': source['id']}])}
             artifacts = []
