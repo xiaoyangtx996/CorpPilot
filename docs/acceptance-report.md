@@ -671,3 +671,11 @@ PM/TechLead/Ponytail/QA与根对F51增量验收Pass；真实CLI/双Docker、目�
 根两组定向115项通过（49项27.26s与66项39.47s），含实际HTTP输入、身份隔离、审批/回滚、授权撤销、特殊分支、事务回滚、Owner授权/只读及实际离线备份恢复。独立源码/Ponytail审查Pass；受控本机HTTP不替代真实供应商验收。本轮未重复全量，保留F77已知全量结果及修正范围。
 
 正常数据先备份再迁移，仅新增空model_memory_snapshots；50旧表逐行不变，完整性/外键/health200和原F78资源一致（f79-normal-readback.json）。原上下文浏览器4qam6Y与原goal最终UsmrIH通过；原goal首轮CZSbdd因测试控制文件rename EPERM失败已保留，新隔离目录重跑通过，未修改生产或测试断言。前端生产未改；整体目标、真实CLI、双Docker、身份创建幂等及远端交付仍未完成。
+
+## F80 固定记忆历史界面验收
+
+模型运行上下文内可独立查看批准记忆元数据，按需读取原历史版本，核对范围、字符数和SHA256后呈现正文。当前v2不替代旧v1，DM与群scope严格区分，Owner历史不依赖后续成员/启用状态，全部只读。
+
+最终gUx13A通过24项边界、390px布局及真实开发StrictMode焦点；0写入、0模型CLI调用、pageErrors为空、fixture退出0。等长篡改hash、旧版缺失、迟到正文、项目精确正文、中文/非BMP与HTML不执行均有实测。QA三项测试证据Return已补强后重跑通过，前端源码独立审查Pass；夹具由根复核，责任独立范围见台账。
+
+原context pvzZIR和原goal最终PD0eMQ通过。原goal一次Windows测试control rename EPERM已保留，改测试原子替换有界重试后通过，未修改后端生产。62模块构建成功，保留体积提示；正常50旧表/空模型记忆表、完整性/外键/health和最终资源一致（f80-normal-readback.json）。身份创建幂等、真实CLI、双Docker、远端交付与最终全量验收仍未完成。

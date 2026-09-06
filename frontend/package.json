@@ -20,7 +20,8 @@
     "test:browser:repository": "npm run build && node tests/repository-browser.mjs",
     "test:browser:code-review": "npm run build && node tests/code-review-browser.mjs",
     "test:browser:code-integration": "npm run build && node tests/code-integration-browser.mjs",
-    "test:browser:skills": "npm run build && node tests/skills-browser.mjs"
+    "test:browser:skills": "npm run build && node tests/skills-browser.mjs",
+    "test:browser:memory-inputs": "npm run build && node tests/memory-inputs-browser.mjs"
   },
   "dependencies": {
     "react": "19.2.8",

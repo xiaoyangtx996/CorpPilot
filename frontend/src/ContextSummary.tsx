@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { SkillInputs } from './Skills';
+import { MemoryInputs } from './MemoryInputs';
 
 type Digest = { chars: number; sha256: string };
 type Message = Digest & { id: string | null; sequence: number | null; sender_kind: 'owner' | 'agent'; sender_id: string | null; content_source: 'conversation_message' | 'authorized_shared_brief' | 'retrospective_snapshot' };
@@ -87,6 +88,7 @@ export function ContextSummary({ onClose, ...target }: Target & { onClose: () =>
     {busy && <p role="status">读取当次上下文中…</p>}{error && <p className="error" role="alert">{error}</p>}
     {loaded && !row && <p role="status">没有保存当次上下文回执，实际输入未知。</p>}
     <SkillInputs kind={target.kind} run_id={target.run_id} agent_id={target.agent_id} />
+    {target.kind === 'model' && <MemoryInputs run_id={target.run_id} agent_id={target.agent_id} conversation_id={target.conversation_id} modelKind={target.modelKind} />}
     {row && <section aria-label="已准备上下文摘要">
       <p>已准备（prepared）：只证明入口保存了摘要，不证明供应商已接收、CLI 已启动或工具已执行。</p>
       <dl><dt>准备时间</dt><dd>{row.prepared_at}</dd><dt>Agent</dt><dd>{row.agent_id}</dd><dt>实例尝试 / 需求版本</dt><dd>第{row.attempt}次 / v{row.requirement_version}</dd><dt>当次模板</dt><dd>{row.template_id}</dd><dt>当次选用模型</dt><dd>{row.model}</dd></dl>

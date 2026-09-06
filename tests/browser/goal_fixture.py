@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--fees', action='store_true')
     parser.add_argument('--context', action='store_true')
     parser.add_argument('--skills', action='store_true')
+    parser.add_argument('--chat-memories', action='store_true')
     parser.add_argument('--tools', action='store_true')
     parser.add_argument('--repository', action='store_true')
     parser.add_argument('--code-review', action='store_true')
@@ -174,7 +175,7 @@ def main():
         budget = dict(plan=plan, batch=batch)
 
     context = None
-    if args.context or args.skills:
+    if args.context or args.skills or args.chat_memories:
         from workbench.runs import Runs
         from workbench.context_receipts import ContextReceipts
         from workbench.tasks import Tasks
@@ -211,9 +212,22 @@ def main():
             note='Fixture Owner inspected result',artifact_ids=[a['id'] for a in artifacts.list_for(store,upstream['id'])]))
         scopes = [('agent',people[1]['id']),('project',room['id'])]
         for scope,identity in scopes:
+            content = 'F66_PRIVATE_MEMORY_' + scope
+            if args.chat_memories:
+                content += ' 中文😀 <img src=x onerror="window.F80_MEMORY_EXECUTED=true">'
             candidate=memory.propose(scope,identity,dict(request_id='context-'+scope,expected_version=0,
-                source_execution_id=upstream['id'],content='F66_PRIVATE_MEMORY_'+scope))
+                source_execution_id=upstream['id'],content=content))
             memory.decide(candidate['id'],dict(request_id='context-approve-'+scope,decision='approved',note='Fixture Owner approval'))
+        if args.chat_memories:
+            def memory_reply(conversation, owner_message, request_id):
+                reply = runs.create(conversation['id'], dict(agent_id=people[1]['id'], source_message_id=owner_message['id'], request_id=request_id))
+                assert runs.claim(reply['id'])
+                contexts.record_model(reply['id'], runs.snapshot(reply['id']), 'fixture-chat-memory-model')
+                return runs.fail(reply['id'], 'Fixture prepared approved memory input; provider was not called')
+            memory_model = memory_reply(room, source_input, 'memory-model')
+            memory_dm_room = store.save_conversation(dict(type='dm', title='F80 个人记忆私聊', member_ids=[people[1]['id']]))
+            memory_dm_source = store.send_message(memory_dm_room['id'], dict(content='F80_PRIVATE_MEMORY_QUESTION', request_id='memory-dm-source'))
+            memory_dm = memory_reply(memory_dm_room, memory_dm_source, 'memory-dm')
         child = task('F66 上下文消费者','context-child')
         tasks.set_dependencies(child['id'],dict(expected_version=1,task_ids=[parent['id']]))
         child=tasks.get(child['id']); execution=create(child); assert executions.claim(execution['id'])
@@ -222,6 +236,9 @@ def main():
         for scope,identity in scopes:
             memory.rollback(scope,identity,dict(request_id='context-rollback-'+scope,expected_version=1,target_version=0,note='Later memory changed'))
         context=dict(model=runs.get(model['id']),legacy=runs.get(legacy['id']),execution=executions.get(execution['id']),room=room)
+        if args.chat_memories:
+            context.update(memory_model=memory_model, memory_dm=memory_dm,
+                           memory_empty=memory_reply(room, source_input, 'memory-empty'))
         if args.skills:
             store.save_agent({'skills': []}, people[0]['id'])
             empty = runs.create(source['id'], dict(agent_id=people[0]['id'], source_message_id=latest['id'], request_id='skills-empty'))

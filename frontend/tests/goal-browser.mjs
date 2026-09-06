@@ -28,9 +28,14 @@ async function until(check, description, timeout = 30000) {
   while (Date.now() < deadline) { const value = await check(); if (value) return value; await delay(100); }
   throw Error(`Timed out: ${description}`);
 }
-function controls(value) {
+async function controls(value) {
   const target = path.join(fixtureDir, 'control.json');
-  fs.writeFileSync(target + '.tmp', JSON.stringify(value)); fs.renameSync(target + '.tmp', target);
+  fs.writeFileSync(target + '.tmp', JSON.stringify(value));
+  // Windows readers can briefly deny replacement; keep the control write atomic and bounded.
+  for (let attempt = 0; ; attempt++) {
+    try { fs.renameSync(target + '.tmp', target); return; }
+    catch (error) { if (process.platform !== 'win32' || !['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || attempt >= 20) throw error; await delay(25); }
+  }
 }
 function events() {
   const target = path.join(fixtureDir, 'evidence.jsonl');
@@ -93,20 +98,20 @@ try {
     await dialog.getByRole('checkbox', { name: /我确认共享上述摘要/ }).check();
   }
 
-  controls({ reject_first: true, pause_runner: true });
+  await controls({ reject_first: true, pause_runner: true });
   await openTarget(); await fillGoal('F53 EXPLICIT SHARED: produce three linked evidence files.');
   await page.screenshot({ path: path.join(outDir, 'goal-draft.png') });
   await modal().getByRole('button', { name: '授权秘书组织并执行', exact: true }).click();
   await modal().getByRole('button', { name: '修改首次未接受的目标授权' }).waitFor();
   const original = await pending(); assert(original?.rejected);
-  controls({ drop_goal: true, get503: true, pause_runner: true });
+  await controls({ drop_goal: true, get503: true, pause_runner: true });
   await modal().getByRole('button', { name: '同键核对原目标授权' }).click();
   await until(() => events().find(e => e.kind === 'goal_accepted'), 'accepted goal before dropped response');
   await page.reload(); await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
   assert.deepEqual((await pending()).payload, original.payload);
   assert.equal((await pending()).rejected, undefined);
   await page.screenshot({ path: path.join(outDir, 'goal-recovery.png') });
-  controls({});
+  await controls({});
   await modal().getByRole('button', { name: '刷新目标状态' }).click();
   const accepted = events().find(e => e.kind === 'goal_accepted').goal_id;
   let receipt = await until(async () => {
@@ -216,7 +221,7 @@ try {
   report.boundaries = await runBoundaries({ browser, baseURL, manifest, receipt, outDir });
   report.stops = [];
   for (const phase of ['model', 'execution']) {
-    controls({ pause_model: phase === 'model', pause_runner: phase === 'execution' });
+    await controls({ pause_model: phase === 'model', pause_runner: phase === 'execution' });
     await openTarget(); await fillGoal(`F53 EXPLICIT SHARED: stop during ${phase}.`);
     const acceptedBefore = events().filter(e => e.kind === 'goal_accepted').length;
     await modal().getByRole('button', { name: '授权秘书组织并执行', exact: true }).click();
@@ -227,17 +232,17 @@ try {
       return phase === 'model' ? row.planning.state === 'running' : row.batch?.items.some(i => i.execution.state === 'running');
     }, `goal running during ${phase}`);
     await modal().getByRole('checkbox', { name: /我确认停止此目标的后续调度/ }).check();
-    controls({ pause_model: phase === 'model', pause_runner: phase === 'execution', drop_stop: true, get503: true });
+    await controls({ pause_model: phase === 'model', pause_runner: phase === 'execution', drop_stop: true, get503: true });
     await modal().getByRole('button', { name: '确认停止此目标', exact: true }).click();
     await until(() => events().some(e => e.kind === 'stop_accepted' && e.goal_id === goalId && e.dropped), 'stop response actually dropped');
     const stopping = await page.evaluate(() => sessionStorage.getItem('corppilot.goal-stop-pending.v1'));
     assert.equal(JSON.parse(stopping).goal_id, goalId);
-    controls({ get503: true, pause_model: phase === 'model', pause_runner: phase === 'execution' });
+    await controls({ get503: true, pause_model: phase === 'model', pause_runner: phase === 'execution' });
     await page.reload();
     await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
     assert.equal((await pending()).goal_id, goalId);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('corppilot.goal-stop-pending.v1')), stopping);
-    controls({ pause_runner: phase === 'execution' });
+    await controls({ pause_runner: phase === 'execution' });
     await modal().getByRole('button', { name: '刷新目标状态' }).click();
     await until(async () => (await readGoal(goalId)).stop_requested, 'durable stop after lost response');
     const stopped = await until(async () => {
@@ -290,7 +295,7 @@ try {
   await devServer?.close();
   await browser?.close();
   if (fs.existsSync(fixtureDir)) {
-    controls({}); fs.writeFileSync(path.join(fixtureDir, 'shutdown'), 'stop');
+    await controls({}); fs.writeFileSync(path.join(fixtureDir, 'shutdown'), 'stop');
     await until(() => childExit || spawnError, 'fixture shutdown', 20000).catch(() => { child.kill(); report.cleanupForced = true; });
   }
   report.fixtureExit = childExit; report.fixtureSpawnError = spawnError?.message;

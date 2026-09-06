@@ -902,3 +902,15 @@ skill_inputs_backend负责chat_memories模块与20项自测；根负责Runs认�
 正常35607确认live且三类活动均0后明确停止；f79-normal-backup数据库688128字节，SHA256 369d61bf4b379a498e842645a768f57cf00065849538bc3b76dc0d876eb068de；新服务6655沿原目录7892。f79-normal-readback.json确认50旧表逐行未变、仅新增空model_memory_snapshots，完整性/外键/health200与未变F78资源字节一致。没有新增前端构建声明。
 
 原上下文浏览器4qam6Y通过、fixture正常退出；原goal首轮CZSbdd因测试控制文件rename的Windows EPERM退出1，fixture正常退出0，不计通过。新的隔离目录UsmrIH完整重跑通过（session94565退出0、fixture退出0），生产和测试代码未为此修改。未重复Python全量，F77初轮失败及定向修正记录保留，最终整体回归仍需完成。专用固定记忆历史界面、身份创建未知响应幂等、真实CLI和双Docker仍待完成。精确commit、推送及远端分支回读见H:\item\CorpPilot-test-evidence-20260906\f79-delivery-result.json，远端确认前不标记已交付。
+
+## F80 固定批准记忆浏览器查看
+
+frontend_integration负责MemoryInputs及ContextSummary两文件；skill_inputs_backend负责隔离--chat-memories夹具，另独立审查其未编写的前端源码与根浏览器测试；根独占构建、浏览器测试、夹具复核、PM目视、正常数据回读、文档与Git。恢复原QA代理遭thread limit，改由未编写前端的后端代理审查，明确不将其自有夹具称为独立验证。复用F79元数据及既有history API，按精确旧版本/hash展示正文，全部只读，无新依赖或后端生产修改。
+
+正式npm run test:browser:memory-inputs已建立并执行；最终test-only gUx13A通过（session22761退出0、fixture退出0），24项边界及390px/开发StrictMode焦点通过，0业务写、0模型CLI调用、pageErrors为空。实际v1个人/项目正文与当前v2空分辨，DM只有个人、CLI保留原入口、v0不读history，缺历史与非零空不同；错scope/关联/版本、等长篡改hash、缺旧版本、重复history、401、上下文失败独立查看、迟到元数据/正文均拒绝错误展示。正文含中文/非BMP和字面HTML，节点及window标记证明未执行。根目视桌面及手机。
+
+早期9GGrHX/3Gfeyv因测试全局article误中消息区、z7TLyK因未展开hash而失败；修正实际定位/展开，未改产品断言。OhvI9i和AjuoIV先通过；QA要求等长篡改、等待迟到响应完成、明确等项目正文三项证据，补强后最终gUx13A通过。原context pvzZIR通过。原goal wA3StY遇Windows测试control文件rename EPERM，再次复现F79瞬时占用；仅测试helper改为有界500ms重试特定Windows错误，保留atomicrename，其余错误立即抛出，全部调用await。最终原goal PD0eMQ通过（session31128退出0、fixture退出0）。
+
+62模块index-MM3KuyaH.js构建成功，543.61kB/160.12kB gzip，保留Vite超过500kB提示。正常6655无需重启或迁移，f80-normal-readback.json确认50旧表不变、新模型记忆表仍空、完整性/外键/health200和实际JS SHA256 f1898005651b310aa19770f1421c92fd639ca83496bb30a8175ac9c9f66fbf89一致。未新增Python全量声明，F79定向与F77全量边界保留。
+
+独立提交后立即推送；精确commit、推送结果及远端回读见H:\item\CorpPilot-test-evidence-20260906\f80-delivery-result.json，远端确认前不标记已交付。身份创建未知响应幂等、真实CLI/双Docker和最终全目标验收继续推进。
