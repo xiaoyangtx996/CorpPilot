@@ -393,7 +393,31 @@ F48实际交付：已直接核实外部 `H:\item\CorpPilot-test-evidence-2026090
 
 主代理独立HTTP三项实际通过（3.44s）：Owner鉴权及严格确认、8并发同键只一个项目和批次、仅共享批准摘要、第二执行SQL注入故障回滚全部新项目数据、旧仅建群授权拒绝升级、配置关闭及归档/停用后精确回放、同库重启恢复和固定批次停止。实际控制器配受控runner仅调用上游一次，后继保持queued等待Owner审批，停止后后继cancelled且未调用。受控runner不是实际CLI或模型。
 
-完整`python -m pytest tests/ -q`为 **612 passed、8 subtests passed（112.34s）**，session40355退出0。新增并发关闭审查测试在此次全量收集后加入，结果另记；不合并冒称一次新全量。F50前端尚在开发，本段不证明浏览器入口或完整自动协作。正常工作台本轮未重启或迁移数据库，仍保持上一轮运行服务；真实CLI/模型、双Docker、费用硬门及整体目标未完成。F49提交与推送待实际操作。
+完整`python -m pytest tests/ -q`为 **612 passed、8 subtests passed（112.34s）**，session40355退出0。新增并发关闭审查测试在此次全量收集后加入，结果另记；不合并冒称一次新全量。F50前端静态检查及构建已通过、浏览器待验收，本段不证明浏览器入口或完整自动协作。正常工作台本轮未重启或迁移数据库，仍保持上一轮运行服务；真实CLI/模型、双Docker、费用硬门及整体目标未完成。F49已本地提交并立即推送403，远端未确认，实际记录见下文。
 
 
 F49独立审查补充：QA/Ponytail审查Pass，定向54项通过（7.73s）。新增两个Event/RLock受控并发用例验证启动先行时关闭等待原子提交、关闭先行时拒绝新请求但允许精确回读；主代理亲读并复跑 **2 passed（0.42s）**。这两项在612项全量收集之后新增，未计入该全量；产品代码未再修改。PM及主代理对F49后端/API增量验收Pass，F50浏览器仍待验收。
+
+
+F49实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f49-delivery-result.json`，提交 `6e68e864ed6804972f13cd03e4cc92c1fa32ca3b` 成功，12文件、553行新增/67行删除；立即推送退出128、GitHub403（suiyue1990无写权限），远端回读退出0但remote_head=null。提交后仅三个F50前端文件未提交，F49本地验收和提交不等于远端交付。
+
+## F50 完整计划一次启动界面验收（本地fixture验收Pass）
+
+范围为三个前端文件：CollaborationPanel复用完整计划预览，api.ts类型及CollaborationExecutionPanel固定初始batch。静态QA/typecheckPass；根构建48modules通过，产物index-Bl2XnWmG.js。浏览器主流程、边界及重启恢复已完成，实际证据如下；提交及推送以实际操作结果为准。
+
+静态Return已修：停止确认绑定当前detail.id并在历史切换时清除；组合回执补关键ID、批准coordinator/member集合、task/execution/request唯一性和逐任务映射；移除无关项目F44 pending全局互斥，同时保留同plan原pending优先和损坏锁定。
+
+浏览器验收门：原仅创建路径不执行；一次明确批准完整计划后建项目和首批入队；前置仍等Owner审批；固定首批读取与停止；A批确认不用于B；旧F36/F50 pending不被覆盖、F44无关项目不阻塞且同plan旧请求优先；首4xx/401/受理丢响应/GET503同键恢复，POST终态不得绕过独立GET清pending；组合回执结构错误与存储损坏保持锁定。后端证据沿用F49，不虚构新全量或真实CLI/model/Docker验证。自动规划、无需Owner中间审批的交接及货币预算硬门未完成。
+
+
+F50实际验证：主浏览器1315×1272两条完整流程通过：首400后同键受理丢响应/GET503，刷新保留完整操作和计划，独立GET核对后明确结束恢复；固定首批A/C并行、B等待，A经Owner批准后B消耗A的1份捕获成果并自动执行，最后停止同批活动C。最终只有1项目/1启动/1批次/3任务/3执行，A/B awaiting_review、C cancelled，3个不同受控runner各调用一次，无重复入队。主代理亲读脚本和报告，并在IAB独立展开历史及固定批次核对状态。
+
+独立QA六项边界通过；其额度耗尽后主代理补损坏launch存储与无关F44 pending不阻新建两项，完整八项重跑通过。3次模拟POST均仅context内fulfill，真实写全部拦截，unexpected_writes/page_errors/console_errors为空；1条预期503单列。选择器两次定位失败均保留外部证据，修复仅测试脚本，无产品改动或额外真实启动。桌面1280×900及手机390×844截图经主代理查看，弹窗在视口内。
+
+同库重启测试通过：原launch完整pending保持，实际新口令触发旧口令401，重新授权后GET恢复原回执，writes=[]、page_errors=[]。原fixture工具句柄54160失效，但PID44500及7896监听仍在；主代理核实精确命令及活动执行0后定向停止该fixture，未称其自然退出。同库重启session41860验收后先实际poll确认live，再Ctrl-C退出1；7896监听已消失，正常7892保留。页面关闭期间fixture出现ConnectionAborted日志，未生成新增任务或执行。
+
+主代理最终只读f50-verification.json通过：原种子行保留、共享仅显式摘要、执行绑定及依赖精确、2份artifact字节长度及SHA-256一致、3次runner输入无私有源历史标记、SQLite integrity ok/外键无错误。f50-artifact-readback.json另核对B→A固定execution_inputs和唯一输入artifact。正文核对发生在Owner批准之后，不声称批准前已通过UI下载正文；本地Python受控runner不是实际CLI/模型/Docker验收。
+
+主流程page_errors为空，原console包含400/丢连接/503故障注入及2条未记录URL的404；新只读context重走相关页面responses>=400、console及writes均空。两条原404端点无法追溯，保留未归因记录，不宣称原console全零。正常应用已由68562有序停止并重启为43954；health200、index-Bl2XnWmG.js回读成功，33张原表逐行同已核实SHA-256的备份、新launch表0行，原unknown不改。
+
+PM/TechLead/Ponytail/QA及主代理对F50本地增量验收Pass。外部证据位于H:\item\CorpPilot-test-evidence-20260906，包含f50-ui-review、f50-boundary-review、f50-restart-review、f50-verification、f50-normal-readback；后端回归沿用F49，未虚构新全量。真实CLI/双Docker、自动组队后自主交接、费用硬门、检查点恢复等完整目标仍未完成。

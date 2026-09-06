@@ -108,3 +108,5 @@ export type RetrospectiveRun = ReplyRun & { scope: 'agent' | 'project'; scope_id
 
 export type PeerReviewRequest = { agent_id: string; source_message_id: string; request_id: string; confirm: true };
 export type PeerReviewRun = ReplyRun & { request_payload: PeerReviewRequest; source_run_id: string };
+export type ProjectLaunchRequest = { plan: CollaborationPlan; confirm_execution: true };
+export type ProjectLaunchReceipt = { id: string; source_conversation_id: string; request_id: string; request_payload: ProjectLaunchRequest; collaboration: CollaborationReceipt; batch: ProjectExecutionReceipt; created_at: string };

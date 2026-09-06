@@ -561,3 +561,14 @@ F48实际交付：已直接核实外部 `H:\item\CorpPilot-test-evidence-2026090
 ProjectLaunches在一个BEGIN IMMEDIATE内调用提取的Collaboration._create(db)和ProjectExecutions._create(db)，创建成员、共享消息、任务、依赖、固定v1首轮执行及两个回执，最后写不可变project_launches记录；任何写入或容量/权限校验失败全部回滚。事务内不调用模型或CLI。既有仅建群和批次入口语义保留，旧仅建群同键不得隐式升级，启动精确回读先于配置及当前权限检查。
 
 CLIController的launch_lock仅串行新启动准入与closed标记，关闭等待线程池不持有该锁。复用原有执行队列和调度，不增加第二队列；新任务仍需已有execute权限并受全局队列容量限制，前置Owner审批及unknown边界不放宽。费用硬门后续须验证全部模型请求的预留和计费边界，不能以超时或一次CLI attempt代替金额上限。
+
+
+F49实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f49-delivery-result.json`，提交 `6e68e864ed6804972f13cd03e4cc92c1fa32ca3b` 成功，12文件、553行新增/67行删除；立即推送退出128、GitHub403（suiyue1990无写权限），远端回读退出0但remote_head=null。提交后仅三个F50前端文件未提交，F49本地验收和提交不等于远端交付。
+
+## F50 一次启动前端与固定批次恢复（本地fixture验收Pass）
+
+CollaborationPanel复用完整计划预览，api.ts增加ProjectLaunchRequest/Receipt类型；独立sessionStorage键corppilot.project-launch-pending.v1冻结source_id、operation=launch、完整payload及已受理launch_id。保留F36原创建键和语义；新创建/启动不能覆盖任一全局pending，F44批量pending只提示恢复，不全局阻塞无关新项目。
+
+POST只精确核验并保存启动编号，必须再GET /project-launches/{id}核对原计划、会话、coordinator/member集合及唯一task/execution/request绑定后，才允许明确结束原请求核对。首4xx可编辑；重试先清旧rejected；401、丢响应、GET503保留完整原key；损坏存储保守锁定。操作种类冻结，不把旧仅创建授权升级为执行授权。
+
+CollaborationExecutionPanel仅增加可选initialBatchId定位固定首批，已有同plan pending优先（即使尚无batch_id），损坏存储不打开替代批次。停止确认保存detail.id，切历史清许可，stop调用再比当前ID，防A确认用于B；未知停止响应仍只GET核对。未新建调度或巨型dialog。静态/typecheck及48modules构建index-Bl2XnWmG.js通过，浏览器主流程、八项边界和同库401恢复已通过，非自动规划、无审批交接或费用硬门。
