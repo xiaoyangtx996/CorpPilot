@@ -212,6 +212,10 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.controller.cli.project_executions.list(parts[0]))
                     if self.command == "POST":
                         return self.respond(202, self.server.controller.cli.enqueue_project(parts[0], self.read_json()))
+            if path.startswith("/api/workbench/project-launches/") and self.command == "GET":
+                identity = path[len("/api/workbench/project-launches/"):]
+                if identity and "/" not in identity:
+                    return self.respond(200, self.server.controller.cli.project_launches.get(identity))
             prefix = "/api/workbench/project-executions/"
             if path.startswith(prefix):
                 parts = path[len(prefix):].split("/")
@@ -265,6 +269,11 @@ class Handler(BaseHTTPRequestHandler):
                         return self.respond(200, self.server.controller.runs.list(conversation_id))
                     if self.command == "POST":
                         return self.respond(202, self.server.controller.enqueue(conversation_id, self.read_json()))
+                if len(parts) == 2 and parts[1] == "project-launches":
+                    if self.command == "GET":
+                        return self.respond(200, self.server.controller.cli.project_launches.list(conversation_id))
+                    if self.command == "POST":
+                        return self.respond(202, self.server.controller.cli.launch_project(conversation_id, self.read_json()))
                 if len(parts) == 2 and parts[1] == "peer-reviews":
                     if self.command == "GET":
                         return self.respond(200, self.server.controller.peer_reviews.list(conversation_id))

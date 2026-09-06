@@ -68,44 +68,47 @@ class Collaboration:
         return original
 
     def create(self, source_conversation_id, payload):
+        with self.store.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            return self._create(db, source_conversation_id, payload)
+
+    def _create(self, db, source_conversation_id, payload):
         source_conversation_id = _text(source_conversation_id, '源会话 ID')
         original = self._validate(payload)
         request = _text(payload['request_id'], '请求 ID', 120)
-        with self.store.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            prior = db.execute('SELECT payload,snapshot FROM collaboration_receipts WHERE source_conversation_id=? AND request_id=?', (source_conversation_id, request)).fetchone()
-            if prior:
-                if prior['payload'] != original:
-                    raise ValueError('request_id 已用于不同协作计划')
-                return self._receipt(prior)
-            coordinator = _text(payload['coordinator_id'], '协调人 ID')
-            source = self.store._conversation(db, source_conversation_id, coordinator)
-            if source['archived']:
-                raise ValueError('源会话已归档')
-            source_message = _text(payload['source_message_id'], '源消息 ID')
-            if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'", (source_message, source_conversation_id)).fetchone():
-                raise ValueError('源消息必须是本会话的 Owner 消息')
-            members = sorted({coordinator, *(_text(row['agent_id'], 'Agent ID') for row in payload['tasks'])})
-            for member in members:
-                self.store._enabled_member(db, member)
-            identity, project_id, message_id = (str(uuid.uuid4()) for _ in range(3))
-            db.execute("INSERT INTO conversations(id,type,title) VALUES(?,'project',?)", (project_id, payload['title'].strip()))
-            db.executemany('INSERT INTO members VALUES(?,?)', [(project_id, member) for member in members])
-            db.execute("INSERT INTO messages(id,conversation_id,sender_kind,content,request_id) VALUES(?,?,'owner',?,?)", (message_id, project_id, payload['shared_brief'].strip(), identity))
-            task_ids = {}
-            for row in payload['tasks']:
-                task = self.tasks._create(db, project_id, {**{key: row[key] for key in ('title', 'scope', 'acceptance', 'agent_id')}, 'source_message_id': message_id, 'request_id': row['key']})
-                task_ids[row['key']] = task['id']
-            for row in payload['tasks']:
-                db.executemany('INSERT INTO task_dependencies VALUES(?,1,?)', [(task_ids[row['key']], task_ids[target]) for target in row['depends_on']])
-            for task_id in task_ids.values():
-                dependencies.validate_graph(db, task_id, project_id, dependencies.ids(db, task_id, 1))
-            created = db.execute('SELECT created_at FROM conversations WHERE id=?', (project_id,)).fetchone()[0]
-            snapshot = dict(id=identity, source_conversation_id=source_conversation_id, source_message_id=source_message,
-                            request_id=request, project_conversation_id=project_id, shared_message_id=message_id,
-                            coordinator_id=coordinator, member_ids=members, task_ids=task_ids, created_at=created)
-            db.execute('INSERT INTO collaboration_receipts(id,source_conversation_id,request_id,payload,snapshot) VALUES(?,?,?,?,?)', (identity, source_conversation_id, request, original, json.dumps(snapshot, ensure_ascii=False)))
-            return {**snapshot, 'approved_plan': json.loads(original)}
+        prior = db.execute('SELECT payload,snapshot FROM collaboration_receipts WHERE source_conversation_id=? AND request_id=?', (source_conversation_id, request)).fetchone()
+        if prior:
+            if prior['payload'] != original:
+                raise ValueError('request_id 已用于不同协作计划')
+            return self._receipt(prior)
+        coordinator = _text(payload['coordinator_id'], '协调人 ID')
+        source = self.store._conversation(db, source_conversation_id, coordinator)
+        if source['archived']:
+            raise ValueError('源会话已归档')
+        source_message = _text(payload['source_message_id'], '源消息 ID')
+        if not db.execute("SELECT 1 FROM messages WHERE id=? AND conversation_id=? AND sender_kind='owner'", (source_message, source_conversation_id)).fetchone():
+            raise ValueError('源消息必须是本会话的 Owner 消息')
+        members = sorted({coordinator, *(_text(row['agent_id'], 'Agent ID') for row in payload['tasks'])})
+        for member in members:
+            self.store._enabled_member(db, member)
+        identity, project_id, message_id = (str(uuid.uuid4()) for _ in range(3))
+        db.execute("INSERT INTO conversations(id,type,title) VALUES(?,'project',?)", (project_id, payload['title'].strip()))
+        db.executemany('INSERT INTO members VALUES(?,?)', [(project_id, member) for member in members])
+        db.execute("INSERT INTO messages(id,conversation_id,sender_kind,content,request_id) VALUES(?,?,'owner',?,?)", (message_id, project_id, payload['shared_brief'].strip(), identity))
+        task_ids = {}
+        for row in payload['tasks']:
+            task = self.tasks._create(db, project_id, {**{key: row[key] for key in ('title', 'scope', 'acceptance', 'agent_id')}, 'source_message_id': message_id, 'request_id': row['key']})
+            task_ids[row['key']] = task['id']
+        for row in payload['tasks']:
+            db.executemany('INSERT INTO task_dependencies VALUES(?,1,?)', [(task_ids[row['key']], task_ids[target]) for target in row['depends_on']])
+        for task_id in task_ids.values():
+            dependencies.validate_graph(db, task_id, project_id, dependencies.ids(db, task_id, 1))
+        created = db.execute('SELECT created_at FROM conversations WHERE id=?', (project_id,)).fetchone()[0]
+        snapshot = dict(id=identity, source_conversation_id=source_conversation_id, source_message_id=source_message,
+                        request_id=request, project_conversation_id=project_id, shared_message_id=message_id,
+                        coordinator_id=coordinator, member_ids=members, task_ids=task_ids, created_at=created)
+        db.execute('INSERT INTO collaboration_receipts(id,source_conversation_id,request_id,payload,snapshot) VALUES(?,?,?,?,?)', (identity, source_conversation_id, request, original, json.dumps(snapshot, ensure_ascii=False)))
+        return {**snapshot, 'approved_plan': json.loads(original)}
 
     def get(self, identity):
         with self.store.connect() as db:

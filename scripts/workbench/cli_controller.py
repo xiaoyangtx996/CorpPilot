@@ -8,6 +8,7 @@ from .docker_worker import run_docker, inspect_worker, stop_worker
 from .cli_settings import CLISettings
 from .executions import Executions
 from .project_executions import ProjectExecutions
+from .project_launches import ProjectLaunches
 from .artifacts import capture
 from .reconciliations import Reconciliations, unresolved
 
@@ -16,9 +17,11 @@ class CLIController:
     def __init__(self, store):
         # Only construct after acquiring controller.lock; never recover a live worker.
         self.store = store
+        self.launch_lock = threading.RLock()
         self.settings = CLISettings(store)
         self.executions = Executions(store)
         self.project_executions = ProjectExecutions(store)
+        self.project_launches = ProjectLaunches(store)
         self.reconciliations = Reconciliations(store)
         with store.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS execution_backends (
@@ -179,6 +182,20 @@ class CLIController:
         self.settings.resolve()
         return self.executions.create(task_id, payload)
 
+    def launch_project(self, source_conversation_id, payload):
+        with self.launch_lock:
+            plan = payload.get("plan") if isinstance(payload, dict) else None
+            if isinstance(plan, dict) and isinstance(plan.get("request_id"), str):
+                with self.store.connect() as db:
+                    existing = db.execute("SELECT 1 FROM project_launches WHERE source_conversation_id=? AND request_id=?",
+                                          (source_conversation_id.strip(), plan["request_id"].strip())).fetchone()
+                if existing:
+                    return self.project_launches.create(source_conversation_id, payload)
+            if self.closed:
+                raise ValueError("CLI 控制器正在关闭，不能创建并启动项目")
+            self.settings.resolve()
+            return self.project_launches.create(source_conversation_id, payload)
+
     def enqueue_project(self, collaboration_id, payload):
         if isinstance(payload, dict) and isinstance(payload.get("request_id"), str):
             with self.store.connect() as db:
@@ -247,7 +264,8 @@ class CLIController:
                         "message": message}
 
     def close(self):
-        self.closed = True
+        with self.launch_lock:
+            self.closed = True
         for identity, (_, cancel, _) in list(self.active.items()):
             cancel.set()
             try:

@@ -381,4 +381,19 @@ F47 实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\
 
 正常库备份f48-normal-backup.json的SHA256为870f4cef4f31d00460674fb4c8d520d5a17bff3e2fba858a51ea445e5257d356；f48-normal-readback.json直接回读31张原有表逐行比较无变化、peers=0、完整性ok、外键检查空。旧正常session19278确认live后Ctrl+C退出1，新session68562加载F47，health200并提供新bundle，正常历史unknown保留。收尾直接核实f48-cleanup.json：fixture96419先live poll再Ctrl+C退出1，主代理独立回读7896/7897均无监听，正常68562保留。
 
-PM/QA/TechLead/Ponytail对F48本地增量Pass。后端沿用F47完整596项及8子用例证据，不虚构新全量；F48提交与推送待实际操作，真实供应商、CLI、双Docker及整体目标未完成。
+PM/QA/TechLead/Ponytail对F48本地增量Pass。后端沿用F47完整596项及8子用例证据，不虚构新全量；F48已本地提交，立即推送403阻塞，远端未确认；实际记录见下文，真实供应商、CLI、双Docker及整体目标未完成。
+
+
+F48实际交付：已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f48-delivery-result.json`，本地提交 `43be70154bc7d373932a0cd5f14ce672fbfef48f` 成功，9文件、179行新增/13行删除；立即推送退出128，GitHub返回403（suiyue1990无写权限），远端回读退出0但remote_head=null。记录中working_tree_status为空，提交后工作树干净；本地验收与提交不等于远端交付成功。
+
+
+## F49 原子创建启动后端验收
+
+主代理亲读新增ProjectLaunches、四个既有模块diff、核心测试和HTTP测试。核心13项覆盖同键并发、不可变回执、权限/源消息/DAG失败、批次和末步启动回执INSERT故障全回滚、99个真实独立排队任务仅剩1槽时两任务完整回滚，以及关闭后原请求精确回读。
+
+主代理独立HTTP三项实际通过（3.44s）：Owner鉴权及严格确认、8并发同键只一个项目和批次、仅共享批准摘要、第二执行SQL注入故障回滚全部新项目数据、旧仅建群授权拒绝升级、配置关闭及归档/停用后精确回放、同库重启恢复和固定批次停止。实际控制器配受控runner仅调用上游一次，后继保持queued等待Owner审批，停止后后继cancelled且未调用。受控runner不是实际CLI或模型。
+
+完整`python -m pytest tests/ -q`为 **612 passed、8 subtests passed（112.34s）**，session40355退出0。新增并发关闭审查测试在此次全量收集后加入，结果另记；不合并冒称一次新全量。F50前端尚在开发，本段不证明浏览器入口或完整自动协作。正常工作台本轮未重启或迁移数据库，仍保持上一轮运行服务；真实CLI/模型、双Docker、费用硬门及整体目标未完成。F49提交与推送待实际操作。
+
+
+F49独立审查补充：QA/Ponytail审查Pass，定向54项通过（7.73s）。新增两个Event/RLock受控并发用例验证启动先行时关闭等待原子提交、关闭先行时拒绝新请求但允许精确回读；主代理亲读并复跑 **2 passed（0.42s）**。这两项在612项全量收集之后新增，未计入该全量；产品代码未再修改。PM及主代理对F49后端/API增量验收Pass，F50浏览器仍待验收。

@@ -65,35 +65,38 @@ class ProjectExecutions:
         return json.loads(row[0])
 
     def create(self, collaboration_id, payload):
-        encoded = _payload(payload)
         with self.store.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            old = db.execute('SELECT payload,snapshot FROM project_execution_batches WHERE collaboration_id=? AND request_id=?',
-                             (collaboration_id, payload['request_id'])).fetchone()
-            if old:
-                if old['payload'] != encoded:
-                    raise ValueError('request_id 已用于不同项目执行批次')
-                return json.loads(old['snapshot'])
-            row = db.execute('SELECT snapshot FROM collaboration_receipts WHERE id=?', (collaboration_id,)).fetchone()
-            if row is None:
-                raise KeyError('协作计划不存在')
-            plan = json.loads(row[0])
-            allowed = set(plan['task_ids'].values())
-            if any(item['task_id'] not in allowed for item in payload['tasks']):
-                raise ValueError('只能执行此批准计划中明确选择的任务')
-            bindings = []
-            for item in payload['tasks']:
-                request = str(uuid.uuid4())
-                run = self.executions._create(db, item['task_id'], {
-                    'request_id': request, **{k: item[k] for k in ('expected_version', 'previous_execution_id', 'reconciliation_note')}})
-                bindings.append({'task_id': item['task_id'], 'execution_id': run['id'], 'request_id': request})
-            identity = str(uuid.uuid4())
-            created = db.execute("SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now')").fetchone()[0]
-            receipt = {'id': identity, 'collaboration_id': collaboration_id, 'project_conversation_id': plan['project_conversation_id'],
-                       'request_id': payload['request_id'], 'request_payload': payload, 'tasks': bindings, 'created_at': created}
-            db.execute('INSERT INTO project_execution_batches VALUES(?,?,?,?,?,?)',
-                       (identity, collaboration_id, payload['request_id'], encoded, json.dumps(receipt, ensure_ascii=False), created))
-            return receipt
+            return self._create(db, collaboration_id, payload)
+
+    def _create(self, db, collaboration_id, payload):
+        encoded = _payload(payload)
+        old = db.execute('SELECT payload,snapshot FROM project_execution_batches WHERE collaboration_id=? AND request_id=?',
+                         (collaboration_id, payload['request_id'])).fetchone()
+        if old:
+            if old['payload'] != encoded:
+                raise ValueError('request_id 已用于不同项目执行批次')
+            return json.loads(old['snapshot'])
+        row = db.execute('SELECT snapshot FROM collaboration_receipts WHERE id=?', (collaboration_id,)).fetchone()
+        if row is None:
+            raise KeyError('协作计划不存在')
+        plan = json.loads(row[0])
+        allowed = set(plan['task_ids'].values())
+        if any(item['task_id'] not in allowed for item in payload['tasks']):
+            raise ValueError('只能执行此批准计划中明确选择的任务')
+        bindings = []
+        for item in payload['tasks']:
+            request = str(uuid.uuid4())
+            run = self.executions._create(db, item['task_id'], {
+                'request_id': request, **{k: item[k] for k in ('expected_version', 'previous_execution_id', 'reconciliation_note')}})
+            bindings.append({'task_id': item['task_id'], 'execution_id': run['id'], 'request_id': request})
+        identity = str(uuid.uuid4())
+        created = db.execute("SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now')").fetchone()[0]
+        receipt = {'id': identity, 'collaboration_id': collaboration_id, 'project_conversation_id': plan['project_conversation_id'],
+                   'request_id': payload['request_id'], 'request_payload': payload, 'tasks': bindings, 'created_at': created}
+        db.execute('INSERT INTO project_execution_batches VALUES(?,?,?,?,?,?)',
+                   (identity, collaboration_id, payload['request_id'], encoded, json.dumps(receipt, ensure_ascii=False), created))
+        return receipt
 
     def _get(self, db, identity):
         receipt = self._receipt(db, identity)

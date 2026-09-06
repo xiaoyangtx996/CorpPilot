@@ -125,4 +125,14 @@ F47 实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\
 
 全局“Agent评议与恢复”入口无需预选会话即可恢复原请求；已有pending优先回到原来源，历史按所选群隔离。发送前冻结完整payload和源正文；首次明确4xx可修改，401及响应丢失保留原key，重试先清旧拒绝。202仅保存编号，独立GET精确核验后才确认结果并允许释放；unknown须通过人工核查，再GET原Run声明成功方可释放，失败撤销旧核查许可且保留pending。
 
-类型检查及48模块构建通过（index-BDbMUDFL.js）；群内明确逐次授权、断线与401同键恢复、unknown核查和排队取消已通过本地fixture浏览器验收，PM/QA/TechLead/Ponytail增量Pass。证据见[验收记录](acceptance-report.md#f48-群内评议界面验收本地fixture验收pass)。提交及远端交付待实际记录。真实供应商、CLI、双Docker和整体目标仍未验收。
+类型检查及48模块构建通过（index-BDbMUDFL.js）；群内明确逐次授权、断线与401同键恢复、unknown核查和排队取消已通过本地fixture浏览器验收，PM/QA/TechLead/Ponytail增量Pass。证据见[验收记录](acceptance-report.md#f48-群内评议界面验收本地fixture验收pass)。F48已本地提交，立即推送403阻塞，远端未确认；实际记录见下文。真实供应商、CLI、双Docker和整体目标仍未验收。
+
+
+F48实际交付：已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f48-delivery-result.json`，本地提交 `43be70154bc7d373932a0cd5f14ce672fbfef48f` 成功，9文件、179行新增/13行删除；立即推送退出128，GitHub返回403（suiyue1990无写权限），远端回读退出0但remote_head=null。记录中working_tree_status为空，提交后工作树干净；本地验收与提交不等于远端交付成功。
+
+
+## F49 批准完整计划并创建启动（后端增量）
+
+Owner明确确认完整共享摘要、成员、任务范围、验收及依赖后，一次操作原子创建项目和全部任务的首轮执行批次，省去建群后的再次入队确认。失败不留下半个项目或部分执行；仅创建项目的旧授权不能通过重用请求键扩大成执行授权。任务不会自动获得execute权限。
+
+F49保留既有依赖成果Owner审批、unknown阻断和固定实例停止；入队不代表已经运行或交付。自动规划、同授权中间成果交接、货币预算硬门仍未完成；当前CLI超时/并发不能充当费用上限。F50复用现有计划预览增加界面操作，尚未浏览器验收。F49验证记录见acceptance-report.md对应段。

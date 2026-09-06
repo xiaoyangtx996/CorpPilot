@@ -552,4 +552,18 @@ F47 实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\
 - verify_prompt_push实现五个前端文件，复用F47 API和原模型核查；根/独立审查两处恢复缺陷已修复：POST须独立GET精确核验后才可释放，unknown声明复查失败撤旧许可且保留pending。普通reply路径保持。
 - 48modules构建index-BDbMUDFL.js通过且之后无代码修改。主代理已读四份浏览器脚本与报告、看桌面/手机/发布截图并CUA确认历史；主流程3项、边界3项、401重启恢复及queued取消均Pass。精确恢复和来源链接证据见[验收记录](acceptance-report.md#f48-群内评议界面验收本地fixture验收pass)。
 - 最终外部f48-verification.json通过：7runs/7messages/5peer/1声明/0候选/0CLI，新3completed各1次本地HTTP调用、1cancelled零调用，原Run及消息未变，DB完整性通过。31张正常原表逐行同备份；fixture96419已确认live后退出1，7896/7897无监听，正常68562保留。
-- PM/QA/TechLead/Ponytail本地增量Pass；本轮不记录provider输入，隐私证据沿用F47，不扩大为真实供应商/CLI/Docker验证。F48提交及推送待主代理实际执行，整体目标未完成。
+- PM/QA/TechLead/Ponytail本地增量Pass；本轮不记录provider输入，隐私证据沿用F47，不扩大为真实供应商/CLI/Docker验证。F48已本地提交，立即推送403阻塞，远端未确认；实际记录见下文，整体目标未完成。
+
+
+F48实际交付：已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f48-delivery-result.json`，本地提交 `43be70154bc7d373932a0cd5f14ce672fbfef48f` 成功，9文件、179行新增/13行删除；立即推送退出128，GitHub返回403（suiyue1990无写权限），远端回读退出0但remote_head=null。记录中working_tree_status为空，提交后工作树干净；本地验收与提交不等于远端交付成功。
+
+
+## F49：批准计划原子创建并启动后端
+
+- PM与Tech Lead确定一次明确批准完整计划，原子建群及首批入队的范围；自动规划、中间成果自动交接和费用硬门继续保持未完成。
+- task_execution_ui持有五个后端文件及核心13项测试；主代理亲读实现并独立新增三项HTTP测试，verify_history_scope负责独立Ponytail/QA与并发关闭审查。前端F50独立开发，不混入本次提交。
+- 主代理HTTP三项3.44s通过，完整612项及8子用例112.34s通过（session40355退出0）；详细证据见acceptance-report.md的F49段。新增审查测试单列，不伪合入全量。
+- 新API复用原创建/批次事务与队列；同键恢复、旧授权不扩大、全事务回滚和固定实例停止为验收门。F49独立提交及即时推送等待实际操作；真实CLI/模型/Docker及整体目标未完成。
+
+
+F49独立审查补充：QA/Ponytail审查Pass，定向54项通过（7.73s）。新增两个Event/RLock受控并发用例验证启动先行时关闭等待原子提交、关闭先行时拒绝新请求但允许精确回读；主代理亲读并复跑 **2 passed（0.42s）**。这两项在612项全量收集之后新增，未计入该全量；产品代码未再修改。PM及主代理对F49后端/API增量验收Pass，F50浏览器仍待验收。

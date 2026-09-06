@@ -548,4 +548,16 @@ F47 实际交付：直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\
 
 POST响应须严格匹配原会话、来源、目标、请求键及payload，但仅持久化Run编号，不设置已核验current。从列表找回编号也必须另GET /peer-reviews/{id}精确回读，才能展示可释放状态。串行读写及失效回调检查防止旧会话结果污染新选择；存储损坏保守锁定，不清原请求。unknown核查回调按record.run_id关联，释放阶段持有写锁并重新GET原声明；失败清除该Run的checked许可，原请求继续保留。核查、列表轮询均不自动发起新模型调用。
 
-原生dialog提供Escape/关闭与焦点恢复；UI明确一次调用、仅分享选中正文、排队可取消和完成后原群刷新。typecheck及48modules构建index-BDbMUDFL.js通过，之后无代码修改；两恢复边界及正常调用、重启401、取消已通过本地fixture浏览器验收，详见[验收记录](acceptance-report.md#f48-群内评议界面验收本地fixture验收pass)。本轮fixture不记录provider输入，输入隐私证据沿用F47用例，不扩大新增声明；提交结果待实际操作。
+原生dialog提供Escape/关闭与焦点恢复；UI明确一次调用、仅分享选中正文、排队可取消和完成后原群刷新。typecheck及48modules构建index-BDbMUDFL.js通过，之后无代码修改；两恢复边界及正常调用、重启401、取消已通过本地fixture浏览器验收，详见[验收记录](acceptance-report.md#f48-群内评议界面验收本地fixture验收pass)。本轮fixture不记录provider输入，输入隐私证据沿用F47用例，不扩大新增声明；F48已本地提交，立即推送403阻塞，远端未确认；实际记录见下文。
+
+
+F48实际交付：已直接核实外部 `H:\item\CorpPilot-test-evidence-20260906\f48-delivery-result.json`，本地提交 `43be70154bc7d373932a0cd5f14ce672fbfef48f` 成功，9文件、179行新增/13行删除；立即推送退出128，GitHub返回403（suiyue1990无写权限），远端回读退出0但remote_head=null。记录中working_tree_status为空，提交后工作树干净；本地验收与提交不等于远端交付成功。
+
+
+## F49 原子创建并启动接口
+
+新增POST/GET `/api/workbench/conversations/{source_id}/project-launches`及GET `/api/workbench/project-launches/{id}`，沿用Owner Bearer鉴权。POST严格为`{plan, confirm_execution:true}`，plan为现有完整六字段Collaboration计划，以plan.request_id作为源会话内幂等键；返回202不可变组合回执，含原request_payload、collaboration及batch。动态状态与停止复用project-executions端点。
+
+ProjectLaunches在一个BEGIN IMMEDIATE内调用提取的Collaboration._create(db)和ProjectExecutions._create(db)，创建成员、共享消息、任务、依赖、固定v1首轮执行及两个回执，最后写不可变project_launches记录；任何写入或容量/权限校验失败全部回滚。事务内不调用模型或CLI。既有仅建群和批次入口语义保留，旧仅建群同键不得隐式升级，启动精确回读先于配置及当前权限检查。
+
+CLIController的launch_lock仅串行新启动准入与closed标记，关闭等待线程池不持有该锁。复用原有执行队列和调度，不增加第二队列；新任务仍需已有execute权限并受全局队列容量限制，前置Owner审批及unknown边界不放宽。费用硬门后续须验证全部模型请求的预留和计费边界，不能以超时或一次CLI attempt代替金额上限。
