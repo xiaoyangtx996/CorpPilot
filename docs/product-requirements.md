@@ -28,7 +28,7 @@
 | R11 | Owner目标/上下文/活动/阻塞/成果/费用与干预 | F55、57–60、64–68、78、80；观察及停止恢复浏览器 | 本地通过；工具元数据为CLI返回后回执，不是实时完整命令流；真实供应商费用未核验 |
 | R12 | 中文界面、配置、空态、校验、错误恢复和键盘 | frontend/package.json所列真实浏览器脚本；F82焦点修复 | 已有分项浏览器证据；最终集成回归继续核对，不以截图代替行为 |
 | R13 | 旧/新单测、契约、浏览器、真实烟测和独立QA | acceptance-report与每功能命令/退出码 | 本地测试与独立审查已执行多轮；真实模型/CLI/双Docker及最终PM验收未完成 |
-| R14 | 每功能commit、立即push和远端回读 | 本地Git历史、feature-delivery-log及外部delivery-result | 本地按功能提交；即时push仍403，逐次commit和失败结果见台账，远端分支未读回 |
+| R14 | 每功能commit、立即push和远端回读 | 本地Git历史、feature-delivery-log及外部delivery-result | 本地按功能提交并逐次尝试推送；2026-09-07权限恢复后远端确认包含F87及之前提交；历史403未改写为当时成功 |
 | R15 | Tauri规划、本地运行、配置、备份恢复 | tauri-migration、frontend/README、backup-recovery | 规划已建立并更新当前边界；本轮不要求安装包，浏览器完整验收仍是桌面实施前置门 |
 
 ## 阶段顺序与责任

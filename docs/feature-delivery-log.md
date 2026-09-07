@@ -1062,6 +1062,10 @@ frontend_integration负责新onboarding脚本、package入口及fixture --onboar
 
 ## F87 真实执行验收手册与最终回归补记
 
+2026-09-07远端补验：用户确认仓库写权限已就绪后，根执行git push -u origin codex/corppilot-agent-workbench退出0，设置上游；两次ls-remote均读回8b266f85935dc68dc88fd8c2648d4a416aa98794，与本地HEAD完全一致。F87及之前独立提交现已在远端可回读；历史即时推送的403仍按实际发生情况保留。没有强推、合并、PR或发布。
+
+用户要求运行项目：中断后权威检查无7892监听和workbench.server进程，重新从scripts启动本仓库虚拟环境服务，沿用H:\item\CorpPilot-test-evidence-20260906\browser-state，session61614。健康接口ok、首页200且标题CorpPilot工作台、JS index-ClAG5vgI.js与CSS index-DzO0xkNW.css均200，服务已自动打开本机授权页面。verify_launch子代理只读复核正式入口和授权边界，根实际启动并验收；本次没有重新执行收费调用或全量测试。此文档补记独立提交后立即推送并回读。
+
 skill_inputs_backend编写人工验收手册和Docker权限说明，根独立核对源码/路径/权限/证据边界并同步README及13项浏览器入口。作者自查Return三处已修正：补onboarding、故障注入使用已知绝对Docker路径且重读本轮ID、inspect显式输出实际ID与Image。根验收Pass，范围仅为文档准确性与已完成回归记录，不将待执行命令标成实测。
 
 手册限定独立数据与明确费用窗口，6次CLI覆盖双Worker/失败/重建/停止，秘书另1模型及1CLI；崩溃、daemon断线等额外场景单列待验收。未运行真实付费调用、容器或系统修复。本功能单独提交后即时push及远端回读记录于H:\item\CorpPilot-test-evidence-20260906\f87-delivery-result.json；远端确认前仍未交付，完整目标保持未完成。
