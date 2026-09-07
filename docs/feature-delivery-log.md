@@ -1087,3 +1087,9 @@ F88 已提交 `2553de97d8bfed8ff7d13943e868f73b210a6a83` 并立即推送实施�
 真实生产 WorkbenchServer、独立数据、官方 OpenCode 1.18.29 / opencode/big-pickle，通过浏览器设置、创建身份/任务、提交一次执行、下载并核对 nonce/字节/hash 后 UI 批准。execution=`e4fdcd42-66f3-48c3-9b6c-2f1a28c0f3f2`，exit0，51字节成果，原生工具事件1，page/HTTP错误0。真实模型执行前有两次控件定位失败，均未创建执行或调用模型，修正定位后才发出该唯一请求。主代理另验证重启后身份/执行/批准/原生回执保留，无额外执行，扫描本轮57个运行文件未发现提供的key。
 
 证据根：`H:\item\CorpPilot-test-evidence-20260908\opencode-live-server-15pbipa3`；`corppilot-opencode-live-Qemdsz/browser-report.json`、批准/工具截图及 `independent-readback.json`。本功能按 `feat(workbench): connect OpenCode Zen tasks and native receipts` 单独提交、立即推送，并按最新授权快进 main；精确哈希与远端回读在会话工具输出和本轮仓库外 release-readback.json 保留。完整目标仍需双 Docker Worker、隔离故障/重建场景和真实秘书规划闭环。
+
+## F90 OpenCode 隔离纯文本 provider
+
+2026-09-08。zen_text_backend 实现，opencode_backend 独立 QA/Ponytail 审查 Pass，根复核运行 provider、OpenCode CLI、旧 HTTP provider、controller 共45项测试通过。复用隔离环境、Windows 进程树与原生事件解析，无新增依赖。只接受无工具、单步骤完整文本；保留16000字符正文，超限失败而非截断成功。官方输出 token 上限经 OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX 传入 SDK；客户端内部可能重试，工作台只约束客户端启动次数与总期限。
+
+审查 Return 后修复动态上下文进入配置模板的风险：身份指令及消息全部经 stdin JSON，配置只含固定指令；字面量 env/file 模板有回归。未知进程状态保留目录，清理前检查绝对路径及临时目录归属。此增量仅交付 transport 实现；设置接入与真实秘书端到端验收属于 F91，不把单元测试称为真实调用。单独提交后立即推送并远端回读。

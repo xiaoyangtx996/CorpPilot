@@ -62,7 +62,7 @@ def _usage(parts):
         return None
 
 
-def parse_result(process, api_key):
+def parse_result(process, api_key, *, text_limit=2000, allow_tools=True):
     """A zero exit is insufficient: require one coherent, finally stopped session."""
     api_key = _text(api_key, 'CLI API 凭据', 4096)
     result = {'success': False, 'exit_code': process['exit_code'], 'reason': process['reason'],
@@ -101,6 +101,8 @@ def parse_result(process, api_key):
                 return result
             identities.add(part_id)
             kind = event['type']
+            if not allow_tools and (kind == 'tool_use' or kind == 'step_start' and messages):
+                return result
             expected = {'step_start': 'step-start', 'step_finish': 'step-finish', 'tool_use': 'tool'}.get(kind, kind)
             if part.get('type') != expected:
                 return result
@@ -131,8 +133,13 @@ def parse_result(process, api_key):
                 or events[-1]['type'] != 'step_finish' or finishes[-1]['messageID'] != last_message
                 or not ''.join(texts).strip()):
             return result
+        content = ''.join(texts).strip()
+        if not allow_tools and len(content) > text_limit:
+            result.update(reason='response_limit', usage=_usage(finishes))
+            return result
         result.update(success=True, reason='exited', usage=_usage(finishes),
-                      summary=''.join(texts).strip().replace(api_key, '[凭据已隐藏]')[:2000])
+                      summary=content.replace(api_key, '[凭据已隐藏]')[:text_limit] if allow_tools
+                      else content.replace(api_key, '[凭据已隐藏]'))
     except (ValueError, TypeError, UnicodeError, KeyError, RecursionError, OverflowError):
         pass
     return result
