@@ -2,12 +2,12 @@
 
 整体结论：未完成。当前能力与15项逐项状态见 [需求矩阵](product-requirements.md#当前验收矩阵)。本文按F编号保存历史测试事实，早期“待实现”不是当前缺口清单。
 
-## 当前待完成项（F83审计）
+## 当前状态与待完成项（F91后审计）
 
-- 当前版本最终回归：F84已限制CLI三权限，F85已落实协调人delegate；分项通过仍须纳入最终全量及真实执行验收。
-- 真实已授权模型/CLI完整交付，以及两个实际Docker Worker隔离、停止、失败互不影响和重建恢复；本地fixture及原生Git不能替代。
-- 最终Python/浏览器集成回归、独立QA及PM逐项验收；本轮结果在末尾单列，不覆盖早期失败记录。
-- GitHub功能分支远端交付：2026-09-07权限恢复后push退出0，远端回读8b266f85935dc68dc88fd8c2648d4a416aa98794与本地一致，包含F87及之前独立提交。历史各次403不改写；整体真实执行验收仍未完成。
+- 已通过的真实本机链路：F89官方OpenCode文件任务、F91官方Zen秘书规划→单任务执行→下载hash核对→UI批准，原记录服务重启后保留。具体原始失败报告、沿原ID续验及独立回读见本文对应段；无需用新任务替代已完成原任务。
+- 两个实际Docker Worker隔离、停止、失败互不影响和重建恢复仍未实测；Docker/WSL2环境修复待单独授权，本机进程、fixture及原生Git不能替代真实容器。
+- 当前代码b78311a全量Python与13套浏览器回归已通过，详见F92；F86及此前失败继续保留为历史。最终整体QA/PM门仍需双Docker真实隔离、故障与重建证据，不能以回归通过代替。
+- Git交付：权限恢复后F88–91分别提交、立即推送并回读，F91提交b78311a已按用户后续授权合入并推送main。台账保留每功能记录及早期各次403；远端成功不等同整体产品验收完成。
 - Tauri仅迁移规划属于本轮交付，安装包留后续；批准记忆路径已实现，不额外把Skill市场列成本轮硬要求。
 
 
@@ -750,3 +750,11 @@ OpenCode本机模式是目录与配置隔离，不是OS安全边界；目前只�
 证据根 `H:\item\CorpPilot-test-evidence-20260908\opencode-goal-server-hgbzd22l`，含上述三份报告及 `independent-readback.json`。根运行 F90 45项、F91 设置/规划/目标105项 Python 回归通过（与独立QA检查有重叠，不相加冒称全量）；typecheck/build、原目标浏览器 z7Swno、入门 SC9MTu 通过。既有557kB构建体积提示保留。设置旧HTTP默认兼容、凭据不保存，OpenCode运行时重新校验exe；前后端专业分工与独立QA/Ponytail审查通过。
 
 本次证明秘书目标到文件成果和审批的真实链路，不代表双Docker、故障隔离/重建与最终全量验收已完成；完整目标仍保持未完成。
+
+## F92 当前版本整体回归与验收矩阵刷新
+
+2026-09-08，测试对象为代码提交 `b78311a7f67427ace04928b140a8d4b6c6e26817`；期间仅修改本轮文档，源码和测试未变。根运行 `.venv\Scripts\python.exe -m pytest tests/ -q --junitxml=H:\item\CorpPilot-test-evidence-20260908\f91-full-pytest.xml`，session86130退出0：1247 passed、8 subtests passed，523.43秒。原XML有1247个testcase节点，suite计数含8个子用例共1255，零失败、错误、跳过；日志及 `f91-full-regression-verified.json` 保留根核对结果。
+
+package.json全部13个浏览器入口依次执行，session71041退出0；`f91-browser-suite.json`逐项映射原报告，每份passed=true、fixtureExit code0/signal null、pageErrors为空。主目标套件包含预期HTTP故障注入，不将它们描述为所有HTTP/console错误均0。独立QA逐份核对完整报告，而非仅信任汇总默认字段。重跑typecheck/Vite构建通过，62模块，资源仍为index-wEwGtqIp.js与index-XKpvIcV8.css；既有557.15kB体积提示保留。
+
+PM/Doc代理同步R01–R15当前证据，修正旧“未联调真实CLI”及main授权描述，保留历史事实；根逐项复核与独立QA审查。该门为当前代码回归Pass，整体产品门仍Return：双Docker Worker的真实隔离、停止、故障互不影响和记忆重建尚未完成。系统修复授权仍待答复，本轮未进行模型调用、容器操作、系统修复或重启。

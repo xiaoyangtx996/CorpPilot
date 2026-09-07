@@ -1098,4 +1098,10 @@ F88 已提交 `2553de97d8bfed8ff7d13943e868f73b210a6a83` 并立即推送实施�
 
 根负责 settings/provider 分发、兼容性/API测试与真实服务验收；opencode_frontend 负责模型设置UI和真实浏览器脚本，opencode_backend 独立后端/前端/Ponytail/QA/PM审查。原 HTTP 默认兼容，OpenCode 可执行路径、官方模型及运行时状态校验，密钥只从服务环境取。补清楚客户端 RPM 与内部重试边界。根105项设置/规划/目标回归、typecheck/build及目标/入门浏览器通过；独立66项有重叠不累加。
 
-实际新数据生产服务一次goal规划和一次本机OpenCode任务均成功。首份浏览器报告因误读独立规划列表中断，修脚本后沿原ID、无key服务续验并UI批准；再只读补验原生write hash、零丢失事件。原失败报告保留，不重发模型或CLI。完整IDs/hash/三份报告见验收报告F91；独立重启检查74文件无key命中，原执行、规划、审批和身份保留。根独占暂存，按本功能独立commit后立即push/readback，再按Owner最新授权快进并推送main。精确结果记入仓库外 `f91-release-readback.json`，远端确认前不称已交付。双Docker环境/真实隔离及最终整体门仍未完成。
+实际新数据生产服务一次goal规划和一次本机OpenCode任务均成功。首份浏览器报告因误读独立规划列表中断，修脚本后沿原ID、无key服务续验并UI批准；再只读补验原生write hash、零丢失事件。原失败报告保留，不重发模型或CLI。完整IDs/hash/三份报告见验收报告F91；独立重启检查74文件无key命中，原执行、规划、审批和身份保留。根独占暂存，按本功能独立commit后立即push/readback，再按Owner最新授权快进并推送main。实际提交 `b78311a7f67427ace04928b140a8d4b6c6e26817` 与远端两个分支一致，见仓库外 `f91-release-readback.json`。双Docker环境/真实隔离及最终整体门仍未完成。
+
+## F92 当前代码完整回归与当前验收状态同步
+
+remaining_acceptance承担PM逐项审计与三个文档当前状态修正，opencode_backend承担只读Tech Lead缺口核查及独立QA，根运行完整回归/构建、核对原始证据并完成文档集成。F91代码b78311a保持不变；Python1247项+8子用例通过（86130退出0），全部13浏览器入口通过（71041退出0），typecheck/Vite通过。独立QA核XML/log与13份原报告的显式fixture退出/页面异常/嵌套验收，回归门Pass；预期HTTP故障注入仍按实际记录。
+
+证据根 `H:\item\CorpPilot-test-evidence-20260908`，文件 `f91-full-pytest.log`、`f91-full-pytest.xml`、`f91-browser-suite.json`、`f91-full-regression-verified.json`。原核验小脚本一次漏指定UTF-8导致GBK解码失败，补编码后全部原报告验证通过，未重跑模型或修改测试结果。当前矩阵区分已完成Zen本机闭环、当前全量与双Docker未完成项，保留历史失败和后续main授权。按本功能独立提交、立即推送/回读实施分支，再快进并推送main，精确哈希记仓库外 `f92-release-readback.json`。
