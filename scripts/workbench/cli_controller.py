@@ -73,8 +73,6 @@ class CLIController:
 
     def _execute(self, run, config, cancel):
         try:
-            if config.get('engine', 'codex') == 'opencode' and config.get('backend', 'local') != 'local':
-                return self._unstarted('OpenCode Docker 适配尚未启用，未启动')
             snapshot = self.executions.snapshot(run["id"], include_artifacts=True)
             selected = snapshot["agent"]["model"]
             model = config["model"] if selected == "default" else selected
@@ -112,6 +110,8 @@ class CLIController:
             options = {"image": config["docker_image"], "cpus": config["docker_cpus"],
                        "memory_mb": config["docker_memory_mb"],
                        "pids_limit": config["docker_pids_limit"]} if docker else {}
+            if docker and config.get('engine', 'codex') == 'opencode':
+                options['engine'] = 'opencode'
             if snapshot.get('repository'):
                 options['repository'] = snapshot['repository']['snapshot']
             executable = str(config["docker_executable"] if docker else config["executable"])

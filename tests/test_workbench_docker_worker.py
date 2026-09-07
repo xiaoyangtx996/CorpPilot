@@ -8,15 +8,24 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from workbench import docker_worker as worker
 
 
-def run(tmp_path,monkeypatch,scenario='success'):
+def run(tmp_path,monkeypatch,scenario='success',engine='codex',label='1.18.29',stdout_override=None):
     calls=[]; identity=str(uuid.uuid4()); token=None; container='a'*64; inspections=0
     stdout=b'{"type":"item.completed","item":{"type":"agent_message","text":"done"}}\n{"type":"turn.completed"}\n'
+    if engine == 'opencode':
+        from test_workbench_opencode_cli import process, step
+        from test_workbench_opencode_integration import native_event
+        events = step()
+        tool = native_event(session='session-one'); tool['part']['messageID'] = 'message-1'
+        events.insert(1, tool)
+        stdout = process(events)['stdout']
+    if stdout_override is not None:
+        stdout = stdout_override
     def fake(argv,cwd,env,stdin,timeout,cancel,output_limit_bytes):
         nonlocal token,inspections
         calls.append((argv,env,stdin))
         assert '--host' in argv and worker.HOST in argv
         assert 'DOCKER_HOST' not in env and 'DOCKER_CONTEXT' not in env
-        if 'image' in argv: return dict(reason='exited',exit_code=0,stdout=json.dumps({'Id':'sha256:'+'b'*64,'Os':'linux'}).encode(),stderr=b'')
+        if 'image' in argv: return dict(reason='exited',exit_code=0,stdout=json.dumps({'Id':'sha256:'+'b'*64,'Os':'linux','Config':{'Labels':{worker.OPENCODE_LABEL:label}}}).encode(),stderr=b'')
         command=argv[argv.index('container')+1]
         result=dict(reason='exited',exit_code=0,stdout=b'',stderr=b'')
         if command=='create':
@@ -34,14 +43,16 @@ def run(tmp_path,monkeypatch,scenario='success'):
             result['stdout']=json.dumps([{'Id':container,'Config':{'Labels':labels},'Image':'sha256:'+('c' if scenario=='wrong_image' else 'b')*64,'State':{'Paused':scenario=='paused','Restarting':False,'Running':running,'ExitCode':0 if inspections==1 or running or scenario in ('success','create_lost','remove_failed') else 137,'Status':state}}]).encode()
         if command=='start':
             if scenario=='exception_start': raise OSError('lost client')
-            assert json.loads(stdin)=={'prompt':'task','model':'model','api_key':'TEST_SECRET'}
+            expected = {'prompt':'task','model':'model','api_key':'TEST_SECRET'}
+            if engine == 'opencode': expected.update(model='opencode/big-pickle',engine=engine)
+            assert json.loads(stdin)==expected
             result['stdout']=stdout
             if scenario in ('cancel','timeout','kill'): result.update(reason='cancelled' if scenario=='cancel' else 'timeout',exit_code=1)
         if command=='rm' and scenario=='remove_failed': result['exit_code']=1
         return result
     monkeypatch.setenv('DOCKER_HOST','tcp://remote.invalid:2375')
     monkeypatch.setattr(worker,'run_process',fake)
-    result=worker.run_docker(sys.executable,tmp_path,identity,'task','model','TEST_SECRET',2,image='sha256:'+'b'*64)
+    result=worker.run_docker(sys.executable,tmp_path,identity,'task','opencode/big-pickle' if engine=='opencode' else 'model','TEST_SECRET',2,image='sha256:'+'b'*64,engine=engine)
     return result,calls
 
 

@@ -2,6 +2,8 @@
 
 F40 已接入浏览器配置和执行适配，复用工作台 CLI 队列。当前主机 Docker/WSL2 阻塞，下面构建与运行步骤尚未实测；浏览器受控状态和后端测试不能替代真实容器验收。最终测试及交付状态见 [验收记录](acceptance-report.md#f40-docker-worker-适配与恢复验收) 和 [交付台账](feature-delivery-log.md)。
 
+F93 新增官方 OpenCode Zen Docker 入口，复用相同生命周期；旧 Codex 镜像及三字段协议保留。只使用已验证原生文件权限，不开放 Shell、网络工具或子代理。此增量代码和契约测试通过，专用镜像尚未构建、双Worker尚未运行。
+
 ## 镜像构建与配置
 
 先确认本地 Docker Desktop 使用 Linux/WSL2 backend 且 daemon 可用。应用固定访问 `npipe:////./pipe/docker_engine`，不接受远程 Docker context；不需修改、启动或转换其他项目的 WSL 分发。Docker 官方说明，从 Windows 使用 Docker 不要求安装业务分发；Docker 使用自己的分发，其他分发集成是独立选项。[Docker WSL 说明](https://docs.docker.com/desktop/features/wsl/)
@@ -16,6 +18,17 @@ $workerDocker = 'C:\Program Files\Docker\Docker\resources\bin\docker.exe'
 ```
 
 第一项须返回linux，构建须成功，最后记录实际 `sha256:` 加64位十六进制ID；此文不提供虚构镜像ID。Dockerfile基于node:22-bookworm-slim，安装Python/git/证书与 `@openai/codex@0.153.3`。Codex版本已固定，基础tag不是可重现构建保证；运行固定最终image ID，更新镜像需要重新构建、记录并显式改配置。
+
+使用已获授权的官方 Zen 时，待环境恢复后改建专用镜像（以下命令未实测，不是成功记录）：
+
+```powershell
+& $workerDocker --host npipe:////./pipe/docker_engine build -t corppilot-worker:opencode-1.18.29 -f docker/worker/Dockerfile.opencode docker/worker
+& $workerDocker --host npipe:////./pipe/docker_engine image inspect --format '{{.Id}}' corppilot-worker:opencode-1.18.29
+```
+
+在 CLI 设置同时选择 OpenCode Zen 与 Docker，填实际固定镜像ID和 `opencode/big-pickle`。新Dockerfile只安装 `opencode-ai@1.18.29`，带 `io.corppilot.opencode=1.18.29` 标签；probe和每次创建前均核对Linux、ID和该标签，旧Codex镜像不能误用。标签只声明镜像契约，不是客户端实际版本运行证明，镜像仍须来自可信构建。凭据依旧经attach stdin；每个容器的HOME/XDG位于原私有tmpfs，动态任务只传stdin，不进入配置模板。镜像内 `/etc/opencode/opencode.json` 或 `opencode.jsonc` 存在时入口拒绝，不覆盖受管理策略；路径依据[官方v1.18.29源码](https://github.com/anomalyco/opencode/blob/v1.18.29/packages/opencode/src/config/managed.ts)。
+
+OpenCode 使用原生JSONL与原生工具回执，不冒充Codex。外层仍按时限停止并inspect核对，客户端内部可能重试；不能把工作台执行次数解释为供应商精确请求数或硬费用上限。OpenCode文件模式不能执行下方Codex专用shell任务；真实隔离探针需由Owner按验收授权在明确容器ID内完成，不开放Agent额外权限来方便测试。
 
 在工作台CLI设置选择Docker，填Docker .exe绝对路径、实际镜像ID（亦支持repo@sha256摘要）、已授权模型名及**宿主密钥环境变量名称**，不把密钥值写入配置。先保持enabled=false保存，再显式检查；probe仅验证本地Linux服务、固定镜像和版本，不创建容器、不调用模型，也不验证模型授权或网络可达。默认CPU=1、内存=1024MiB、PID=128、超时120秒、并发2；范围分别为1–16、128–32768MiB、16–1024、1–3600秒、1–16。
 

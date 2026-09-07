@@ -118,7 +118,7 @@ CLI设置的“启用本机资源准入”可按实际可用内存和逻辑CPU�
 离线备份、完整校验、新目录恢复和隔离解除的实际命令见 [备份与恢复](../docs/backup-recovery.md)。恢复副本默认暂停调度，先核对旧实例及外部结果，再按说明解除；不是CLI进程检查点恢复。
 ## OpenCode Zen 实际调用（F91）
 
-模型设置选择“OpenCode Zen（纯文本）”，输入可信官方 `opencode.exe` 绝对路径、`opencode/big-pickle`、密钥环境变量名及输出/时限/并发参数后启用。密钥由启动服务的进程环境提供，不保存到配置或源码。该通道用于回复与秘书规划，关闭所有工具；文件任务在“CLI 设置”另选 OpenCode / 本机。原 HTTP API 配置继续可用。RPM/并发约束客户端启动，客户端可能在内部重试；回执不代替账单。
+模型设置选择“OpenCode Zen（纯文本）”，输入可信官方 `opencode.exe` 绝对路径、`opencode/big-pickle`、密钥环境变量名及输出/时限/并发参数后启用。密钥由启动服务的进程环境提供，不保存到配置或源码。该通道用于回复与秘书规划，关闭所有工具；文件任务在“CLI 设置”另选 OpenCode / 本机（已实测），或 F93 新增的 OpenCode / Docker（需专用固定镜像，真实容器待验收，见[Docker说明](../docs/docker-worker.md)）。原 HTTP API 配置继续可用。RPM/并发约束客户端启动，客户端可能在内部重试；回执不代替账单。
 
 `node tests/opencode-goal-live.mjs` 是已实际执行的真实浏览器验收入口，须指向独立测试服务及新数据目录。服务先构建并配置已获授权的模型密钥环境；脚本环境为 `CORPPILOT_LIVE_URL`（本机origin）、`CORPPILOT_LIVE_TOKEN`（该服务Owner口令）、`CORPPILOT_LIVE_OPENCODE_EXE`、`CORPPILOT_LIVE_KEY_ENV`（变量名）、可选 `CORPPILOT_LIVE_MODEL` 与 `CORPPILOT_BROWSER_OUTPUT`。脚本不读取模型key，所有写入走UI；会提交一次目标，最多一项任务，可能产生模型费用。
 

@@ -7,12 +7,16 @@ import stat
 import uuid
 
 from .cli import InputPreparationError, prepare_workspace, parse_result
+from .opencode_cli import parse_result as parse_opencode_result
+from .tool_activities import parse_opencode_tools
 from .process_tree import run_process
 from .store import _text
 
 HOST = 'npipe:////./pipe/docker_engine'
 RUN_LABEL = 'io.corppilot.execution'
 TOKEN_LABEL = 'io.corppilot.owner'
+OPENCODE_LABEL = 'io.corppilot.opencode'
+OPENCODE_VERSION = '1.18.29'
 
 
 def _save(path, record):
@@ -92,7 +96,8 @@ def _read_record(path):
     record = json.loads(raw)
     required = {'version', 'execution_id', 'token', 'name', 'image', 'phase', 'container_id', 'executable'}
     if (not isinstance(record, dict) or not required <= record.keys()
-            or record.keys() - required - {'image_id', 'exit_code'}
+            or record.keys() - required - {'image_id', 'exit_code', 'engine'}
+            or record.get('engine', 'codex') not in ('codex', 'opencode')
             or type(record['version']) is not int or record['version'] != 1
             or record['execution_id'] != path.parent.name
             or not isinstance(record['token'], str) or not re.fullmatch('[0-9a-f]{32}', record['token'])
@@ -182,13 +187,17 @@ def stop_worker(executable, record_path, execution_id=None):
 
 
 def run_docker(executable, data_dir, execution_id, prompt, model, api_key, timeout_seconds,
-               cancel=None, input_artifacts=None, repository=None, *, image, cpus=1, memory_mb=1024, pids_limit=128):
+               cancel=None, input_artifacts=None, repository=None, *, image, cpus=1, memory_mb=1024, pids_limit=128, engine='codex'):
+    if engine not in ('codex', 'opencode'):
+        raise ValueError('Docker CLI 引擎无效')
     executable = Path(executable)
     if os.name != 'nt' or not executable.is_absolute() or not executable.is_file() or executable.suffix.lower() != '.exe':
         raise ValueError('Docker Worker 需要本机 Windows Docker .exe 绝对路径')
     if not isinstance(image, str) or not re.fullmatch(r'(?:sha256:|[A-Za-z0-9._:/-]+@sha256:)[0-9a-f]{64}', image):
         raise ValueError('Docker 镜像必须固定为已安装的 sha256 ID 或摘要')
     prompt, model, api_key = _text(prompt, '任务', 64000), _text(model, '模型', 200), _text(api_key, '凭据', 4096)
+    if engine == 'opencode' and not re.fullmatch(r'opencode/[A-Za-z0-9][A-Za-z0-9._-]*', model):
+        raise ValueError('OpenCode 模型须为官方 Zen 的 opencode/模型标识')
     for value, low, high in [(timeout_seconds, 1, 3600), (cpus, 1, 16), (memory_mb, 128, 32768), (pids_limit, 16, 1024)]:
         if type(value) is not int or not low <= value <= high:
             raise ValueError('Docker Worker 资源或时限配置无效')
@@ -207,6 +216,8 @@ def run_docker(executable, data_dir, execution_id, prompt, model, api_key, timeo
         token = uuid.uuid4().hex
         record = {'version': 1, 'execution_id': execution_id, 'token': token,
                   'name': f'corppilot-{token[:12]}-{execution_id}', 'image': image, 'phase': 'create_intent', 'container_id': None, 'executable': str(executable)}
+        if engine == 'opencode':
+            record['engine'] = engine
         record_path = paths['root'] / 'docker-worker.json'
         _save(record_path, record)
     except (OSError, ValueError, TypeError) as exc:
@@ -222,10 +233,12 @@ def run_docker(executable, data_dir, execution_id, prompt, model, api_key, timeo
                 or not isinstance(image_id, str) or not re.fullmatch(r'sha256:[0-9a-f]{64}', image_id)
                 or images.get('Os') != 'linux' or image.startswith('sha256:') and image != image_id):
             raise ValueError()
+        if engine == 'opencode' and (images.get('Config', {}).get('Labels') or {}).get(OPENCODE_LABEL) != OPENCODE_VERSION:
+            raise ValueError()
         record['image_id'] = image_id
         _save(record_path, record)
     except Exception as exc:
-        raise InputPreparationError('固定 Linux 镜像尚未安装或无法验证，未请求创建容器') from exc
+        raise InputPreparationError('固定 Linux 镜像尚未安装或 CLI 能力无法验证，未请求创建容器') from exc
     try:
         _command(executable, paths, ['container', 'create', '--pull', 'never', '--name', record['name'],
             '--label', f'{RUN_LABEL}={execution_id}', '--label', f'{TOKEN_LABEL}={token}',
@@ -247,8 +260,11 @@ def run_docker(executable, data_dir, execution_id, prompt, model, api_key, timeo
                 process['reason'] = 'cancelled'
             else:
                 record['phase'] = 'start_intent'; _save(record_path, record)
+                payload = {'prompt': prompt, 'model': model, 'api_key': api_key}
+                if engine == 'opencode':
+                    payload['engine'] = engine
                 process = _command(executable, paths, ['container', 'start', '--attach', '--interactive', state['container_id']],
-                    stdin=json.dumps({'prompt': prompt, 'model': model, 'api_key': api_key}, ensure_ascii=False).encode('utf-8'),
+                    stdin=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
                     timeout=timeout_seconds, cancel=cancel, output_limit=4 * 1024 * 1024)
         elif state is None:
             process['reason'] = 'unknown'
@@ -284,7 +300,9 @@ def run_docker(executable, data_dir, execution_id, prompt, model, api_key, timeo
             cleanup = 'remove_failed'
     else:
         process['exit_code'] = None; process['reason'] = 'unknown'
-    result = parse_result(process, api_key)
+    result = (parse_opencode_result if engine == 'opencode' else parse_result)(process, api_key)
+    if engine == 'opencode':
+        result['tool_activities'] = parse_opencode_tools(process)
     result.update(workspace=str(paths['work']), cleanup=cleanup, worker_record=str(record_path))
     if cleanup == 'remove_failed':
         result['summary'] += '；容器已确认停止，但清理失败，保留核查记录'

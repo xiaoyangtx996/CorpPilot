@@ -1105,3 +1105,11 @@ F88 已提交 `2553de97d8bfed8ff7d13943e868f73b210a6a83` 并立即推送实施�
 remaining_acceptance承担PM逐项审计与三个文档当前状态修正，opencode_backend承担只读Tech Lead缺口核查及独立QA，根运行完整回归/构建、核对原始证据并完成文档集成。F91代码b78311a保持不变；Python1247项+8子用例通过（86130退出0），全部13浏览器入口通过（71041退出0），typecheck/Vite通过。独立QA核XML/log与13份原报告的显式fixture退出/页面异常/嵌套验收，回归门Pass；预期HTTP故障注入仍按实际记录。
 
 证据根 `H:\item\CorpPilot-test-evidence-20260908`，文件 `f91-full-pytest.log`、`f91-full-pytest.xml`、`f91-browser-suite.json`、`f91-full-regression-verified.json`。原核验小脚本一次漏指定UTF-8导致GBK解码失败，补编码后全部原报告验证通过，未重跑模型或修改测试结果。当前矩阵区分已完成Zen本机闭环、当前全量与双Docker未完成项，保留历史失败和后续main授权。按本功能独立提交、立即推送/回读实施分支，再快进并推送main，精确哈希记仓库外 `f92-release-readback.json`。
+
+F92实际提交 `586a2d57dcb990f08ab74635288484344cb42d47`，实施分支与main均已即时推送并精确回读成功。
+
+## F93 官方 Zen Docker 适配
+
+opencode_backend负责入口、专用Dockerfile与入口测试；opencode_frontend负责CLI设置文案；remaining_acceptance独立PM/代码/Ponytail/QA审查；根负责Docker宿主路由、镜像准入、原生回执及控制器测试和发布。复用原Docker生命周期，不增加Worker框架或业务层。新镜像只装OpenCode，旧Codex镜像及三字段调用不变；OpenCode四字段、官方模型及标签验证，所有凭据stdin。
+
+审查Return修复Docker原生工具回执遗漏后Pass。根142项和补充80项通过，独立97/47项重叠不累加；目标浏览器3gcm2Z及构建通过。测试细节、首轮失败与F92全量边界见验收报告F93。只标实现及契约通过，镜像尚未构建、真实双Worker未执行；系统修复/重启未获授权，未进行。单独commit后立即push/readback，再按已授权快进main，精确结果记仓库外 `f93-release-readback.json`。

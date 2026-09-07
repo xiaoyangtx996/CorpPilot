@@ -2,11 +2,11 @@
 
 整体结论：未完成。当前能力与15项逐项状态见 [需求矩阵](product-requirements.md#当前验收矩阵)。本文按F编号保存历史测试事实，早期“待实现”不是当前缺口清单。
 
-## 当前状态与待完成项（F91后审计）
+## 当前状态与待完成项（F93）
 
 - 已通过的真实本机链路：F89官方OpenCode文件任务、F91官方Zen秘书规划→单任务执行→下载hash核对→UI批准，原记录服务重启后保留。具体原始失败报告、沿原ID续验及独立回读见本文对应段；无需用新任务替代已完成原任务。
 - 两个实际Docker Worker隔离、停止、失败互不影响和重建恢复仍未实测；Docker/WSL2环境修复待单独授权，本机进程、fixture及原生Git不能替代真实容器。
-- 当前代码b78311a全量Python与13套浏览器回归已通过，详见F92；F86及此前失败继续保留为历史。最终整体QA/PM门仍需双Docker真实隔离、故障与重建证据，不能以回归通过代替。
+- F92完整回归覆盖代码b78311a：Python与13套浏览器通过；后续F93 Docker接入为单独定向回归，详见末尾。F86及此前失败继续保留为历史。最终整体QA/PM门仍需双Docker真实隔离、故障与重建证据，不能以回归通过代替。
 - Git交付：权限恢复后F88–91分别提交、立即推送并回读，F91提交b78311a已按用户后续授权合入并推送main。台账保留每功能记录及早期各次403；远端成功不等同整体产品验收完成。
 - Tauri仅迁移规划属于本轮交付，安装包留后续；批准记忆路径已实现，不额外把Skill市场列成本轮硬要求。
 
@@ -758,3 +758,11 @@ OpenCode本机模式是目录与配置隔离，不是OS安全边界；目前只�
 package.json全部13个浏览器入口依次执行，session71041退出0；`f91-browser-suite.json`逐项映射原报告，每份passed=true、fixtureExit code0/signal null、pageErrors为空。主目标套件包含预期HTTP故障注入，不将它们描述为所有HTTP/console错误均0。独立QA逐份核对完整报告，而非仅信任汇总默认字段。重跑typecheck/Vite构建通过，62模块，资源仍为index-wEwGtqIp.js与index-XKpvIcV8.css；既有557.15kB体积提示保留。
 
 PM/Doc代理同步R01–R15当前证据，修正旧“未联调真实CLI”及main授权描述，保留历史事实；根逐项复核与独立QA审查。该门为当前代码回归Pass，整体产品门仍Return：双Docker Worker的真实隔离、停止、故障互不影响和记忆重建尚未完成。系统修复授权仍待答复，本轮未进行模型调用、容器操作、系统修复或重启。
+
+## F93 OpenCode Docker 入口及原生执行协议
+
+代码/契约门Pass，真实镜像与双Worker仍未验收。新专用Dockerfile固定OpenCode1.18.29、UID1000、原入口；四字段OpenCode请求保留旧Codex三字段兼容。模型/engine在创建前校验，固定Linux镜像ID及精确能力标签在probe与每次create前验证；凭据仍只经stdin，动态任务不进配置模板，Linux管理配置存在则拒绝。复用原容器标签身份、挂载、资源、stop/kill/inspect和unknown语义；没有本机回退。
+
+独立审查Return曾发现漏附原生工具回执，修正后controller经过实际run_docker函数、受控Docker命令将OpenCode工具事件与usage持久化，原生JSONL不伪装Codex。根运行OpenCode/Docker/入口/设置相关142项通过，另Docker API/控制器/恢复/工具/目标相关80项通过；独立QA97项及设置47项与根有重叠，不累加。typecheck/build通过，目标浏览器 `corppilot-browser-3gcm2Z` 通过、fixture退出0。当前构建JS为index-kFBjubag.js、557.27kB，保留体积提示。
+
+首轮根10项失败为工具回执遗漏、旧Codex探测格式变化及新测试fixture缺资源字段；分别补原生回执、保持旧格式、补齐原资源配置后通过，未放宽状态/权限断言。F92完整回归以b78311a代码为边界，不冒称包含F93；F93为上述定向回归。未执行Docker build、实际容器或模型调用，环境修复授权仍待答复。

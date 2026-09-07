@@ -26,7 +26,7 @@ def test_engine_selection_persists_without_secrets_or_implicit_start(tmp_path, m
     if os.name == 'nt':
         settings.save({'enabled': True})
         assert settings.resolve()['engine'] == 'opencode'
-        with pytest.raises(ValueError, match='Docker'):
+        with pytest.raises(ValueError, match='完整'):
             settings.save({'backend': 'docker'})
         assert settings.get()['backend'] == 'local'
         with pytest.raises(ValueError, match='Zen'):

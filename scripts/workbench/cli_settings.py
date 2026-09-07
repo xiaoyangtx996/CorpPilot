@@ -101,8 +101,6 @@ class CLISettings:
     @staticmethod
     def _require_ready(status):
         if status.get("engine", "codex") == "opencode":
-            if status["backend"] != "local":
-                raise ValueError("OpenCode 当前仅支持本地执行；Docker 适配尚未启用")
             if not re.fullmatch(r"opencode/[A-Za-z0-9][A-Za-z0-9._-]*", status["model"]):
                 raise ValueError("OpenCode 模型须为官方 Zen 的 opencode/模型标识")
         if not status["configured"]:
@@ -174,6 +172,7 @@ class CLISettings:
 
     @staticmethod
     def _probe_docker(config, paths, env):
+        from .docker_worker import OPENCODE_LABEL, OPENCODE_VERSION
         unavailable = {"available": False, "version": None,
                        "message": "Docker 本地服务或固定镜像不可用；未拉取镜像、未调用模型"}
         if not config["docker_image"]:
@@ -186,8 +185,9 @@ class CLISettings:
         deadline = time.monotonic() + 10
         budget = 65536
         outputs = []
+        image_format = '{"Id":{{json .Id}},"Os":{{json .Os}},"Labels":{{json .Config.Labels}}}' if config.get('engine', 'codex') == 'opencode' else '{"Id":{{json .Id}},"Os":{{json .Os}}}'
         for args in (["info", "--format", '{"ServerVersion":{{json .ServerVersion}},"OSType":{{json .OSType}}}'],
-                     ["image", "inspect", "--format", '{"Id":{{json .Id}},"Os":{{json .Os}}}', config["docker_image"]]):
+                     ["image", "inspect", "--format", image_format, config["docker_image"]]):
             remaining = deadline - time.monotonic()
             if remaining <= 0 or budget <= 0:
                 return unavailable
@@ -211,5 +211,9 @@ class CLISettings:
             return unavailable
         if config["docker_image"].startswith("sha256:") and identity != config["docker_image"]:
             return unavailable
+        if config.get('engine', 'codex') == 'opencode':
+            labels = outputs[1].get('Labels')
+            if not isinstance(labels, dict) or labels.get(OPENCODE_LABEL) != OPENCODE_VERSION:
+                return {**unavailable, 'message': '固定镜像缺少匹配的 OpenCode 1.18.29 能力标签；未创建容器、未调用模型'}
         return {"available": True, "version": version,
                 "message": "Docker 本地服务与固定镜像可用；未拉取镜像、未调用模型"}
