@@ -1069,3 +1069,11 @@ frontend_integration负责新onboarding脚本、package入口及fixture --onboar
 skill_inputs_backend编写人工验收手册和Docker权限说明，根独立核对源码/路径/权限/证据边界并同步README及13项浏览器入口。作者自查Return三处已修正：补onboarding、故障注入使用已知绝对Docker路径且重读本轮ID、inspect显式输出实际ID与Image。根验收Pass，范围仅为文档准确性与已完成回归记录，不将待执行命令标成实测。
 
 手册限定独立数据与明确费用窗口，6次CLI覆盖双Worker/失败/重建/停止，秘书另1模型及1CLI；崩溃、daemon断线等额外场景单列待验收。未运行真实付费调用、容器或系统修复。本功能单独提交后即时push及远端回读记录于H:\item\CorpPilot-test-evidence-20260906\f87-delivery-result.json；远端确认前仍未交付，完整目标保持未完成。
+
+## F88 OpenCode Zen 原生执行适配器
+
+2026-09-08。opencode_backend 实现、opencode_qa 独立核对官方 v1.18.29 协议与审查，根复核源码并运行 `python -m pytest tests/test_workbench_opencode_cli.py tests/test_workbench_cli.py -q`：17 passed。本增量为可单独验证的 runner；设置、控制器、工具回执和浏览器接入属于紧接的独立功能，尚未以该 runner 调用真实模型。
+
+复用原 prepare_workspace 和 Windows 进程树控制，独立 HOME/XDG、私有 stdin，使用官方纯模式并禁项目配置/外部插件。模型限定官方 Zen；只开放内置文件工具，不开启 shell、网络工具或内部委派。系统受管理配置存在时拒绝启动，不重定向或覆盖组织策略。成功要求同一会话的有效多步事件、最终 stop 和进程退出0；缓存与 reasoning 按原生口径归一，用量缺失不视为0。取消、错误、重复事件、混会话与无效终态均有检查。
+
+本功能按标题 `feat(cli): add isolated OpenCode Zen runner` 单独提交并立即推送实施分支；实际提交哈希及远端回读见后续 F89 记录。已有 Zen 连通性文档提交 `3d657efb07ea6f11ce20e8b9738cf37f72675f7e` 与 UI 功能提交 `c414461d41a3bc3e65f1bdd4f052c29e3103e3aa` 已即时推送。Owner 随后明确授权直接合并 main；2026-09-07 main 快进到 c414461，远端精确回读成功，旧计划中的禁止 main 限制已被本次明确授权覆盖。
