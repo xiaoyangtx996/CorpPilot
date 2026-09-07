@@ -1113,3 +1113,11 @@ F92实际提交 `586a2d57dcb990f08ab74635288484344cb42d47`，实施分支与main
 opencode_backend负责入口、专用Dockerfile与入口测试；opencode_frontend负责CLI设置文案；remaining_acceptance独立PM/代码/Ponytail/QA审查；根负责Docker宿主路由、镜像准入、原生回执及控制器测试和发布。复用原Docker生命周期，不增加Worker框架或业务层。新镜像只装OpenCode，旧Codex镜像及三字段调用不变；OpenCode四字段、官方模型及标签验证，所有凭据stdin。
 
 审查Return修复Docker原生工具回执遗漏后Pass。根142项和补充80项通过，独立97/47项重叠不累加；目标浏览器3gcm2Z及构建通过。测试细节、首轮失败与F92全量边界见验收报告F93。只标实现及契约通过，镜像尚未构建、真实双Worker未执行；系统修复/重启未获授权，未进行。单独commit后立即push/readback，再按已授权快进main，精确结果记仓库外 `f93-release-readback.json`。
+
+F93实际提交 `42105be95ffccb644228200b9c51f22e92524b37`，实施分支与main均立即推送并精确回读，见仓库外 `f93-release-readback.json`。
+
+## F94 最新代码完整回归与 OpenCode 验收手册
+
+final_gate_audit负责PM审计与手册，opencode_backend独立QA，根执行/核验全量回归、加强探针身份检查并集成文档。42105be代码1299项Python+8子用例、13套浏览器全部通过；原始日志/XML/报告与独立QA一致。手册明确OpenCode文件工具与Owner探针分工，语法检查通过，全部真实容器步骤仍未执行。证据与具体门结论见验收报告F94。
+
+该增量只包含文档，未修改正常运行数据。按本功能独立提交、立即push/readback实施分支，再依用户授权快进main并push/readback；精确提交及远端状态记仓库外 `f94-release-readback.json`。当前回归和文档门Pass，整体目标仍Return；环境修复授权未收到，未尝试修复或重启。

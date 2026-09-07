@@ -2,12 +2,12 @@
 
 整体结论：未完成。当前能力与15项逐项状态见 [需求矩阵](product-requirements.md#当前验收矩阵)。本文按F编号保存历史测试事实，早期“待实现”不是当前缺口清单。
 
-## 当前状态与待完成项（F93）
+## 当前状态与待完成项（F94）
 
 - 已通过的真实本机链路：F89官方OpenCode文件任务、F91官方Zen秘书规划→单任务执行→下载hash核对→UI批准，原记录服务重启后保留。具体原始失败报告、沿原ID续验及独立回读见本文对应段；无需用新任务替代已完成原任务。
 - 两个实际Docker Worker隔离、停止、失败互不影响和重建恢复仍未实测；Docker/WSL2环境修复待单独授权，本机进程、fixture及原生Git不能替代真实容器。
-- F92完整回归覆盖代码b78311a：Python与13套浏览器通过；后续F93 Docker接入为单独定向回归，详见末尾。F86及此前失败继续保留为历史。最终整体QA/PM门仍需双Docker真实隔离、故障与重建证据，不能以回归通过代替。
-- Git交付：权限恢复后F88–91分别提交、立即推送并回读，F91提交b78311a已按用户后续授权合入并推送main。台账保留每功能记录及早期各次403；远端成功不等同整体产品验收完成。
+- F94完整回归覆盖代码42105be（含F93）：1299项Python及8子用例、13套浏览器通过，独立QA核验原始日志及报告。F86及此前失败继续保留为历史。最终整体QA/PM门仍需双Docker真实隔离、故障与重建证据，不能以回归通过代替。
+- Git交付：权限恢复后F88–93分别提交、立即推送并回读，F93提交42105be已按用户后续授权合入并推送main。台账保留每功能记录及早期各次403；远端成功不等同整体产品验收完成。
 - Tauri仅迁移规划属于本轮交付，安装包留后续；批准记忆路径已实现，不额外把Skill市场列成本轮硬要求。
 
 
@@ -766,3 +766,13 @@ PM/Doc代理同步R01–R15当前证据，修正旧“未联调真实CLI”及ma
 独立审查Return曾发现漏附原生工具回执，修正后controller经过实际run_docker函数、受控Docker命令将OpenCode工具事件与usage持久化，原生JSONL不伪装Codex。根运行OpenCode/Docker/入口/设置相关142项通过，另Docker API/控制器/恢复/工具/目标相关80项通过；独立QA97项及设置47项与根有重叠，不累加。typecheck/build通过，目标浏览器 `corppilot-browser-3gcm2Z` 通过、fixture退出0。当前构建JS为index-kFBjubag.js、557.27kB，保留体积提示。
 
 首轮根10项失败为工具回执遗漏、旧Codex探测格式变化及新测试fixture缺资源字段；分别补原生回执、保持旧格式、补齐原资源配置后通过，未放宽状态/权限断言。F92完整回归以b78311a代码为边界，不冒称包含F93；F93为上述定向回归。未执行Docker build、实际容器或模型调用，环境修复授权仍待答复。
+
+## F94 最新代码回归与 OpenCode 容器验收手册
+
+2026-09-08，代码基线 `42105be95ffccb644228200b9c51f22e92524b37`，本轮仅文档修改。原Python进程session53523退出0：1299 passed、8 subtests passed，522.16秒。XML含1299个testcase，suite计数1307含子用例，failure/error/skipped属性和节点均为0。全部13个package.json浏览器入口依次执行并通过（session39729退出0），原报告均passed=true、fixtureExit code0/signal null、pageErrors为空；目标套件保留预期400/503故障注入。根与独立QA分别核对原始文件，未修改或重跑失败证据。
+
+外部证据根 `H:\item\CorpPilot-test-evidence-20260908`：`f93-full-pytest.log/xml`、`f93-browser-suite.json`、`f93-full-regression-verified.json`。构建沿F93已通过的同一源码产物；本轮未改源码或新增依赖，既有557.27kB体积提示仍在。
+
+final_gate_audit负责PM缺口审计及手册，opencode_backend独立QA；根整合审查。手册新增OpenCode原生文件模式的双Worker观察、Owner有界存储探针、故障/停止/重建证据门，不给Agent增加shell权限，不以探针替代真实成果。根补严格UUID、单容器inspect及Paused/Restarting拒绝；PowerShell全部样例和Python探针仅通过语法解析，没有执行容器命令。文档/当前回归门Pass，整体PM门Return。
+
+`f94-environment-preflight.json`记录本轮Docker info退出1（本机pipe不存在）；WSL status虽退出0，正文明确不支持WSL2并要求启用虚拟机平台。正常工作台health为ok。本轮无模型调用、镜像构建、系统修复或重启；真实双Docker隔离、失败互不影响、停止及记忆重建仍待环境修复授权和实测。
