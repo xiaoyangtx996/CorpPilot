@@ -26,6 +26,6 @@ opencode --pure --log-level ERROR run --model opencode/big-pickle --format json 
 
 ## 产品验收边界
 
-这是三个key通过官方OpenCode客户端的真实连通性证据，不是CorpPilot完整任务交付、成果审批或双Docker Worker验收。当前工作台文本provider支持Chat Completions；当前CLI后端使用Codex协议，尚未实现OpenCode CLI适配。不能把Zen key直接填进Codex配置后声称已接通，也不能把本测试的免费客户端结果当作工作台直接API成功。
+这是三个key通过官方OpenCode客户端的真实连通性证据，不是双Docker Worker验收。该次测试时 CLI 后端仅支持 Codex；后续 F88/F89 已接入 OpenCode 本机文件执行并完成真实 UI 任务与成果审批，见 [F89 验收记录](acceptance-report.md#f89-opencode-真实文件执行与界面接入)。工作台文本 provider 仍使用 Chat Completions，不能把客户端成功当作直接 API 成功，也不能把 Zen key 填入 Codex 配置后声称已接通。
 
 来源：[官方Zen接口与模型说明](https://opencode.ai/docs/zen/)、[CLI说明](https://opencode.ai/docs/cli/)。真实回执优先于文档中的可用性描述。

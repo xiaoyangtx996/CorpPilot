@@ -18,7 +18,7 @@ LIMITS = {"timeout_seconds": (1, 3600), "max_concurrency": (1, 16),
           "docker_cpus": (1, 16), "docker_memory_mb": (128, 32768), "docker_pids_limit": (16, 1024),
           "host_reserve_memory_mb": (0, 1048576), "local_worker_memory_mb": (128, 1048576), "local_worker_cpus": (1, 256)}
 DEFAULTS = {"enabled": False, "executable": "", "model": "", "api_key_env": "",
-            "timeout_seconds": 120, "max_concurrency": 2, "backend": "local",
+            "timeout_seconds": 120, "max_concurrency": 2, "backend": "local", "engine": "codex",
             "docker_executable": "", "docker_image": "", "docker_cpus": 1,
             "docker_memory_mb": 1024, "docker_pids_limit": 128,
             "resource_admission_enabled": False, "host_reserve_memory_mb": 1024,
@@ -52,6 +52,9 @@ def _validate(payload):
             elif field == "backend":
                 if value not in ("local", "docker"):
                     raise ValueError("backend 必须为 local 或 docker")
+            elif field == "engine":
+                if value not in ("codex", "opencode"):
+                    raise ValueError("engine 必须为 codex 或 opencode")
             elif field == "docker_image":
                 if value and not re.fullmatch(r"(?:[a-z0-9][a-z0-9._:/-]*@)?sha256:[0-9a-f]{64}", value):
                     raise ValueError("Docker 镜像必须固定为 sha256 ID 或 repo@sha256 摘要")
@@ -97,6 +100,11 @@ class CLISettings:
 
     @staticmethod
     def _require_ready(status):
+        if status.get("engine", "codex") == "opencode":
+            if status["backend"] != "local":
+                raise ValueError("OpenCode 当前仅支持本地执行；Docker 适配尚未启用")
+            if not re.fullmatch(r"opencode/[A-Za-z0-9][A-Za-z0-9._-]*", status["model"]):
+                raise ValueError("OpenCode 模型须为官方 Zen 的 opencode/模型标识")
         if not status["configured"]:
             raise ValueError("启用前必须填写完整 CLI 配置")
         if not status["platform_supported"]:
@@ -143,16 +151,21 @@ class CLISettings:
                 env.pop("CODEX_API_KEY", None)
                 if config["backend"] == "docker":
                     return self._probe_docker(config, paths, env)
+                opencode = config.get("engine", "codex") == "opencode"
+                if opencode:
+                    from .opencode_cli import opencode_environment
+                    env = opencode_environment(paths, "probe-placeholder")
+                    env.pop("CORPPILOT_ZEN_KEY", None)
                 process = run_process([config["executable"], "--version"], paths["work"], env,
                                       b"", 10, output_limit_bytes=65536)
-            version = re.fullmatch(rb"codex-cli ([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)",
+            version = re.fullmatch((rb"" if opencode else rb"codex-cli ") + rb"([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)",
                                    process["stdout"].strip())
             if process["reason"] == "exited" and process["exit_code"] == 0 and version:
                 return {"available": True, "version": version[1].decode("ascii"),
-                        "message": "Codex CLI 可用；仅检查版本，未调用模型"}
+                        "message": f"{'OpenCode' if opencode else 'Codex'} CLI 可用；仅检查版本，未调用模型"}
             message = {"timeout": "CLI 状态检查超时", "output_limit": "CLI 状态检查输出超过限制",
                        "start_failed": "CLI 无法启动，请检查工具和运行环境"}.get(
-                           process["reason"], "未识别到有效的 Codex CLI 版本")
+                           process["reason"], "未识别到所选 CLI 工具的有效版本")
             return {**unavailable, "message": message}
         except (OSError, ValueError):
             return {**unavailable, "message": "CLI 状态检查失败，请检查配置和运行环境"}

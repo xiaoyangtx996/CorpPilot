@@ -726,3 +726,15 @@ F85源码补跑其余11浏览器脚本均通过，f86-browser-verified.json逐�
 ## F87 真实执行验收准备
 
 新增live-execution-acceptance.md，明确独立数据、双容器同时运行、文件/HOME/配置隔离、批准记忆、单个失败、重建、停止、有序重启及秘书目标的操作和证据。核心样例需6次真实CLI，秘书另需1模型/1CLI；费用与系统修复须独立授权，额外故障场景保持待执行。根独立核对源码路径、只读挂载和回滚语义；作者自查三项Return（onboarding入口、Docker绝对路径调用、实际镜像回读）均修正。文档检查通过不代表真实执行通过。
+
+## F89 OpenCode 真实文件执行与界面接入
+
+2026-09-08，Pass，限定本机 OpenCode 文件任务。正式 WorkbenchServer 使用隔离新数据，无模型或 CLI fixture；UI 保存 OpenCode 配置并探测版本，创建长期身份和私聊任务、确认一次执行、下载成果、批准原执行，并查看原生工具事件。脚本入口 `frontend/tests/opencode-live.mjs`，密钥只在服务进程环境提供；GET 取证辅助没有直接写 API 或补数据库。
+
+官方客户端1.18.29、opencode/big-pickle；执行 `e4fdcd42-66f3-48c3-9b6c-2f1a28c0f3f2` 退出0，attempt1/需求v1，Owner approved。成果 `zen-proof.txt` 为51字节，SHA-256 `ffa467256eed13556f59769fd012b850114315d58a3884f300350f3d89a13876`，与本次随机标记及下载回执匹配。回执输入10671、输出447、缓存输入6912 tokens，原生工具事件1；一次 CLI 执行可能包含多个模型步骤，用量不是供应商账单核销。
+
+证据为 `H:\item\CorpPilot-test-evidence-20260908\opencode-live-server-15pbipa3\corppilot-opencode-live-Qemdsz` 的浏览器报告、成果文件及两张截图。根与独立 QA 均查看截图和重算文件hash。父目录 `independent-readback.json` 记录 SQLite integrity=ok、外键错误0、仅一次执行、批准持久化、服务重启后身份/执行/工具回执保留，57个本轮运行文件无提供key命中。先前两次浏览器定位失败发生在执行提交前，没有模型重试。
+
+相关138项Python测试、独立adapter/Codex17项检查、typecheck/build及目标/工具活动/入门三套浏览器回归通过；大于500kB的既有构建提示保留。独立代码/Ponytail/QA/PM门为Pass。未重跑全部历史Python测试，不把此增量检查宣称最终全量验收。
+
+OpenCode本机模式是目录与配置隔离，不是OS安全边界；目前只开放内置文件工具。Docker daemon/WSL2仍不可用，未修系统或重启机器；双Worker、故障隔离与记忆重建仍未实测。聊天/秘书规划仍走单独模型API，Zen直接API的额度限制尚未解决。Tauri迁移文档属于本轮交付，安装包不是本轮要求。

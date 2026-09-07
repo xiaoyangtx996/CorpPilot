@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type CliSettingsValue, type CliProbeResult, type ResourceAdmission } from './api';
 
-type Fields = { resource_admission_enabled: boolean; host_reserve_memory_mb: string; local_worker_memory_mb: string; local_worker_cpus: string; enabled: boolean; backend: 'local' | 'docker'; executable: string; docker_executable: string; docker_image: string; docker_cpus: string; docker_memory_mb: string; docker_pids_limit: string; model: string; api_key_env: string; timeout_seconds: string; max_concurrency: string };
+type Fields = { resource_admission_enabled: boolean; host_reserve_memory_mb: string; local_worker_memory_mb: string; local_worker_cpus: string; enabled: boolean; engine: 'codex' | 'opencode'; backend: 'local' | 'docker'; executable: string; docker_executable: string; docker_image: string; docker_cpus: string; docker_memory_mb: string; docker_pids_limit: string; model: string; api_key_env: string; timeout_seconds: string; max_concurrency: string };
 const numericFields = [
   { key: 'timeout_seconds', label: '执行超时（秒）', minimum: 1, maximum: 3600 },
   { key: 'max_concurrency', label: '最大并发数', minimum: 1, maximum: 16 },
@@ -14,7 +14,7 @@ const numericFields = [
 ] as const;
 function fields(value: CliSettingsValue): Fields {
   return { resource_admission_enabled: value.resource_admission_enabled ?? false, host_reserve_memory_mb: String(value.host_reserve_memory_mb ?? 1024), local_worker_memory_mb: String(value.local_worker_memory_mb ?? 1024), local_worker_cpus: String(value.local_worker_cpus ?? 1), enabled: value.enabled, executable: value.executable, model: value.model, api_key_env: value.api_key_env,
-    backend: value.backend ?? 'local', docker_executable: value.docker_executable ?? '', docker_image: value.docker_image ?? '',
+    engine: value.engine ?? 'codex', backend: value.backend ?? 'local', docker_executable: value.docker_executable ?? '', docker_image: value.docker_image ?? '',
     docker_cpus: String(value.docker_cpus ?? 1), docker_memory_mb: String(value.docker_memory_mb ?? 1024), docker_pids_limit: String(value.docker_pids_limit ?? 128),
     timeout_seconds: String(value.timeout_seconds), max_concurrency: String(value.max_concurrency) };
 }
@@ -107,20 +107,23 @@ export function CliSettings({ onClose }: { onClose: () => void }) {
       {loading && <p role="status">正在读取已保存配置…</p>}
       {!loading && !saved && <p className="muted">尚未成功读取配置，暂不可编辑或保存。</p>}
       {saved && draft && <>
-        <p className="settings-status">已保存配置：{saved.enabled ? '已启用' : '已禁用'} · {saved.configured ? '字段完整' : '尚未完整配置'}</p>
+        <p className="settings-status">已保存配置：{saved.enabled ? '已启用' : '已禁用'} · {saved.engine === 'opencode' ? 'OpenCode Zen' : 'Codex'} · {saved.configured ? '字段完整' : '尚未完整配置'}</p>
         <p className="muted">运行平台：{saved.platform_supported ? '支持' : '不支持'} · 可执行文件：{saved.executable_available ? '已找到' : '未找到'}。文件存在不代表可以正常执行。</p>
         <p className="muted">密钥环境变量：{saved.credential_available ? '服务进程中已设置' : '服务进程中未设置'}。此状态不代表凭据有效。</p>
         <fieldset className="settings-fields" disabled={busy !== null || loading}><legend className="sr-only">CLI 配置字段</legend>
           <label className="check"><input type="checkbox" checked={draft.enabled} onChange={event => update('enabled', event.target.checked)} />启用 CLI 配置</label>
           <label className="check"><input type="checkbox" checked={draft.resource_admission_enabled} onChange={event => update('resource_admission_enabled', event.target.checked)} />启用本机资源准入</label>
           <p>资源不足或读取失败时暂停新执行，已有执行不因此被终止。本地预留值用于控制启动数量，不是进程内存硬限制或费用预算。Docker 使用每容器资源配置参与准入。</p>
+          <label>CLI 工具<select value={draft.engine} onChange={event => update('engine', event.target.value as Fields['engine'])}><option value="codex">Codex</option><option value="opencode">OpenCode Zen</option></select></label>
           <label>执行后端<select value={draft.backend} onChange={event => update('backend', event.target.value as Fields['backend'])}><option value="local">本地 CLI（工作目录隔离）</option><option value="docker">Docker Worker（容器隔离）</option></select></label>
-          {draft.backend === 'local' ? <label>CLI 可执行文件路径<input required={draft.enabled} maxLength={2048} autoComplete="off" spellCheck={false} value={draft.executable} placeholder="例如 C:\Tools\codex.exe" onChange={event => update('executable', event.target.value)} /><small>填写可信程序的绝对 .exe 路径，不含命令参数或引号。本地后端不是容器沙箱。</small></label> : <>
+          {draft.engine === 'opencode' && <p>OpenCode Zen 当前仅支持本地执行，允许使用内置文件读写工具，禁用 Shell、网络工具和子代理。每个 Agent 使用独立工作目录与配置；目录隔离不是操作系统沙箱。切换工具不会自动更改路径、模型或密钥环境变量。</p>}
+          {draft.engine === 'opencode' && draft.backend === 'docker' && <p className="error">OpenCode Docker Worker 尚未接入。此组合仅可保存为禁用配置；启用时请先选择本地 CLI。</p>}
+          {draft.backend === 'local' ? <label>CLI 可执行文件路径<input required={draft.enabled} maxLength={2048} autoComplete="off" spellCheck={false} value={draft.executable} placeholder={draft.engine === 'opencode' ? '例如 C:\\Tools\\opencode.exe' : '例如 C:\\Tools\\codex.exe'} onChange={event => update('executable', event.target.value)} /><small>填写可信程序的绝对 .exe 路径，不含命令参数或引号。本地后端不是容器沙箱。</small></label> : <>
             <label>Docker 可执行文件路径<input required={draft.enabled} maxLength={2048} autoComplete="off" spellCheck={false} value={draft.docker_executable} placeholder="例如 C:\Tools\docker.exe" onChange={event => update('docker_executable', event.target.value)} /></label>
             <label>固定 Docker 镜像<input required={draft.enabled} maxLength={200} spellCheck={false} value={draft.docker_image} placeholder="sha256:… 或 repo@sha256:…" onChange={event => update('docker_image', event.target.value)} /><small>须预先构建包含 CLI 工具链的 Linux 镜像，并使用本地镜像 ID 或固定摘要。检查不会拉取或构建镜像。</small></label>
           </>}
-          <label>模型标识<input required={draft.enabled} maxLength={200} value={draft.model} placeholder="填写可用的 OpenAI 模型标识" onChange={event => update('model', event.target.value)} /><small>当前 Codex 适配器使用 OpenAI API，不复用聊天的 API 基础地址。</small></label>
-          <label>密钥环境变量名<input required={draft.enabled} pattern="[A-Za-z_][A-Za-z0-9_]*" maxLength={128} autoComplete="off" spellCheck={false} value={draft.api_key_env} placeholder="例如 OPENAI_API_KEY（不是密钥值）" onChange={event => update('api_key_env', event.target.value)} /><small>仅填写变量名。请在启动服务前设置该环境变量；修改环境后需重启服务。</small></label>
+          <label>模型标识<input required={draft.enabled} maxLength={200} value={draft.model} placeholder={draft.engine === 'opencode' ? '例如 opencode/big-pickle' : '填写可用的 OpenAI 模型标识'} onChange={event => update('model', event.target.value)} /><small>{draft.engine === 'opencode' ? '使用官方 Zen 模型标识，例如 opencode/big-pickle；通过 OpenCode 客户端执行，不复用聊天的 API 基础地址。' : '当前 Codex 适配器使用 OpenAI API，不复用聊天的 API 基础地址。'}</small></label>
+          <label>密钥环境变量名<input required={draft.enabled} pattern="[A-Za-z_][A-Za-z0-9_]*" maxLength={128} autoComplete="off" spellCheck={false} value={draft.api_key_env} placeholder={draft.engine === 'opencode' ? '例如 OPENCODE_API_KEY（不是密钥值）' : '例如 OPENAI_API_KEY（不是密钥值）'} onChange={event => update('api_key_env', event.target.value)} /><small>仅填写变量名。请在启动服务前设置该环境变量；修改环境后需重启服务。</small></label>
           {numericFields.filter(field => draft.backend === 'docker' ? !field.key.startsWith('local_worker_') : !field.key.startsWith('docker_')).map(field => <label key={field.key}>{field.label}<input type="number" required min={field.minimum} max={field.maximum} step={1} value={draft[field.key]} onChange={event => update(field.key, event.target.value)} /><small>范围 {field.minimum}–{field.maximum}，仅接受整数。</small></label>)}
         </fieldset>
         <button type="button" disabled={busy !== null || loading || dirty || !(saved.backend === 'docker' ? saved.docker_executable && saved.docker_image : saved.executable) || !saved.platform_supported} onClick={() => void checkVersion()}>{busy === 'probe' ? '正在检查…' : saved.backend === 'docker' ? '检查本地 Docker 与固定镜像' : '检查已保存 CLI 版本'}</button>

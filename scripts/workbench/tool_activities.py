@@ -9,6 +9,7 @@ from .store import _text
 MAX_EVENTS = 500
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 FIELDS = {
+    'opencode_tool': ('tool', 'input', 'output', 'error'),
     'command_execution': ('command', 'aggregated_output'),
     'file_change': ('changes',),
     'mcp_tool_call': ('server', 'tool', 'arguments', 'result', 'error'),
@@ -79,7 +80,7 @@ def parse_tools(process):
             item = event.get('item')
             if not isinstance(item, dict) or not isinstance(item.get('type'), str):
                 raise ValueError('Invalid item')
-            if item['type'] not in FIELDS:
+            if item['type'] not in FIELDS or item['type'] == 'opencode_tool':
                 if item['type'] not in NON_TOOLS:
                     result['unknown_items'] += 1
                 continue
@@ -100,6 +101,56 @@ def parse_tools(process):
     return result
 
 
+def parse_opencode_tools(process):
+    """Native OpenCode terminal tool observations; keep only hashes, never tool text."""
+    result = parse_tools({**process, 'stdout': b''})
+    result['source'] = 'opencode_jsonl'
+    raw = process.get('stdout')
+    if not isinstance(raw, bytes):
+        result['invalid_lines'] = 1
+        return result
+    if len(raw) > MAX_OUTPUT_BYTES:
+        raw = raw[:MAX_OUTPUT_BYTES]
+        result['output_limited'] = True
+    session = None
+    for sequence, line in enumerate(raw.splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line.decode('utf-8'), object_pairs_hook=_pairs, parse_constant=_constant)
+            if not isinstance(event, dict) or not isinstance(event.get('type'), str):
+                raise ValueError('Invalid event')
+            identity = event.get('sessionID')
+            if not isinstance(identity, str) or not identity or session is not None and identity != session:
+                raise ValueError('Mixed session')
+            session = identity
+            if event['type'] != 'tool_use':
+                if event['type'] not in ('step_start', 'step_finish', 'text', 'reasoning', 'error'):
+                    result['unknown_items'] += 1
+                continue
+            part = event.get('part')
+            if (not isinstance(part, dict) or part.get('type') != 'tool' or part.get('sessionID') != session
+                    or not isinstance(part.get('id'), str) or not part['id']
+                    or not isinstance(part.get('messageID'), str) or not part['messageID']
+                    or not isinstance(part.get('tool'), str) or not part['tool']):
+                raise ValueError('Invalid tool identity')
+            state = part.get('state')
+            if not isinstance(state, dict) or state.get('status') not in ('completed', 'error'):
+                raise ValueError('Invalid terminal tool state')
+            values = {'tool': part['tool'], **{key: state[key] for key in ('input', 'output', 'error') if key in state}}
+            row = {'sequence': sequence, 'phase': 'completed', 'type': 'opencode_tool',
+                   'item_sha256': _digest(part['id'])['sha256'],
+                   'status': 'completed' if state['status'] == 'completed' else 'failed', 'exit_code': None,
+                   'details': {key: _digest(value) for key, value in values.items()}}
+            if len(result['events']) == MAX_EVENTS:
+                result['dropped_events'] += 1
+            else:
+                result['events'].append(row)
+        except (ValueError, TypeError, UnicodeError, RecursionError, OverflowError):
+            result['invalid_lines'] += 1
+    return result
+
+
 def _integer(value, minimum=0, maximum=9007199254740991):
     return type(value) is int and minimum <= value <= maximum
 
@@ -110,7 +161,7 @@ def _hash(value):
 
 def _validate(payload):
     if (not isinstance(payload, dict) or set(payload) != {'version', 'source', 'observation', 'events', 'invalid_lines', 'unknown_items', 'dropped_events', 'output_limited', 'process_reason'}
-            or type(payload['version']) is not int or payload['version'] != 1 or payload['source'] != 'codex_jsonl'
+            or type(payload['version']) is not int or payload['version'] != 1 or payload['source'] not in ('codex_jsonl', 'opencode_jsonl')
             or payload['observation'] != 'after_process' or type(payload['output_limited']) is not bool
             or not isinstance(payload['process_reason'], str) or payload['process_reason'] not in REASONS
             or any(not _integer(payload[key]) for key in ('invalid_lines', 'unknown_items', 'dropped_events'))
@@ -123,6 +174,10 @@ def _validate(payload):
                 or not isinstance(row['type'], str) or row['type'] not in FIELDS or not _hash(row['item_sha256'])
                 or not isinstance(row['details'], dict) or set(row['details']) - set(FIELDS[row['type']])):
             raise ValueError('工具活动事件格式无效')
+        if (payload['source'] == 'opencode_jsonl') != (row['type'] == 'opencode_tool'):
+            raise ValueError('工具活动来源与类型不一致')
+        if row['type'] == 'opencode_tool' and (row['phase'] != 'completed' or row['status'] not in ('completed', 'failed')):
+            raise ValueError('OpenCode 工具活动必须为终态通知')
         if row['type'] == 'web_search':
             valid_status = row['status'] is None
         else:

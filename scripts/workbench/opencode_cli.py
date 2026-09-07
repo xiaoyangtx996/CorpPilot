@@ -8,7 +8,7 @@ import re
 
 from .cli import InputPreparationError, execution_environment, prepare_workspace
 from .store import _text
-from .tool_activities import MAX_OUTPUT_BYTES, _constant, _pairs
+from .tool_activities import MAX_OUTPUT_BYTES, _constant, _pairs, parse_opencode_tools
 
 
 def opencode_environment(paths, api_key, model='opencode/big-pickle', timeout_seconds=120):
@@ -166,5 +166,6 @@ def run_opencode(executable, data_dir, execution_id, prompt, model, api_key, tim
     from .process_tree import run_process
     process = run_process(argv, paths['work'], env, prompt.encode('utf-8'), timeout_seconds, cancel)
     result = parse_result(process, api_key)
+    result['tool_activities'] = parse_opencode_tools(process)
     result['workspace'] = str(paths['work'])
     return result

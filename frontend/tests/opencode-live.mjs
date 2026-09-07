@@ -1,0 +1,175 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createHash, randomUUID } from 'node:crypto';
+import { chromium } from 'playwright';
+
+// Explicit live acceptance: this script starts one real CLI execution after UI confirmation.
+// It never retries the execution or writes through an API helper.
+const root = process.env.CORPPILOT_BROWSER_OUTPUT || os.tmpdir();
+fs.mkdirSync(root, { recursive: true });
+const out = fs.mkdtempSync(path.join(root, 'corppilot-opencode-live-'));
+const token = process.env.CORPPILOT_LIVE_TOKEN || '';
+const sanitize = value => String(value).split(token || '\0').join('[redacted]').replace(/sk-[A-Za-z0-9_-]+/g, '[redacted]');
+const report = { passed: false, startedAt: new Date().toISOString(), output: out, steps: [], mutations: [], pageErrors: [], httpErrors: [] };
+let browser, page, authenticated = false;
+async function until(check, name, timeout = 30000) {
+  const end = Date.now() + timeout;
+  while (Date.now() < end) { const result = await check(); if (result) return result; await new Promise(resolve => setTimeout(resolve, 250)); }
+  throw Error(`Timed out: ${name}. No execution retry was sent.`);
+}
+try {
+  const url = new URL(process.env.CORPPILOT_LIVE_URL || '');
+  assert(['http:', 'https:'].includes(url.protocol) && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname), 'Live URL must address the local Workbench');
+  assert(!url.username && !url.password && !url.search && !url.hash && url.pathname === '/', 'Live URL must be an origin without credentials, query or fragment');
+  assert(/^[A-Za-z0-9_-]{43}$/.test(token), 'A valid owner access token is required');
+  const base = url.origin;
+  const executable = process.env.CORPPILOT_LIVE_OPENCODE_EXE || '';
+  const keyEnv = process.env.CORPPILOT_LIVE_KEY_ENV || 'OPENCODE_API_KEY';
+  const model = process.env.CORPPILOT_LIVE_MODEL || 'opencode/big-pickle';
+  assert(/^(?:[A-Za-z]:[\\/]|\\\\).+\.exe$/i.test(executable), 'An absolute OpenCode executable path is required');
+  assert(/^[A-Za-z_][A-Za-z0-9_]*$/.test(keyEnv), 'Key setting must be an environment variable name');
+  assert(/^opencode\/[A-Za-z0-9._/-]+$/.test(model), 'An official Zen model identifier is required');
+  browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  page = await context.newPage(); page.setDefaultTimeout(30000);
+  page.on('pageerror', error => report.pageErrors.push(sanitize(error.message)));
+  page.on('request', request => {
+    const parsed = new URL(request.url());
+    if (parsed.origin === base && parsed.pathname.startsWith('/api/workbench/') && request.method() !== 'GET') report.mutations.push({ method: request.method(), path: parsed.pathname });
+  });
+  page.on('response', response => {
+    const parsed = new URL(response.url());
+    if (parsed.origin === base && response.status() >= 400) report.httpErrors.push({ status: response.status(), path: parsed.pathname });
+  });
+  async function read(endpoint, bytes = false) {
+    assert(endpoint.startsWith('/') && !endpoint.includes('?') && !endpoint.includes('#'), 'GET path must be relative to Workbench');
+    const response = await context.request.get(`${base}/api/workbench${endpoint}`, { headers: { Authorization: `Bearer ${token}` } });
+    assert.equal(response.status(), 200, `GET ${endpoint} failed`);
+    return bytes ? response.body() : response.json();
+  }
+  const screenshot = name => page.screenshot({ path: path.join(out, name), fullPage: false });
+  await page.goto(base);
+  await page.getByLabel('访问口令', { exact: true }).fill(token);
+  await page.getByRole('button', { name: '验证并进入', exact: true }).click();
+  await page.getByRole('button', { name: 'CLI 设置', exact: true }).waitFor(); authenticated = true;
+  assert.equal((await read('/cli-runtime')).active_requests, 0, 'Live server must have no active CLI requests before acceptance');
+  await page.getByRole('button', { name: 'CLI 设置', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'CLI 设置', exact: true });
+  await settings.getByLabel('启用 CLI 配置', { exact: true }).uncheck();
+  await settings.getByRole('combobox', { name: /^CLI 工具/ }).selectOption('opencode');
+  await settings.getByRole('combobox', { name: /^执行后端/ }).selectOption('local');
+  await settings.getByLabel('CLI 可执行文件路径', { exact: false }).fill(executable);
+  await settings.getByLabel('模型标识', { exact: false }).fill(model);
+  await settings.getByLabel('密钥环境变量名', { exact: false }).fill(keyEnv);
+  await settings.getByRole('button', { name: '保存配置', exact: true }).click();
+  await settings.getByText('CLI 配置已保存，后续调度使用新配置。', { exact: true }).waitFor();
+  let config = await read('/cli-settings');
+  assert.equal(config.enabled, false); assert.equal(config.engine, 'opencode'); assert.equal(config.backend, 'local');
+  assert.equal(config.executable, executable); assert.equal(config.model, model); assert.equal(config.api_key_env, keyEnv);
+  await settings.getByRole('button', { name: '检查已保存 CLI 版本', exact: true }).click();
+  await settings.getByRole('status').filter({ hasText: '检查成功' }).waitFor();
+  await screenshot('cli-disabled-version.png'); report.steps.push('UI saved disabled OpenCode configuration and verified executable version');
+  await settings.getByLabel('启用 CLI 配置', { exact: true }).check();
+  await settings.getByRole('button', { name: '保存配置', exact: true }).click();
+  await settings.getByText('CLI 配置已保存，后续调度使用新配置。', { exact: true }).waitFor();
+  config = await read('/cli-settings');
+  assert(config.enabled && config.configured && config.credential_available && config.executable_available && config.platform_supported, 'OpenCode configuration must be ready');
+  await settings.getByRole('button', { name: '关闭', exact: true }).first().click();
+
+  const nonce = `CORPPILOT_ZEN_${randomUUID()}`, name = `Zen 实测 ${nonce.slice(-8)}`, title = `Zen 原生文件写入 ${nonce.slice(-8)}`;
+  report.nonce = nonce;
+  const scope = `Use only the built-in write tool to create artifacts/zen-proof.txt in this execution's workspace. The file must contain exactly ${nonce} followed by one newline. Do not use shell, network tools, delegation or other tools. Do not create any other file. After writing, finish with a short confirmation.`;
+  const acceptance = `Exactly one saved artifact, zen-proof.txt, containing ${nonce} followed by one newline. Downloaded bytes and SHA-256 must match the artifact receipt; native OpenCode tool activity must be recorded.`;
+  await page.getByRole('button', { name: '新建', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: '创建 Agent', exact: true });
+  await editor.getByLabel('名字', { exact: true }).fill(name);
+  await editor.getByLabel('模型路由', { exact: false }).fill('default');
+  for (const label of ['读取', '写入', '执行工具']) await editor.getByRole('checkbox', { name: label, exact: true }).check();
+  await editor.getByRole('checkbox', { name: '委派任务', exact: true }).uncheck();
+  await editor.getByRole('button', { name: '保存', exact: true }).click();
+  await editor.waitFor({ state: 'hidden' });
+  const agents = await read('/agents'), agent = agents.find(row => row.name === name);
+  assert(agent && agent.enabled); assert.deepEqual([...agent.tools].sort(), ['execute', 'read', 'write']);
+  report.agentId = agent.id;
+  await page.locator('button.person').filter({ hasText: name }).click();
+  await page.getByPlaceholder('向会话发送消息…').fill(scope);
+  await page.getByRole('button', { name: '发送', exact: true }).click();
+  const message = page.locator('article.message.owner').filter({ hasText: nonce });
+  await message.getByRole('button', { name: '创建任务', exact: true }).click();
+  const taskEditor = page.getByRole('dialog', { name: '从消息创建任务', exact: true });
+  await taskEditor.getByLabel('任务标题', { exact: true }).fill(title);
+  await taskEditor.getByRole('textbox', { name: /^范围/ }).fill(scope);
+  await taskEditor.getByRole('textbox', { name: /^验收标准/ }).fill(acceptance);
+  await taskEditor.getByRole('combobox', { name: /^负责人/ }).selectOption(agent.id);
+  await taskEditor.getByRole('button', { name: '保存任务', exact: true }).click();
+  await taskEditor.waitFor({ state: 'hidden' });
+  const conversation = (await read('/conversations')).find(row => row.type === 'dm' && row.member_ids.includes(agent.id));
+  assert(conversation);
+  const task = (await read(`/conversations/${conversation.id}/tasks`)).find(row => row.title === title);
+  assert(task && task.agent_id === agent.id && task.requirement_version === 1); report.taskId = task.id;
+  assert.deepEqual(await read(`/tasks/${task.id}/executions`), []);
+  const card = page.locator('article.task-card').filter({ has: page.getByRole('heading', { name: title, exact: true }) });
+  await card.getByRole('button', { name: '执行记录与控制', exact: true }).click();
+  const execution = page.getByRole('dialog', { name: `任务执行 · ${title}`, exact: true });
+  await execution.getByRole('checkbox', { name: '我确认按需求 v1 调用 CLI 和模型执行', exact: true }).check();
+  await screenshot('execution-confirmation.png');
+  await execution.getByRole('button', { name: '确认执行任务', exact: true }).click();
+  report.steps.push('UI created agent, private message and task, then confirmed exactly one CLI execution');
+  let executionId;
+  const run = await until(async () => {
+    const rows = await read(`/tasks/${task.id}/executions`);
+    assert(rows.length <= 1, 'More than one execution exists');
+    if (!rows.length) return null;
+    executionId ??= rows[0].id;
+    assert.equal(rows[0].id, executionId); report.executionId = executionId;
+    return ['queued', 'running', 'stopping'].includes(rows[0].state) ? null : rows[0];
+  }, 'original live execution terminal state', 240000);
+  report.execution = { state: run.state, exitCode: run.exit_code, attempt: run.attempt, requirementVersion: run.requirement_version, usage: run.usage };
+  assert.equal(run.state, 'awaiting_review', 'Live execution did not reach review; no retry sent'); assert.equal(run.exit_code, 0); assert.equal(run.attempt, 1);
+  const artifacts = await read(`/executions/${executionId}/artifacts`);
+  assert.equal(artifacts.length, 1, 'Only the requested proof artifact may be approved');
+  assert(['zen-proof.txt', 'artifacts/zen-proof.txt'].includes(artifacts[0].path), 'Unexpected artifact path');
+  const bytes = await read(`/artifacts/${artifacts[0].id}/download`, true);
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), artifacts[0].sha256);
+  assert.equal(bytes.length, artifacts[0].size); assert.equal(bytes.toString('utf8'), `${nonce}\n`);
+  const tools = await read(`/executions/${executionId}/tool-activities`);
+  assert.equal(tools.execution_id, executionId); assert.equal(tools.agent_id, agent.id); assert.equal(tools.payload.source, 'opencode_jsonl');
+  assert(tools.payload.events.some(row => row.type === 'opencode_tool' && row.status === 'completed'), 'No completed native OpenCode tool event recorded');
+  assert(tools.payload.events.every(row => row.type === 'opencode_tool' && row.phase === 'completed' && row.status === 'completed' && row.exit_code === null));
+  report.artifacts = artifacts; report.toolEventCount = tools.payload.events.length;
+  fs.writeFileSync(path.join(out, 'zen-proof.txt'), bytes);
+  await execution.getByRole('button', { name: '刷新执行状态', exact: true }).click();
+  await execution.getByText('成果与 Owner 评审', { exact: true }).click();
+  await execution.getByLabel('评审理由', { exact: true }).fill(`Downloaded the single requested proof artifact; exact nonce, byte length and SHA-256 verified. Native OpenCode tool receipt confirmed. ${nonce}`);
+  await execution.getByLabel('我已查验全部成果，确认符合本次需求与验收标准', { exact: true }).check();
+  await execution.getByRole('button', { name: '确认提交评审', exact: true }).click();
+  await execution.getByRole('region', { name: 'Owner 评审决定', exact: true }).waitFor();
+  const review = await read(`/executions/${executionId}/review`);
+  assert.equal(review.decision, 'approved'); assert.equal(review.execution_id, executionId); assert.deepEqual(review.artifact_ids, [artifacts[0].id]);
+  report.review = { decision: review.decision, executionId: review.execution_id, artifactIds: review.artifact_ids };
+  await screenshot('owner-approved.png');
+  await execution.getByRole('button', { name: '关闭', exact: true }).click();
+  const activity = page.getByRole('region', { name: `${name}的活动`, exact: true });
+  await activity.getByRole('button', { name: '刷新 Agent 活动', exact: true }).click();
+  await activity.locator('article').filter({ hasText: executionId }).getByRole('button', { name: '查看工具活动', exact: true }).click();
+  const toolDialog = page.getByRole('dialog', { name: '查看工具活动', exact: true });
+  await toolDialog.getByText('事件来源：OpenCode 原生 JSONL。', { exact: true }).waitFor();
+  await toolDialog.getByText(`查看工具事件明细（${tools.payload.events.length}条）`, { exact: true }).click();
+  await toolDialog.getByRole('heading', { name: /OpenCode 工具/ }).first().waitFor();
+  await screenshot('native-tool-activities.png');
+  assert.equal(report.mutations.filter(row => row.method === 'POST' && row.path === `/api/workbench/tasks/${task.id}/executions`).length, 1);
+  assert(!report.mutations.some(row => /reply-runs|planning-runs|goal-executions|retrospective|peer-review/.test(row.path)), 'Unexpected extra model action');
+  assert.equal(report.pageErrors.length, 0); assert.equal(report.httpErrors.length, 0);
+  report.steps.push('Downloaded proof and verified exact nonce/SHA-256; UI approved original execution; UI displayed native OpenCode tool events');
+  report.passed = true;
+} catch (error) {
+  report.error = sanitize(error.stack || error); process.exitCode = 1;
+  if (page && authenticated) await page.screenshot({ path: path.join(out, 'failure.png') }).catch(() => {});
+} finally {
+  await browser?.close(); report.finishedAt = new Date().toISOString();
+  const reportPath = path.join(out, 'browser-report.json');
+  fs.writeFileSync(reportPath, sanitize(JSON.stringify(report, null, 2)));
+  console.log(JSON.stringify({ passed: report.passed, report: reportPath, executionId: report.executionId, error: report.error }));
+}

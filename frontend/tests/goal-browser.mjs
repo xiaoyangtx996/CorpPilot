@@ -169,7 +169,7 @@ try {
   assert.equal(observed.tasks.total, 2);
   assert.equal(observed.executions.total, 2);
   assert(observed.executions.items.every(item => item.usage?.input_tokens === 7 && item.usage.output_tokens === null && item.usage.cached_input_tokens === 0));
-  const usageText = 'CLI 单轮回执 token：输入 7 / 输出 未知 / 缓存输入 0。缓存输入包含在输入中；这是已观测回执，不是完整账单。';
+  const usageText = 'CLI 回执 token：输入 7 / 输出 未知 / 缓存输入 0。缓存输入包含在输入中；这是已观测回执，不是完整账单。';
   assert.equal(await activityPanel.getByText(usageText, { exact: true }).count(), 2);
   assert(observed.executions.items.every(item => item.agent_id === manifest.agent_ids[1]));
   await activityPanel.getByRole('button', { name: '查看该任务全部执行', exact: true }).first().click();

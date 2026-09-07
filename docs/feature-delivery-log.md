@@ -1077,3 +1077,13 @@ skill_inputs_backend编写人工验收手册和Docker权限说明，根独立核
 复用原 prepare_workspace 和 Windows 进程树控制，独立 HOME/XDG、私有 stdin，使用官方纯模式并禁项目配置/外部插件。模型限定官方 Zen；只开放内置文件工具，不开启 shell、网络工具或内部委派。系统受管理配置存在时拒绝启动，不重定向或覆盖组织策略。成功要求同一会话的有效多步事件、最终 stop 和进程退出0；缓存与 reasoning 按原生口径归一，用量缺失不视为0。取消、错误、重复事件、混会话与无效终态均有检查。
 
 本功能按标题 `feat(cli): add isolated OpenCode Zen runner` 单独提交并立即推送实施分支；实际提交哈希及远端回读见后续 F89 记录。已有 Zen 连通性文档提交 `3d657efb07ea6f11ce20e8b9738cf37f72675f7e` 与 UI 功能提交 `c414461d41a3bc3e65f1bdd4f052c29e3103e3aa` 已即时推送。Owner 随后明确授权直接合并 main；2026-09-07 main 快进到 c414461，远端精确回读成功，旧计划中的禁止 main 限制已被本次明确授权覆盖。
+
+## F89 OpenCode 工作台设置、原生工具回执与真实成果交付
+
+F88 已提交 `2553de97d8bfed8ff7d13943e868f73b210a6a83` 并立即推送实施分支，ls-remote 精确回读成功。F89 根负责设置/控制器/原生工具摘要与贯通测试，opencode_frontend 负责界面及真实 UI 脚本，opencode_qa 独立代码/Ponytail/QA/PM 审查 Pass。保留旧 Codex 默认值，OpenCode 单独选择；未开放未经验证的 Docker 组合。native JSONL 不伪装 Codex，多步用量归一，工具内容只保存字符数与哈希。
+
+根针对性 Python 138 passed（包括原生 runner 经 controller 持久化的贯通测试）；另 adapter/Codex 17 passed；构建/typecheck Pass。目标、工具活动、入门三套浏览器回归分别为 `corppilot-browser-i37Epi`、`corppilot-tools-Qdz8Xb`、`corppilot-onboarding-Cal1qx`。未把受控测试当作真实模型。
+
+真实生产 WorkbenchServer、独立数据、官方 OpenCode 1.18.29 / opencode/big-pickle，通过浏览器设置、创建身份/任务、提交一次执行、下载并核对 nonce/字节/hash 后 UI 批准。execution=`e4fdcd42-66f3-48c3-9b6c-2f1a28c0f3f2`，exit0，51字节成果，原生工具事件1，page/HTTP错误0。真实模型执行前有两次控件定位失败，均未创建执行或调用模型，修正定位后才发出该唯一请求。主代理另验证重启后身份/执行/批准/原生回执保留，无额外执行，扫描本轮57个运行文件未发现提供的key。
+
+证据根：`H:\item\CorpPilot-test-evidence-20260908\opencode-live-server-15pbipa3`；`corppilot-opencode-live-Qemdsz/browser-report.json`、批准/工具截图及 `independent-readback.json`。本功能按 `feat(workbench): connect OpenCode Zen tasks and native receipts` 单独提交、立即推送，并按最新授权快进 main；精确哈希与远端回读在会话工具输出和本轮仓库外 release-readback.json 保留。完整目标仍需双 Docker Worker、隔离故障/重建场景和真实秘书规划闭环。
