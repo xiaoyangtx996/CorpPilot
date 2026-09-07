@@ -4,6 +4,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import os
+from pathlib import Path
 import re
 from urllib.parse import urlsplit
 
@@ -11,6 +12,7 @@ from urllib.parse import urlsplit
 LIMITS = {"max_output_tokens": (1, 131072), "timeout_seconds": (1, 300),
           "rpm": (1, 600), "max_concurrency": (1, 16)}
 DEFAULTS = {"enabled": False, "model": "", "base_url": "", "api_key_env": "",
+            "transport": "http", "executable": "",
             **{field: None for field in LIMITS}}
 
 
@@ -61,6 +63,14 @@ def _validate(payload):
                 raise ValueError(f"{field} 必须为 {low}–{high} 的整数")
         elif field == "base_url":
             values[field] = _base_url(value)
+        elif field == 'transport':
+            if value not in ('http', 'opencode'):
+                raise ValueError('transport 必须为 http 或 opencode')
+        elif field == 'executable':
+            if (not isinstance(value, str) or len(value) > 32767
+                    or any(ord(c) < 32 or ord(c) == 127 for c in value)
+                    or value and (not Path(value).is_absolute() or Path(value).suffix.lower() != '.exe')):
+                raise ValueError('请选择 OpenCode .exe 的绝对路径')
         elif field == "api_key_env":
             if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,127}", value):
                 raise ValueError("api_key_env 必须为有效的环境变量名")
@@ -97,8 +107,24 @@ class Settings:
     @staticmethod
     def _status(values):
         config = {**DEFAULTS, **values}
-        return {**config, "configured": all(config[field] for field in DEFAULTS if field != "enabled"),
+        required = ('model', 'api_key_env', *LIMITS, 'executable' if config['transport'] == 'opencode' else 'base_url')
+        executable = Path(config['executable'])
+        return {**config, "configured": all(config[field] for field in required),
+                "executable_available": executable.is_absolute() and executable.suffix.lower() == '.exe' and executable.is_file(),
+                "platform_supported": os.name == 'nt',
                 "credential_available": bool(os.environ.get(config["api_key_env"], "").strip())}
+
+    @staticmethod
+    def _require_ready(status):
+        if not status['configured']:
+            raise ValueError('启用前必须填写完整模型配置')
+        if status['transport'] == 'opencode':
+            if not status['platform_supported']:
+                raise ValueError('OpenCode 文本通道当前仅支持 Windows')
+            if not status['executable_available']:
+                raise ValueError('请选择存在的 OpenCode .exe 绝对路径')
+            if not re.fullmatch(r'opencode/[A-Za-z0-9][A-Za-z0-9._-]*', status['model']):
+                raise ValueError('OpenCode 模型须为官方 Zen 的 opencode/模型标识')
 
     def get(self):
         with self.store.connect() as db:
@@ -110,8 +136,8 @@ class Settings:
             db.execute("BEGIN IMMEDIATE")
             values = {**self._read(db), **patch}
             status = self._status(values)
-            if status["enabled"] and not status["configured"]:
-                raise ValueError("启用前必须填写完整模型配置")
+            if status["enabled"]:
+                self._require_ready(status)
             db.execute("""INSERT INTO model_settings(id,version,config) VALUES(1,1,?)
                 ON CONFLICT(id) DO UPDATE SET config=excluded.config""", (json.dumps(values),))
             return status
@@ -121,6 +147,7 @@ class Settings:
         config = self.get()
         if not config["enabled"] or not config["configured"]:
             raise ValueError("模型尚未完整配置并启用")
+        self._require_ready(config)
         key = os.environ.get(config["api_key_env"], "")
         if not key.strip():
             raise ValueError("模型密钥环境变量未设置")

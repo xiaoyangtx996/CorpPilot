@@ -1092,4 +1092,10 @@ F88 已提交 `2553de97d8bfed8ff7d13943e868f73b210a6a83` 并立即推送实施�
 
 2026-09-08。zen_text_backend 实现，opencode_backend 独立 QA/Ponytail 审查 Pass，根复核运行 provider、OpenCode CLI、旧 HTTP provider、controller 共45项测试通过。复用隔离环境、Windows 进程树与原生事件解析，无新增依赖。只接受无工具、单步骤完整文本；保留16000字符正文，超限失败而非截断成功。官方输出 token 上限经 OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX 传入 SDK；客户端内部可能重试，工作台只约束客户端启动次数与总期限。
 
-审查 Return 后修复动态上下文进入配置模板的风险：身份指令及消息全部经 stdin JSON，配置只含固定指令；字面量 env/file 模板有回归。未知进程状态保留目录，清理前检查绝对路径及临时目录归属。此增量仅交付 transport 实现；设置接入与真实秘书端到端验收属于 F91，不把单元测试称为真实调用。单独提交后立即推送并远端回读。
+审查 Return 后修复动态上下文进入配置模板的风险：身份指令及消息全部经 stdin JSON，配置只含固定指令；字面量 env/file 模板有回归。未知进程状态保留目录，清理前检查绝对路径及临时目录归属。此增量仅交付 transport 实现；设置接入与真实秘书端到端验收属于 F91，不把单元测试称为真实调用。已独立提交 `dbe6dc75691091fa20bb36cd35efac5a681bdfb7`，立即 push 实施分支成功，ls-remote 与本地HEAD一致。
+
+## F91 OpenCode 文本设置与真实秘书闭环
+
+根负责 settings/provider 分发、兼容性/API测试与真实服务验收；opencode_frontend 负责模型设置UI和真实浏览器脚本，opencode_backend 独立后端/前端/Ponytail/QA/PM审查。原 HTTP 默认兼容，OpenCode 可执行路径、官方模型及运行时状态校验，密钥只从服务环境取。补清楚客户端 RPM 与内部重试边界。根105项设置/规划/目标回归、typecheck/build及目标/入门浏览器通过；独立66项有重叠不累加。
+
+实际新数据生产服务一次goal规划和一次本机OpenCode任务均成功。首份浏览器报告因误读独立规划列表中断，修脚本后沿原ID、无key服务续验并UI批准；再只读补验原生write hash、零丢失事件。原失败报告保留，不重发模型或CLI。完整IDs/hash/三份报告见验收报告F91；独立重启检查74文件无key命中，原执行、规划、审批和身份保留。根独占暂存，按本功能独立commit后立即push/readback，再按Owner最新授权快进并推送main。精确结果记入仓库外 `f91-release-readback.json`，远端确认前不称已交付。双Docker环境/真实隔离及最终整体门仍未完成。

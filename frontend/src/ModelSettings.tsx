@@ -7,9 +7,9 @@ const numericFields = [
   { key: 'rpm', label: '每分钟请求上限（RPM）', maximum: 600, suggestion: '建议 30' },
   { key: 'max_concurrency', label: '最大并发请求数', maximum: 16, suggestion: '建议 1' },
 ] as const;
-type Fields = { enabled: boolean; model: string; base_url: string; api_key_env: string; max_output_tokens: string; timeout_seconds: string; rpm: string; max_concurrency: string };
+type Fields = { enabled: boolean; transport: 'http' | 'opencode'; executable: string; model: string; base_url: string; api_key_env: string; max_output_tokens: string; timeout_seconds: string; rpm: string; max_concurrency: string };
 function fields(value: ModelSettingsValue): Fields {
-  return { enabled: value.enabled, model: value.model, base_url: value.base_url, api_key_env: value.api_key_env,
+  return { enabled: value.enabled, transport: value.transport ?? 'http', executable: value.executable ?? '', model: value.model, base_url: value.base_url, api_key_env: value.api_key_env,
     max_output_tokens: value.max_output_tokens?.toString() ?? '', timeout_seconds: value.timeout_seconds?.toString() ?? '',
     rpm: value.rpm?.toString() ?? '', max_concurrency: value.max_concurrency?.toString() ?? '' };
 }
@@ -51,6 +51,8 @@ export function ModelSettings({ onClose }: { onClose: () => void }) {
     saving.current = true; setBusy(true); setError(''); setSuccess(false);
     try {
       const previous = fields(saved);
+      const executable = draft.executable.trim();
+      if ((draft.executable !== previous.executable || draft.transport === 'opencode' && draft.enabled) && executable && (!/^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+\\).+\.exe$/i.test(executable) || /[\r\n"<>|]/.test(executable))) throw new Error('OpenCode 路径须为不带引号或参数的绝对 .exe 文件路径。');
       const patch: Record<string, string | number | boolean> = {};
       for (const key of Object.keys(draft) as (keyof Fields)[]) {
         if (draft[key] === previous[key]) continue;
@@ -69,13 +71,19 @@ export function ModelSettings({ onClose }: { onClose: () => void }) {
       {loading && <p role="status">正在读取已保存配置…</p>}
       {!loading && !saved && <p className="muted">尚未成功读取配置，暂不可编辑或保存。</p>}
       {saved && draft && <>
-        <p className="settings-status">已保存配置：{saved.enabled ? '已启用' : '已禁用'} · {saved.configured ? '字段完整' : '尚未完整配置'}</p>
+        <p className="settings-status">已保存配置：{saved.enabled ? '已启用' : '已禁用'} · {saved.transport === 'opencode' ? 'OpenCode Zen 纯文本' : 'HTTP API'} · {saved.configured ? '字段完整' : '尚未完整配置'}</p>
         <p className="muted">密钥环境变量：{saved.api_key_env || '未指定'} · {saved.credential_available ? '服务进程中已设置' : '服务进程中未设置'}。此状态不代表凭据有效或 API 可连接。</p>
+        {saved.transport === 'opencode' && <p className="muted">运行平台：{saved.platform_supported === undefined ? '未知' : saved.platform_supported ? '支持' : '不支持'} · 可执行文件：{saved.executable_available === undefined ? '未知' : saved.executable_available ? '已找到' : '未找到'}。文件存在不代表已验证模型调用。</p>}
         <fieldset className="settings-fields" disabled={busy || loading}><legend className="sr-only">模型配置字段</legend>
           <label className="check"><input type="checkbox" checked={draft.enabled} onChange={event => update('enabled', event.target.checked)} />启用模型配置</label>
-          <label>模型标识<input required={draft.enabled} maxLength={200} value={draft.model} placeholder="填写服务商提供的模型标识" onChange={event => update('model', event.target.value)} /></label>
-          <label>API 基础地址<input type="url" required={draft.enabled} maxLength={2048} value={draft.base_url} placeholder="https://api.example.com/v1" onChange={event => update('base_url', event.target.value)} /><small>公网地址使用 HTTPS；本机 HTTP 仅支持 localhost 或 127.0.0.1。地址中不可包含密钥、凭据、查询参数或片段。</small></label>
-          <label>密钥环境变量名<input required={draft.enabled} pattern="[A-Za-z_][A-Za-z0-9_]*" maxLength={128} autoComplete="off" spellCheck={false} value={draft.api_key_env} placeholder="例如 CORPPILOT_API_KEY（不是密钥值）" onChange={event => update('api_key_env', event.target.value)} /><small>仅填写变量名。密钥从启动工作台服务的进程环境读取；请在启动服务前设置该变量，修改系统环境后需重启服务。</small></label>
+          <label>模型通道<select value={draft.transport} onChange={event => update('transport', event.target.value as Fields['transport'])}><option value="http">HTTP API</option><option value="opencode">OpenCode Zen（纯文本）</option></select></label>
+          <label>模型标识<input required={draft.enabled} maxLength={200} value={draft.model} placeholder={draft.transport === 'opencode' ? '例如 opencode/big-pickle' : '填写服务商提供的模型标识'} onChange={event => update('model', event.target.value)} /></label>
+          {draft.transport === 'http' ? <label>API 基础地址<input type="url" required={draft.enabled} maxLength={2048} value={draft.base_url} placeholder="https://api.example.com/v1" onChange={event => update('base_url', event.target.value)} /><small>公网地址使用 HTTPS；本机 HTTP 仅支持 localhost 或 127.0.0.1。地址中不可包含密钥、凭据、查询参数或片段。</small></label> : <>
+            <label>OpenCode 可执行文件路径<input required={draft.enabled} maxLength={2048} autoComplete="off" spellCheck={false} value={draft.executable} placeholder="例如 C:\Tools\opencode.exe" onChange={event => update('executable', event.target.value)} /><small>填写可信程序的绝对 .exe 路径，不含参数或引号。</small></label>
+            <p>官方 Zen 纯文本通道用于回复和秘书规划，所有工具均关闭。文件任务仍使用 CLI 设置。切换通道不会自动改写模型、密钥环境变量或其他已填配置。</p>
+            <small>RPM 与并发限制按工作台客户端启动计；客户端可能在一次启动内重试，实际模型请求数和费用需另行核对。</small>
+          </>}
+          <label>密钥环境变量名<input required={draft.enabled} pattern="[A-Za-z_][A-Za-z0-9_]*" maxLength={128} autoComplete="off" spellCheck={false} value={draft.api_key_env} placeholder={draft.transport === 'opencode' ? '例如 OPENCODE_API_KEY（不是密钥值）' : '例如 CORPPILOT_API_KEY（不是密钥值）'} onChange={event => update('api_key_env', event.target.value)} /><small>仅填写变量名。密钥从启动工作台服务的进程环境读取；请在启动服务前设置该变量，修改系统环境后需重启服务。此处与 CLI 设置中的变量名独立保存。</small></label>
           {numericFields.map(field => <label key={field.key}>{field.label}<input type="number" required={draft.enabled} min={1} max={field.maximum} step={1} placeholder={field.suggestion} value={draft[field.key]} onChange={event => update(field.key, event.target.value)} /><small>范围 1–{field.maximum}，仅接受整数；建议值不会自动保存。</small></label>)}
         </fieldset>
       </>}

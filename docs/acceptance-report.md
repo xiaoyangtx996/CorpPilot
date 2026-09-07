@@ -737,4 +737,16 @@ F85源码补跑其余11浏览器脚本均通过，f86-browser-verified.json逐�
 
 相关138项Python测试、独立adapter/Codex17项检查、typecheck/build及目标/工具活动/入门三套浏览器回归通过；大于500kB的既有构建提示保留。独立代码/Ponytail/QA/PM门为Pass。未重跑全部历史Python测试，不把此增量检查宣称最终全量验收。
 
-OpenCode本机模式是目录与配置隔离，不是OS安全边界；目前只开放内置文件工具。Docker daemon/WSL2仍不可用，未修系统或重启机器；双Worker、故障隔离与记忆重建仍未实测。聊天/秘书规划仍走单独模型API，Zen直接API的额度限制尚未解决。Tauri迁移文档属于本轮交付，安装包不是本轮要求。
+OpenCode本机模式是目录与配置隔离，不是OS安全边界；目前只开放内置文件工具。Docker daemon/WSL2仍不可用，未修系统或重启机器；双Worker、故障隔离与记忆重建仍未实测。F89 时聊天/秘书规划只支持单独模型API；后续进展见 F91。Tauri迁移文档属于本轮交付，安装包不是本轮要求。
+
+## F91 官方 Zen 秘书目标闭环
+
+2026-09-08，限定本机官方客户端闭环 Pass。独立新数据上的真实 WorkbenchServer，无模型或CLI替身：UI 配置纯文本 OpenCode 通道和文件执行通道，新建协调人(read/delegate)与执行者(read/write/execute)，私聊提交共享摘要，授权最多1任务。实际 goal `33451438-5163-440e-b1e2-41e0df5ed799`，planning `99b9e6f2-529d-4018-9635-bb3167dbd4de` completed，execution `8bc0d518-1ded-497d-b684-6d0fe02eb50a` exit0 / attempt1 / v1。两者均用官方1.18.29、opencode/big-pickle。
+
+原运行报告 `corppilot-opencode-goal-live-Ku1PNP` 保留 passed=false：真实规划与执行已完成，脚本误把独立提案列表当作目标内规划列表，在下载和批准前中断。修正该断言后，原数据服务不再注入key，通过 `CORPPILOT_LIVE_RESUME_REPORT` 沿同goal/plan/execution ID继续，`corppilot-opencode-goal-live-ySKdOq` 通过且仅有原 execution/review 一条 UI POST。补强只允许write工具及零异常/丢弃事件后，`corppilot-opencode-goal-live-1RhX1Z` 再次只读通过、零写入。没有重提规划或执行，未覆写失败报告。
+
+成果 `goal-proof.txt` 52字节，精确nonce+LF，SHA-256 `5e991881db65d297d7d7c12207703b5eb82e2a749f0fe671b9abd890ef44a830`，已 UI approved。原生write工具事件1；规划回执输入1455/输出1024，文件CLI输入10838/输出293/缓存7040 tokens，客户端内部重试与账单另行核验。根亲自查看批准截图；重启原服务后原目标、身份、审批与工具回执保留，SQLite完整性ok/外键0，规划/目标/执行始终各1条，74个本轮运行文件无提供key命中。
+
+证据根 `H:\item\CorpPilot-test-evidence-20260908\opencode-goal-server-hgbzd22l`，含上述三份报告及 `independent-readback.json`。根运行 F90 45项、F91 设置/规划/目标105项 Python 回归通过（与独立QA检查有重叠，不相加冒称全量）；typecheck/build、原目标浏览器 z7Swno、入门 SC9MTu 通过。既有557kB构建体积提示保留。设置旧HTTP默认兼容、凭据不保存，OpenCode运行时重新校验exe；前后端专业分工与独立QA/Ponytail审查通过。
+
+本次证明秘书目标到文件成果和审批的真实链路，不代表双Docker、故障隔离/重建与最终全量验收已完成；完整目标仍保持未完成。

@@ -26,6 +26,8 @@ opencode --pure --log-level ERROR run --model opencode/big-pickle --format json 
 
 ## 产品验收边界
 
-这是三个key通过官方OpenCode客户端的真实连通性证据，不是双Docker Worker验收。该次测试时 CLI 后端仅支持 Codex；后续 F88/F89 已接入 OpenCode 本机文件执行并完成真实 UI 任务与成果审批，见 [F89 验收记录](acceptance-report.md#f89-opencode-真实文件执行与界面接入)。工作台文本 provider 仍使用 Chat Completions，不能把客户端成功当作直接 API 成功，也不能把 Zen key 填入 Codex 配置后声称已接通。
+这是三个key通过官方OpenCode客户端的真实连通性证据，不是双Docker Worker验收。后续 F88/F89 接入 OpenCode 本机文件执行；F90/F91 增加工具全关的官方客户端文本通道，完成真实秘书规划及原成果 UI 审批，见 [验收记录](acceptance-report.md#f91-官方-zen-秘书目标闭环)。旧 HTTP 通道继续独立保留；客户端成功不能当作直接 API 成功，也不能把 Zen key 填入 Codex 配置后声称已接通。
+
+模型设置选择 OpenCode Zen（纯文本），填写官方 opencode.exe 绝对路径、`opencode/big-pickle` 与服务进程内密钥的环境变量名。文件任务另在 CLI 设置选择 OpenCode / 本机。保存配置不发起模型调用。纯文本上下文经 stdin，所有工具关闭；最大输出 token 经官方客户端 `OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX` 限制。RPM 与并发统计工作台客户端启动，客户端内部可能重试；不是供应商 API 请求或费用硬上限。
 
 来源：[官方Zen接口与模型说明](https://opencode.ai/docs/zen/)、[CLI说明](https://opencode.ai/docs/cli/)。真实回执优先于文档中的可用性描述。

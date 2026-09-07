@@ -1,4 +1,4 @@
-"""One bounded chat request; no tools, redirects, proxy inheritance or retries."""
+"""Bounded text dispatch; HTTP has no retries, OpenCode owns its internal retries."""
 from __future__ import annotations
 
 import http.client
@@ -91,6 +91,9 @@ def reply(config, snapshot):
 
 def run_reply(config, snapshot):
     """A process deadline also bounds DNS/header trickling, unlike socket timeout."""
+    if config.get('transport', 'http') == 'opencode':
+        from .opencode_provider import run_reply as run_opencode_reply
+        return run_opencode_reply(config, snapshot)
     script_dir = str(Path(__file__).resolve().parents[1])
     command = [sys.executable, "-I", "-c",
                "import sys; sys.path.insert(0, sys.argv[1]); from workbench.provider import main; main()", script_dir]
