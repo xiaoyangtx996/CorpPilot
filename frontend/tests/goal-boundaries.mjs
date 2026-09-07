@@ -1,6 +1,7 @@
 // Isolated browser contexts mutate only their own storage and mocked GET replies.
 // Every non-GET API request is blocked, including any accidental model/CLI action.
 import assert from 'node:assert/strict';
+import { openManagement } from './navigation.mjs';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -51,7 +52,7 @@ export async function runBoundaries({ browser, baseURL, manifest, receipt, outDi
       else report.console_errors.push(text);
     });
     await page.goto(`${baseURL}/#access_token=${token}`, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
+    await openManagement(page); await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
     const panel = page.getByRole('dialog', { name: '目标执行与恢复', exact: true });
     return { context, page, panel };
   }
@@ -166,7 +167,7 @@ export async function runBoundaries({ browser, baseURL, manifest, receipt, outDi
     unauthorized = false;
     await expired.page.getByLabel('访问口令', { exact: true }).fill(token);
     await expired.page.getByRole('button', { name: '验证并进入', exact: true }).click();
-    await expired.page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
+    await openManagement(expired.page); await expired.page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
     await expired.panel.getByRole('button', { name: '确认已读回并结束原请求核对', exact: true }).waitFor();
     const restored = JSON.parse(await pending(expired));
     assert.deepEqual(restored, original);

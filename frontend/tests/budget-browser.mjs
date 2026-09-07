@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { openManagement } from './navigation.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -38,7 +39,7 @@ try {
   const devPage = await devContext.newPage();
   devPage.on('pageerror', error => report.pageErrors.push(String(error)));
   await devPage.goto(`${devServer.resolvedUrls.local[0]}#access_token=${manifest.access_token}`);
-  await devPage.getByRole('button', { name: '预算与预留', exact: true }).click();
+  await openManagement(devPage); await devPage.getByRole('button', { name: '预算与预留', exact: true }).click();
   const devDialog = devPage.getByRole('dialog', { name: '预算与预留', exact: true });
   await devDialog.getByLabel('总额度（USD）', { exact: true }).fill('0.000001');
   await devDialog.getByRole('button', { name: '刷新预算与预留', exact: true }).click();
@@ -64,7 +65,7 @@ try {
   }
   async function open() {
     await page.goto(`${baseURL}/#access_token=${manifest.access_token}`);
-    await page.getByRole('button', { name: '预算与预留', exact: true }).click();
+    await openManagement(page); await page.getByRole('button', { name: '预算与预留', exact: true }).click();
   }
   async function read() { await dialog().getByRole('button', { name: /^(只读核对预算配置|刷新预算与预留)$/ }).click(); }
   async function setTotal(value) { await dialog().getByLabel('总额度（USD）', { exact: true }).fill(value); }
@@ -124,7 +125,7 @@ try {
     await view.getByRole('button', { name: '关闭', exact: true }).click();
   }
   assert.equal(patches().length, 4); assert.equal(calls().length, 2);
-  await page.getByRole('button', { name: '预算与预留', exact: true }).click();
+  await openManagement(page); await page.getByRole('button', { name: '预算与预留', exact: true }).click();
   await setTotal('3.000003'); await dialog().getByLabel('启用预算准入', { exact: true }).check(); await confirm().check();
   controls({ drop_budget: true, budget_get503: true });
   await save().click();
@@ -201,7 +202,7 @@ try {
       await page.unroute('**/api/workbench/budget-settings');
       await page.getByLabel('访问口令', { exact: true }).fill(manifest.access_token);
       await page.getByRole('button', { name: '验证并进入', exact: true }).click();
-      await page.getByRole('button', { name: '预算与预留', exact: true }).click();
+      await openManagement(page); await page.getByRole('button', { name: '预算与预留', exact: true }).click();
       await dialog().getByRole('button', { name: '采用当前配置并结束核对', exact: true }).click();
       assert.equal(await page.evaluate(key => sessionStorage.getItem(key), key), null);
       assert.equal(writes.length, 0);

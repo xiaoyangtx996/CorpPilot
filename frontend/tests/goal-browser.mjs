@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { openManagement } from './navigation.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -107,7 +108,7 @@ try {
   await controls({ drop_goal: true, get503: true, pause_runner: true });
   await modal().getByRole('button', { name: '同键核对原目标授权' }).click();
   await until(() => events().find(e => e.kind === 'goal_accepted'), 'accepted goal before dropped response');
-  await page.reload(); await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
+  await page.reload(); await openManagement(page); await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
   assert.deepEqual((await pending()).payload, original.payload);
   assert.equal((await pending()).rejected, undefined);
   await page.screenshot({ path: path.join(outDir, 'goal-recovery.png') });
@@ -239,7 +240,7 @@ try {
     assert.equal(JSON.parse(stopping).goal_id, goalId);
     await controls({ get503: true, pause_model: phase === 'model', pause_runner: phase === 'execution' });
     await page.reload();
-    await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
+    await openManagement(page); await page.getByRole('button', { name: '目标执行与恢复', exact: true }).click();
     assert.equal((await pending()).goal_id, goalId);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('corppilot.goal-stop-pending.v1')), stopping);
     await controls({ pause_runner: phase === 'execution' });

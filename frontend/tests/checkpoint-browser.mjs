@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { openManagement } from './navigation.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -42,7 +43,7 @@ try {
   async function open(source = sourceId) {
     await page.goto(`${baseURL}/#access_token=${manifest.access_token}`);
     await page.getByRole('button', { name: /F60 检查点项目/ }).click();
-    await page.getByRole('button', { name: '协作计划与恢复', exact: true }).click();
+    await openManagement(page); await page.getByRole('button', { name: '协作计划与恢复', exact: true }).click();
     await page.getByRole('button', { name: '批量执行当前项目任务', exact: true }).click();
     await batch().getByText('批量执行历史', { exact: true }).click();
     await batch().getByRole('button', { name: `查看批次 ${source}`, exact: true }).click();

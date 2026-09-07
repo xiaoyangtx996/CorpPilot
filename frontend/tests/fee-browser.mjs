@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { openManagement } from './navigation.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -49,7 +50,7 @@ try {
     await page.getByRole('button', { name: '刷新 Agent 活动', exact: true }).waitFor();
   }
   await page.goto(`${uiURL}/#access_token=${manifest.access_token}`);
-  await page.getByRole('button', { name: '预算与预留', exact: true }).click();
+  await openManagement(page); await page.getByRole('button', { name: '预算与预留', exact: true }).click();
   const budget = page.getByRole('dialog', { name: '预算与预留', exact: true });
   await budget.getByLabel('总额度（USD）', { exact: true }).fill('1');
   await budget.getByLabel('我确认修改可能放行现有排队任务，关闭准入将取消后续预算门禁', { exact: true }).check();
